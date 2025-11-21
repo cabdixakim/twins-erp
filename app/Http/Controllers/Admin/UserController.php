@@ -63,31 +63,36 @@ public function store(Request $request)
             ->with('status', 'User updated.');
     }
 
-    public function toggleStatus(User $user)
-    {
-        $user->status = $user->status === 'active' ? 'inactive' : 'active';
-        $user->save();
-
-        return redirect()->route('admin.users.index')
-            ->with('status', 'User status updated.');
+  public function toggleStatus(User $user)
+{
+    // Prevent deactivating the owner
+    if ($user->role?->slug === 'owner') {
+        return redirect()
+            ->route('admin.users.index')
+            ->with('error', 'The owner account cannot be deactivated.');
     }
 
-    // Now: generate random password instead of manual input
-    public function resetPassword(Request $request, User $user)
-{
-    $data = $request->validate([
-        'password' => 'nullable|string|min:6',
-    ]);
-
-    // Manual password OR generate
-    $plainPassword = $data['password'] ?: Str::random(10);
-
-    $user->password = Hash::make($plainPassword);
+    $user->status = $user->status === 'active' ? 'inactive' : 'active';
     $user->save();
 
     return redirect()->route('admin.users.index')
-        ->with('status', 'Password reset for ' . $user->name . '.')
-        ->with('generated_password', $plainPassword)
+        ->with('success', 'User status updated.');
+}
+
+    // Now: generate random password instead of manual input
+ public function resetPassword(User $user)
+{
+    // Prevent resetting owner password? (optional)
+    // If you want: if ($user->role?->slug === 'owner') abort(403);
+
+    $newPassword = Str::password(12);
+
+    $user->password = bcrypt($newPassword);
+    $user->save();
+
+    return redirect()
+        ->route('admin.users.index')
+        ->with('generated_password', $newPassword)
         ->with('generated_user_email', $user->email);
 }
     public function destroy(User $user)
