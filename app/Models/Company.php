@@ -1,4 +1,5 @@
 <?php
+// app/Models/Company.php
 
 namespace App\Models;
 
@@ -10,5 +11,11 @@ class Company extends Model
         'name',
         'slug',
         'base_currency',
+        'logo_path',
+        'country',
+        'timezone',
     ];
 }
+
+
+         

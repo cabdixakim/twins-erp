@@ -2,17 +2,17 @@
 
 use Illuminate\Support\Facades\Route;
 
-// NOTE: these match your actual folder structure:
-// app/Http/Controllers/DashboardController.php
-// app/Http/Controllers/AuthController.php
-// app/Http/Controllers/Onboarding/CompanyController.php
-// app/Http/Controllers/Admin/RoleController.php
-// app/Http/Controllers/Admin/UserController.php
+// Controllers that match your current folder structure
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Onboarding\CompanyController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Settings\DepotController;
+use App\Http\Controllers\Settings\CompanySettingsController;
+use App\Http\Controllers\Settings\SupplierController;
+use App\Http\Controllers\Settings\TransporterController;
+use App\Http\Controllers\DepotStock\DepotStockController;
 
 // ---------------------------------------------------------------------
 // Home → send people to login or dashboard
@@ -35,7 +35,6 @@ Route::post('/company', [CompanyController::class, 'store'])
 // ---------------------------------------------------------------------
 // Auth routes
 // ---------------------------------------------------------------------
-
 // Show login page
 Route::get('/login', [AuthController::class, 'showLogin'])
     ->name('login');
@@ -48,12 +47,59 @@ Route::post('/login', [AuthController::class, 'login'])
 // Protected area
 // ---------------------------------------------------------------------
 Route::middleware('auth')->group(function () {
+
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+    // ----------------------- DEPOT STOCK ------------------------------
+    Route::get('/depot-stock', [DepotStockController::class, 'index'])
+        ->name('depot-stock.index');
 
     // Logout current user
     Route::post('/logout', [AuthController::class, 'logout'])
         ->name('logout');
+
+    // ------------------------- SETTINGS ------------------------------
+    Route::prefix('settings')
+        ->name('settings.')
+        ->group(function () {
+
+            // Company profile (NEW)
+            Route::get('/company', [CompanySettingsController::class, 'edit'])
+                ->name('company.edit');
+            Route::patch('/company', [CompanySettingsController::class, 'update'])
+                ->name('company.update');
+
+            // Depots
+            Route::get('/depots', [DepotController::class, 'index'])
+                ->name('depots.index');
+            Route::post('/depots', [DepotController::class, 'store'])
+                ->name('depots.store');
+            Route::patch('/depots/{depot}', [DepotController::class, 'update'])
+                ->name('depots.update');
+            Route::patch('/depots/{depot}/toggle-active', [DepotController::class, 'toggleActive'])
+                ->name('depots.toggle-active');
+                // Settings: Suppliers
+        Route::get('/suppliers', [SupplierController::class, 'index'])
+            ->name('suppliers.index');
+        Route::post('/suppliers', [SupplierController::class, 'store'])
+            ->name('suppliers.store');
+        Route::patch('/suppliers/{supplier}', [SupplierController::class, 'update'])
+            ->name('suppliers.update');
+        Route::patch('/suppliers/{supplier}/toggle-active', [SupplierController::class, 'toggleActive'])
+            ->name('suppliers.toggle-active');
+
+            // Settings: Transporters
+        Route::get('/transporters', [TransporterController::class, 'index'])
+            ->name('transporters.index');
+        Route::post('/transporters', [TransporterController::class, 'store'])
+            ->name('transporters.store');
+        Route::patch('/transporters/{transporter}', [TransporterController::class, 'update'])
+            ->name('transporters.update');
+        Route::patch('/transporters/{transporter}/toggle-active', [TransporterController::class, 'toggleActive'])
+            ->name('transporters.toggle-active');
+
+     });
+        
 });
 
 // ---------------------------------------------------------------------
@@ -80,20 +126,12 @@ Route::middleware(['auth', 'role:owner'])
         // Roles & permissions
         Route::get('/roles', [RoleController::class, 'index'])
             ->name('roles.index');
-
-        // create role
         Route::post('/roles', [RoleController::class, 'store'])
             ->name('roles.store');
-
-        // update role (supports PUT or PATCH)
         Route::match(['put', 'patch'], '/roles/{role}', [RoleController::class, 'update'])
             ->name('roles.update');
-
-        // delete role
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
             ->name('roles.destroy');
-
-        // sync permissions for a role (used by the Blade UI)
         Route::post('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])
             ->name('roles.permissions.sync');
     });
