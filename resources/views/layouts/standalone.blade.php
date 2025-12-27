@@ -7,7 +7,7 @@
     <title>@yield('title', 'Twins')</title>
 
     {{-- Always-works styling for standalone pages (no Vite dependency) --}}
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="min-h-screen bg-slate-950 text-slate-100">

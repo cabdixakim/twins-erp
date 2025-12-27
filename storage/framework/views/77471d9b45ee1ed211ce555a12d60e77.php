@@ -10,7 +10,7 @@
 
     <title><?php echo e($appName); ?> - <?php echo $__env->yieldContent('title','Dashboard'); ?></title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
 
     <style>
         .sidebar { transition: all 0.25s ease-in-out; }
@@ -77,6 +77,7 @@
             border-radius: 12px !important;
         }
     </style>
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
 </head>
 
 <body class="bg-slate-950 text-slate-100 h-full flex overflow-hidden">
@@ -123,46 +124,7 @@
 </div>
 
 <?php echo $__env->make('layouts.partials.layout-scripts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-<script>
-/**
- * Twins ERP — sleep / session restore fix
- * Prevents frozen overlays after monitor sleep or session timeout
- */
 
-// If page is restored from browser cache (very common after sleep)
-window.addEventListener('pageshow', function (e) {
-  if (e.persisted) {
-    window.location.reload();
-  }
-});
-
-function twinsCleanupOverlays() {
-  const selectors = [
-    '.modal-backdrop',
-    '[data-backdrop]',
-    '[data-overlay]',
-    '.fixed.inset-0',
-    '.fixed.inset-0.z-40',
-    '.fixed.inset-0.z-50'
-  ];
-
-  document.querySelectorAll(selectors.join(',')).forEach(el => {
-    const s = getComputedStyle(el);
-    if (s.position === 'fixed' && (s.top === '0px' || s.inset !== 'auto')) {
-      el.remove();
-    }
-  });
-
-  document.documentElement.classList.remove('overflow-hidden');
-  document.body.classList.remove('overflow-hidden');
-}
-
-// When tab regains focus (after sleep / lock screen)
-window.addEventListener('focus', twinsCleanupOverlays);
-document.addEventListener('visibilitychange', function () {
-  if (!document.hidden) twinsCleanupOverlays();
-});
-</script>
 
 </body>
 </html><?php /**PATH C:\xampp\htdocs\twins-erp\resources\views/layouts/app.blade.php ENDPATH**/ ?>
