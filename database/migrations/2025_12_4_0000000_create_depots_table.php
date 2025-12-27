@@ -10,6 +10,12 @@ return new class extends Migration
     {
         Schema::create('depots', function (Blueprint $table) {
             $table->id();
+
+            // ✅ ADDITION: company scope
+            $table->foreignId('company_id')
+                  ->constrained('companies')
+                  ->cascadeOnDelete();
+
             $table->string('name');
             $table->string('city')->nullable();
             $table->decimal('storage_fee_per_1000_l', 12, 4)->default(0);
@@ -17,6 +23,9 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->text('notes')->nullable();
             $table->timestamps();
+
+            // ✅ ADDITION: fast lookups per company
+            $table->index(['company_id', 'name']);
         });
     }
 

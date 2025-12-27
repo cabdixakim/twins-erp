@@ -9,10 +9,14 @@ return new class extends Migration {
     {
         Schema::create('permissions', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('slug')->unique(); // depots.view, sales.create, ...
-            $table->string('module')->nullable(); // "depots", "sales", ...
-            $table->string('description')->nullable();
+
+            // your seeder inserts these:
+            $table->string('slug')->unique();                 // e.g. depots.view
+            $table->string('name');                           // e.g. View depots
+            $table->string('group', 80)->nullable()->index(); // e.g. Settings
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
         });
     }

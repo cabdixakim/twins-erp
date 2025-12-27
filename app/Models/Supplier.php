@@ -17,9 +17,16 @@ class Supplier extends Model
         'default_currency',
         'is_active',
         'notes',
+        'company_id',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
+    
+      public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
 }

@@ -10,12 +10,38 @@ use Illuminate\View\View;
 
 class SupplierController extends Controller
 {
+    /**
+     * Get active company id from the authenticated user.
+     */
+    protected function activeCompanyId(): int
+    {
+        return (int) (auth()->user()?->active_company_id ?? 0);
+    }
+
+    /**
+     * Ensure the model belongs to the active company (multi-company safety).
+     */
+    protected function abortIfWrongCompany(Supplier $supplier): void
+    {
+        $companyId = $this->activeCompanyId();
+
+        if (!$companyId || (int) $supplier->company_id !== $companyId) {
+            abort(404);
+        }
+    }
+
     public function index(Request $request): View
     {
-        $suppliers = Supplier::orderBy('name')->get();
+        $companyId = $this->activeCompanyId();
+
+        $suppliers = Supplier::query()
+            ->where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
 
         $currentSupplier = null;
-        if ($suppliers->count() > 0) {
+
+        if ($suppliers->isNotEmpty()) {
             $currentSupplier = $suppliers->first();
 
             if ($request->filled('supplier')) {
@@ -34,9 +60,14 @@ class SupplierController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $companyId = $this->activeCompanyId();
+
         $data = $this->validateData($request);
 
-        // On create, default active = true unless explicitly turned off
+        // Enforce company scope (do NOT trust client input)
+        $data['company_id'] = $companyId;
+
+        // defaults
         $data['is_active'] = $request->boolean('is_active', true);
         $data['default_currency'] = $data['default_currency'] ?? 'USD';
 
@@ -49,9 +80,13 @@ class SupplierController extends Controller
 
     public function update(Request $request, Supplier $supplier): RedirectResponse
     {
+        $this->abortIfWrongCompany($supplier);
+
         $data = $this->validateData($request);
 
-        // If checkbox present, honour it. If missing (e.g. old form), keep current state.
+        // Never allow company_id to be changed from requests
+        unset($data['company_id']);
+
         $data['is_active'] = $request->has('is_active')
             ? $request->boolean('is_active')
             : $supplier->is_active;
@@ -67,17 +102,14 @@ class SupplierController extends Controller
 
     public function toggleActive(Supplier $supplier): RedirectResponse
     {
+        $this->abortIfWrongCompany($supplier);
+
         $supplier->is_active = ! $supplier->is_active;
         $supplier->save();
 
         return redirect()
             ->route('settings.suppliers.index', ['supplier' => $supplier->id])
-            ->with(
-                'status',
-                $supplier->is_active
-                    ? 'Supplier re-activated.'
-                    : 'Supplier deactivated.'
-            );
+            ->with('status', $supplier->is_active ? 'Supplier re-activated.' : 'Supplier deactivated.');
     }
 
     /**
@@ -98,7 +130,6 @@ class SupplierController extends Controller
             'is_active'        => ['sometimes', 'boolean'],
         ]);
 
-        // Basic hardening: trim + strip tags on text fields (defensive)
         $stringFields = [
             'name', 'type', 'country', 'city',
             'contact_person', 'phone', 'default_currency',
@@ -110,7 +141,6 @@ class SupplierController extends Controller
             }
         }
 
-        // For notes we allow more content, but at least trim whitespace
         if (isset($data['notes'])) {
             $data['notes'] = trim($data['notes']);
         }

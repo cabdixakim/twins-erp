@@ -19,10 +19,17 @@ class Transporter extends Model
         'payment_terms',
         'is_active',
         'notes',
+        'company_id',
     ];
 
     protected $casts = [
         'is_active'               => 'boolean',
         'default_rate_per_1000_l' => 'decimal:4',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
 }

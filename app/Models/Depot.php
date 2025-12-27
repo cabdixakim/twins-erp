@@ -16,6 +16,7 @@ class Depot extends Model
         'default_shrinkage_pct',
         'is_active',
         'notes',
+        'company_id',
     ];
 
     protected $casts = [
@@ -23,4 +24,9 @@ class Depot extends Model
         'default_shrinkage_pct'  => 'decimal:4',
         'is_active'              => 'boolean',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

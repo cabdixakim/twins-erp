@@ -4,34 +4,66 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transporter;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class TransporterController extends Controller
 {
-    /**
-     * List all transporters, optionally show selected transporter’s details.
-     */
-    public function index(Request $request)
+    protected function activeCompanyId(): int
     {
-        $transporters   = Transporter::orderBy('name')->get();
-        $currentId      = $request->query('transporter');
-        $current        = $currentId ? Transporter::find($currentId) : null;
+        return (int) (auth()->user()?->active_company_id ?? 0);
+    }
+
+    protected function abortIfWrongCompany(Transporter $transporter): void
+    {
+        $companyId = $this->activeCompanyId();
+
+        if (!$companyId || (int) $transporter->company_id !== $companyId) {
+            abort(404);
+        }
+    }
+
+    public function index(Request $request): View
+    {
+        $companyId = $this->activeCompanyId();
+
+        $transporters = Transporter::query()
+            ->where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
+
+        $currentTransporter = null;
+
+        if ($transporters->isNotEmpty()) {
+            $currentTransporter = $transporters->first();
+
+            if ($request->filled('transporter')) {
+                $selected = $transporters->firstWhere('id', (int) $request->input('transporter'));
+                if ($selected) {
+                    $currentTransporter = $selected;
+                }
+            }
+        }
 
         return view('settings.transporters.index', [
-            'transporters'    => $transporters,
-            'currentTransporter' => $current,
+            'transporters'       => $transporters,
+            'currentTransporter' => $currentTransporter,
         ]);
     }
 
-    /**
-     * Create a new transporter.
-     */
     public function store(Request $request): RedirectResponse
     {
+        $companyId = $this->activeCompanyId();
+
         $data = $this->validateData($request);
 
-        // Create transporter
+        // Enforce company scope (do NOT trust client input)
+        $data['company_id'] = $companyId;
+
+        $data['is_active'] = $request->boolean('is_active', true);
+        $data['default_currency'] = $data['default_currency'] ?? 'USD';
+
         $transporter = Transporter::create($data);
 
         return redirect()
@@ -39,12 +71,19 @@ class TransporterController extends Controller
             ->with('status', 'Transporter created.');
     }
 
-    /**
-     * Update transporter.
-     */
     public function update(Request $request, Transporter $transporter): RedirectResponse
     {
+        $this->abortIfWrongCompany($transporter);
+
         $data = $this->validateData($request);
+
+        unset($data['company_id']);
+
+        $data['is_active'] = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : $transporter->is_active;
+
+        $data['default_currency'] = $data['default_currency'] ?? $transporter->default_currency ?? 'USD';
 
         $transporter->update($data);
 
@@ -53,57 +92,48 @@ class TransporterController extends Controller
             ->with('status', 'Transporter updated.');
     }
 
-    /**
-     * Activate / deactivate transporter.
-     */
     public function toggleActive(Transporter $transporter): RedirectResponse
     {
-        $transporter->is_active = !$transporter->is_active;
+        $this->abortIfWrongCompany($transporter);
+
+        $transporter->is_active = ! $transporter->is_active;
         $transporter->save();
 
         return redirect()
             ->route('settings.transporters.index', ['transporter' => $transporter->id])
-            ->with(
-                'status',
-                $transporter->is_active ? 'Transporter re-activated.' : 'Transporter deactivated.'
-            );
+            ->with('status', $transporter->is_active ? 'Transporter re-activated.' : 'Transporter deactivated.');
     }
 
-    /**
-     * Shared validation + normalisation logic.
-     */
     private function validateData(Request $request): array
     {
         $data = $request->validate([
-            'name'                     => ['required', 'string', 'max:255'],
-            'type'                     => ['nullable', 'string', 'max:255'],
-            'country'                  => ['nullable', 'string', 'max:255'],
-            'city'                     => ['nullable', 'string', 'max:255'],
-            'contact_person'           => ['nullable', 'string', 'max:255'],
-            'email'                    => ['nullable', 'email', 'max:255'],
-            'phone'                    => ['nullable', 'string', 'max:255'],
-
-            // DECIMALS
-            'default_rate_per_1000_l'     => ['nullable', 'numeric'],
-            'default_short_allowance_pct' => ['nullable', 'numeric'],
-
-            'default_currency'        => ['nullable', 'string', 'max:10'],
-            'notes'                   => ['nullable', 'string'],
-            'is_active'               => ['sometimes', 'boolean'],
+            'name'                 => ['required', 'string', 'max:255'],
+            'type'                 => ['nullable', 'string', 'max:50'],
+            'country'              => ['nullable', 'string', 'max:100'],
+            'city'                 => ['nullable', 'string', 'max:100'],
+            'contact_person'       => ['nullable', 'string', 'max:150'],
+            'email'                => ['nullable', 'email', 'max:150'],
+            'phone'                => ['nullable', 'string', 'max:50'],
+            'default_rate_per_1000_l' => ['nullable', 'numeric', 'min:0'],
+            'default_currency'     => ['nullable', 'string', 'max:3'],
+            'notes'                => ['nullable', 'string'],
+            'is_active'            => ['sometimes', 'boolean'],
         ]);
 
-        // --- Normalise decimals to avoid MySQL "" error ---
-        foreach (['default_rate_per_1000_l', 'default_short_allowance_pct'] as $field) {
-            if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
-                $data[$field] = 0;
+        $stringFields = [
+            'name', 'type', 'country', 'city',
+            'contact_person', 'email', 'phone', 'default_currency',
+        ];
+
+        foreach ($stringFields as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = trim(strip_tags($data[$field]));
             }
         }
 
-        // Boolean clean-up
-        $data['is_active'] = $request->boolean('is_active', false);
-
-        // Default currency
-        $data['default_currency'] = $data['default_currency'] ?? 'USD';
+        if (isset($data['notes'])) {
+            $data['notes'] = trim($data['notes']);
+        }
 
         return $data;
     }

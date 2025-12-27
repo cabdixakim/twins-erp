@@ -48,13 +48,12 @@
 
         desktopSidebar.classList.toggle('w-64', !collapsed);
         desktopSidebar.classList.toggle('w-20', collapsed);
+        desktopSidebar.classList.toggle('is-collapsed', collapsed);
 
-        // Hide labels when collapsed
         desktopSidebar.querySelectorAll('.sidebar-label').forEach(el => {
             el.classList.toggle('hidden', collapsed);
         });
 
-        // Change toggle tooltip text (data-tip)
         if (toggleDesktopSidebar) {
             toggleDesktopSidebar.setAttribute('data-tip', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
             toggleDesktopSidebar.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
@@ -72,87 +71,96 @@
     });
 
     /* ============================================================
-       Twins Tooltip System (REAL tooltip, portaled to <body>)
-       Works for BOTH:
-       - data-tip="Text"
-       - title="Text"   (auto-migrated into data-tip)
+       Twins Tooltip System (quiet, tiny, NOT cursor-follow)
+       - Uses data-tip only (no title migration)
+       - Positions relative to element box (tw-tip-b / tw-tip-r)
     ============================================================ */
     (function initTwinsTooltips() {
-        const tipBox = document.getElementById('twinsTooltip');
+        const tipBox  = document.getElementById('twinsTooltip');
         const tipText = document.getElementById('twinsTooltipText');
         if (!tipBox || !tipText) return;
 
-        // Convert any native title tooltips into data-tip (prevents double tooltips)
-        document.querySelectorAll('[title]').forEach(el => {
-            if (!el.getAttribute('data-tip')) {
-                el.setAttribute('data-tip', el.getAttribute('title') || '');
-            }
-            el.removeAttribute('title');
-        });
-
         let activeEl = null;
 
-        function showTip(el) {
-            const text = el.getAttribute('data-tip') || '';
-            if (!text.trim()) return;
-            activeEl = el;
-            tipText.textContent = text;
-            tipBox.classList.add('show');
-        }
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
-        function hideTip() {
-            activeEl = null;
-            tipBox.classList.remove('show');
-        }
-
-        function moveTip(e) {
-            if (!activeEl) return;
-
-            const padding = 14;
-            const tipRect = tipBox.getBoundingClientRect();
+        function position(el) {
+            const rect = el.getBoundingClientRect();
             const vw = window.innerWidth;
             const vh = window.innerHeight;
 
-            // default: to the right of cursor
-            let x = e.clientX + padding;
-            let y = e.clientY;
+            const pad = 8;
 
-            // if overflow right, flip to left
-            if (x + tipRect.width + 8 > vw) {
-                x = e.clientX - tipRect.width - padding;
+            // ensure tip measured
+            const tipRect = tipBox.getBoundingClientRect();
+            const isBottom = el.classList.contains('tw-tip-b');
+
+            let x, y;
+
+            if (isBottom) {
+                x = rect.left + (rect.width / 2) - (tipRect.width / 2);
+                y = rect.bottom + pad;
+                x = clamp(x, 8, vw - tipRect.width - 8);
+
+                // flip upward if bottom overflows
+                if (y + tipRect.height > vh - 8) {
+                    y = rect.top - tipRect.height - pad;
+                }
+            } else {
+                // default: right
+                x = rect.right + pad;
+                y = rect.top + (rect.height / 2) - (tipRect.height / 2);
+
+                // flip left if overflow
+                if (x + tipRect.width > vw - 8) {
+                    x = rect.left - tipRect.width - pad;
+                }
+
+                y = clamp(y, 8, vh - tipRect.height - 8);
             }
-
-            // clamp vertical
-            if (y - tipRect.height / 2 < 8) y = 8 + tipRect.height / 2;
-            if (y + tipRect.height / 2 > vh - 8) y = (vh - 8) - tipRect.height / 2;
 
             tipBox.style.left = `${x}px`;
             tipBox.style.top  = `${y}px`;
         }
 
-        // Use pointer events so it works for mouse + trackpad
-        document.addEventListener('pointermove', moveTip, { passive: true });
+        function show(el) {
+            const text = (el.getAttribute('data-tip') || '').trim();
+            if (!text) return;
 
-        // Delegate hover
+            activeEl = el;
+            tipText.textContent = text;
+            tipBox.classList.add('show');
+
+            // wait a tick so size is correct
+            requestAnimationFrame(() => {
+                if (!activeEl) return;
+                position(activeEl);
+            });
+        }
+
+        function hide() {
+            activeEl = null;
+            tipBox.classList.remove('show');
+        }
+
         document.addEventListener('pointerover', (e) => {
             const el = e.target.closest('[data-tip]');
             if (!el) return;
-            showTip(el);
+            show(el);
         });
 
         document.addEventListener('pointerout', (e) => {
             const leaving = e.target.closest('[data-tip]');
             if (!leaving) return;
 
-            // if moving within same element, ignore
             const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('[data-tip]') : null;
             if (to && to === leaving) return;
 
-            hideTip();
+            hide();
         });
 
-        // Hide on scroll/escape
-        window.addEventListener('scroll', hideTip, true);
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
+        window.addEventListener('scroll', hide, true);
+        window.addEventListener('resize', () => { if (activeEl) position(activeEl); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
     })();
 </script><?php /**PATH C:\xampp\htdocs\twins-erp\resources\views/layouts/partials/layout-scripts.blade.php ENDPATH**/ ?>

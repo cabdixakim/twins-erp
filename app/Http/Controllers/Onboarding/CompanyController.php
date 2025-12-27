@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Onboarding;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Company;
-use App\Models\User;
 use App\Models\Role;
-
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class CompanyController extends Controller
 {
     public function create()
     {
-        // If a user already exists, just send to login
-        if (User::count() > 0) {
+        // Keep your existing behaviour:
+        // if a company already exists in DB, block wizard and go to login.
+        if (Company::count() > 0) {
             return redirect()->route('login');
         }
 
@@ -35,13 +35,8 @@ class CompanyController extends Controller
         ]);
 
         // 2) Create owner user
-
-        // ...
-
-        // find owner role
         $ownerRoleId = Role::where('slug', 'owner')->value('id');
 
-        // 2) Create owner user
         $user = User::create([
             'name'     => $data['owner_name'],
             'email'    => $data['owner_email'],
@@ -49,6 +44,7 @@ class CompanyController extends Controller
             'role_id'  => $ownerRoleId,
             'status'   => 'active',
         ]);
+
         // 3) Log the owner in
         Auth::login($user);
         $request->session()->regenerate();
@@ -60,7 +56,14 @@ class CompanyController extends Controller
             'base_currency' => $data['base_currency'],
         ]);
 
-        // 5) Save active company in session for later use
+        // ✅ ADDITION: attach membership + set active_company_id (multi-company)
+        if (method_exists($user, 'companies')) {
+            $user->companies()->syncWithoutDetaching([$company->id]);
+        }
+        $user->active_company_id = $company->id;
+        $user->save();
+
+        // 5) Keep your existing session key for backward compatibility (for now)
         session(['company_id' => $company->id]);
 
         // 6) Go to dashboard

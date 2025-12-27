@@ -9,10 +9,15 @@ return new class extends Migration {
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('slug')->unique(); // owner, manager, accountant, ...
+
+            $table->string('name');                    // Owner
+            $table->string('slug')->unique();          // owner, manager, accountant...
             $table->string('description')->nullable();
             $table->boolean('is_system')->default(false);
+
+            // ✅ your seeder inserts this:
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
         });
     }

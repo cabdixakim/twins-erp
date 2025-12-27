@@ -3,7 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Twins - @yield('title','Dashboard')</title>
+
+    @php
+        $appName = config('app.name', 'Twins');
+    @endphp
+
+    <title>{{ $appName }} - @yield('title','Dashboard')</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -12,46 +17,64 @@
 
         /*
          |==========================================================
-         | ONE Tooltip System (PORTALED, no clipping, no title="")
+         | Twins Tooltip (quiet + tiny + NOT cursor-follow)
          |==========================================================
-         | Use: data-tip="Text" on any element
-         | Class: tw-tip-r (right) or tw-tip-b (bottom)
+         | Use: data-tip="Text" + class .tw-tip-b or .tw-tip-r
+         | NOTE: We do NOT auto-migrate [title] anymore.
          */
         #twinsTooltip {
             position: fixed;
             z-index: 999999;
             pointer-events: none;
             opacity: 0;
-            transform: translateY(-6px);
-            transition: opacity .12s ease, transform .12s ease;
+            transform: translateY(-4px) scale(.98);
+            transition: opacity .10s ease, transform .10s ease;
         }
         #twinsTooltip.show {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
         #twinsTooltip .tip {
-            background: rgba(15, 23, 42, 0.98);
-            color: rgb(226 232 240);
-            border: 1px solid rgba(51, 65, 85, 0.9);
-            box-shadow: 0 16px 45px rgba(0,0,0,.45);
-            padding: 6px 10px;
-            border-radius: 10px;
-            font-size: 12px;
-            line-height: 1;
+            /* background: rgba(2, 6, 23, 0.85);           slate-950 but softer */
+            color: rgb(226 232 240);                    /* slate-200 */
+            border: 1px solid rgba(51, 65, 85, 0.45);   /* slate-700 subtle */
+            box-shadow: 0 10px 26px rgba(0,0,0,.28);    /* quieter */
+            padding: 4px 8px;                           /* smaller */
+            border-radius: 9px;
+            font-size: 9px;                            /* tiny */
+            line-height: 1.1;
             white-space: nowrap;
             backdrop-filter: blur(10px);
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* Collapsed sidebar: tighter logout */
-        #desktopSidebar.is-collapsed .logout-btn{
-            padding: 8px;
-            justify-content: center;
-            border-radius: 14px;
+        /*
+         |==========================================================
+         | Sidebar logout sizing fix (normal + collapsed)
+         |==========================================================
+         | This forces it to stop being huge/ugly even if markup varies.
+         */
+        .logout-btn {
+            padding: 8px !important;
+            border-radius: 14px !important;
         }
-        #desktopSidebar.is-collapsed .logout-icon{
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
+        .logout-btn .logout-icon {
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 12px !important;
+        }
+
+        #desktopSidebar.is-collapsed .logout-btn{
+            padding: 7px !important;
+            border-radius: 14px !important;
+            justify-content: center !important;
+        }
+        #desktopSidebar.is-collapsed .logout-btn .logout-icon{
+            width: 34px !important;
+            height: 34px !important;
+            border-radius: 12px !important;
         }
     </style>
 </head>
@@ -61,7 +84,13 @@
 @php
     $user            = auth()->user();
     $userRole        = $user?->role?->slug;
-    $company         = \App\Models\Company::first();
+
+    // Prefer active company if set, fallback to first company
+    $company = null;
+    if ($user?->active_company_id) {
+        $company = \App\Models\Company::find($user->active_company_id);
+    }
+    $company = $company ?: \App\Models\Company::query()->orderBy('id')->first();
 
     $canManageUsers  = in_array($userRole, ['owner','manager'], true);
 
@@ -88,107 +117,51 @@
     </main>
 </div>
 
-{{-- Tooltip portal (ALWAYS ABOVE EVERYTHING) --}}
-<div id="twinsTooltip" class="">
+{{-- Tooltip portal (always above everything) --}}
+<div id="twinsTooltip">
     <div class="tip" id="twinsTooltipText"></div>
 </div>
 
 @include('layouts.partials.layout-scripts')
-
 <script>
-/*
- |==========================================================
- | Tooltip Engine (single source of truth)
- |==========================================================
- | - uses data-tip="" only
- | - removes title="" to avoid double tooltips
- | - positions right or bottom based on class:
- |   .tw-tip-r  (right of cursor)
- |   .tw-tip-b  (below cursor)
+/**
+ * Twins ERP — sleep / session restore fix
+ * Prevents frozen overlays after monitor sleep or session timeout
  */
-(function initTwinsTooltips(){
-    const tipBox  = document.getElementById('twinsTooltip');
-    const tipText = document.getElementById('twinsTooltipText');
-    if (!tipBox || !tipText) return;
 
-    // Convert any native title tooltips into data-tip, then remove title
-    document.querySelectorAll('[title]').forEach(el => {
-        if (!el.getAttribute('data-tip')) {
-            const t = el.getAttribute('title') || '';
-            if (t.trim()) el.setAttribute('data-tip', t);
-        }
-        el.removeAttribute('title');
-    });
+// If page is restored from browser cache (very common after sleep)
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) {
+    window.location.reload();
+  }
+});
 
-    let activeEl = null;
+function twinsCleanupOverlays() {
+  const selectors = [
+    '.modal-backdrop',
+    '[data-backdrop]',
+    '[data-overlay]',
+    '.fixed.inset-0',
+    '.fixed.inset-0.z-40',
+    '.fixed.inset-0.z-50'
+  ];
 
-    function show(el){
-        const text = el.getAttribute('data-tip') || '';
-        if (!text.trim()) return;
-        activeEl = el;
-        tipText.textContent = text;
-        tipBox.classList.add('show');
+  document.querySelectorAll(selectors.join(',')).forEach(el => {
+    const s = getComputedStyle(el);
+    if (s.position === 'fixed' && (s.top === '0px' || s.inset !== 'auto')) {
+      el.remove();
     }
+  });
 
-    function hide(){
-        activeEl = null;
-        tipBox.classList.remove('show');
-    }
+  document.documentElement.classList.remove('overflow-hidden');
+  document.body.classList.remove('overflow-hidden');
+}
 
-    function move(e){
-        if (!activeEl) return;
-
-        const pad = 14;
-        const rect = tipBox.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        const isBottom = activeEl.classList.contains('tw-tip-b'); // else right
-
-        let x, y;
-
-        if (isBottom) {
-            x = e.clientX - rect.width / 2;
-            y = e.clientY + pad;
-            // clamp
-            if (x < 8) x = 8;
-            if (x + rect.width > vw - 8) x = vw - rect.width - 8;
-            if (y + rect.height > vh - 8) y = e.clientY - rect.height - pad;
-        } else {
-            x = e.clientX + pad;
-            y = e.clientY - rect.height / 2;
-            // flip left if needed
-            if (x + rect.width > vw - 8) x = e.clientX - rect.width - pad;
-            // clamp vertical
-            if (y < 8) y = 8;
-            if (y + rect.height > vh - 8) y = vh - rect.height - 8;
-        }
-
-        tipBox.style.left = `${x}px`;
-        tipBox.style.top  = `${y}px`;
-    }
-
-    document.addEventListener('pointermove', move, { passive: true });
-
-    document.addEventListener('pointerover', (e) => {
-        const el = e.target.closest('[data-tip]');
-        if (!el) return;
-        show(el);
-    });
-
-    document.addEventListener('pointerout', (e) => {
-        const leaving = e.target.closest('[data-tip]');
-        if (!leaving) return;
-
-        const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('[data-tip]') : null;
-        if (to && to === leaving) return;
-
-        hide();
-    });
-
-    window.addEventListener('scroll', hide, true);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
-})();
+// When tab regains focus (after sleep / lock screen)
+window.addEventListener('focus', twinsCleanupOverlays);
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) twinsCleanupOverlays();
+});
 </script>
 
 </body>

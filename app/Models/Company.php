@@ -15,6 +15,28 @@ class Company extends Model
         'country',
         'timezone',
     ];
+
+
+ public function users()
+    {
+        return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
+    public function depots()
+    {
+        return $this->hasMany(Depot::class);
+    }
+
+    public function suppliers()
+    {
+        return $this->hasMany(Supplier::class);
+    }
+
+    public function transporters()
+    {
+        return $this->hasMany(Transporter::class);
+    }
+    
 }
 
 

@@ -4,11 +4,17 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
+
+            // ✅ ADDITION: company scope
+            $table->foreignId('company_id')
+                  ->constrained('companies')
+                  ->cascadeOnDelete();
 
             $table->string('name');
             $table->string('type')->nullable(); // e.g. 'port', 'local_depot'
@@ -25,6 +31,9 @@ return new class extends Migration {
             $table->text('notes')->nullable();
 
             $table->timestamps();
+
+            // ✅ ADDITION: fast lookups per company
+            $table->index(['company_id', 'name']);
         });
     }
 

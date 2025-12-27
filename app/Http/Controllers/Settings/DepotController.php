@@ -11,11 +11,37 @@ use Illuminate\Http\Request;
 class DepotController extends Controller
 {
     /**
+     * Get active company id from the authenticated user.
+     */
+    protected function activeCompanyId(): int
+    {
+        return (int) (auth()->user()?->active_company_id ?? 0);
+    }
+
+    /**
+     * Ensure the model belongs to the active company (multi-company safety).
+     */
+    protected function abortIfWrongCompany(Depot $depot): void
+    {
+        $companyId = $this->activeCompanyId();
+
+        if (!$companyId || (int) $depot->company_id !== $companyId) {
+            abort(404);
+        }
+    }
+
+    /**
      * Show depots list + selected depot details.
      */
     public function index(Request $request)
     {
-        $depots = Depot::orderBy('name')->get();
+        $companyId = $this->activeCompanyId();
+
+        // company-scoped list
+        $depots = Depot::query()
+            ->where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
 
         // Determine which depot is "current"
         $currentDepotId = (int) $request->query('depot', 0);
@@ -41,7 +67,12 @@ class DepotController extends Controller
      */
     public function store(StoreDepotRequest $request)
     {
+        $companyId = $this->activeCompanyId();
+
         $data = $request->validated();
+
+        // Enforce company scope (do NOT trust client input)
+        $data['company_id'] = $companyId;
 
         // New depots are active by default unless explicitly unchecked
         $data['is_active'] = $request->boolean('is_active', true);
@@ -58,7 +89,12 @@ class DepotController extends Controller
      */
     public function update(UpdateDepotRequest $request, Depot $depot)
     {
+        $this->abortIfWrongCompany($depot);
+
         $data = $request->validated();
+
+        // Never allow company_id to be changed from requests
+        unset($data['company_id']);
 
         if ($request->has('is_active')) {
             $data['is_active'] = $request->boolean('is_active');
@@ -76,6 +112,8 @@ class DepotController extends Controller
      */
     public function toggleActive(Request $request, Depot $depot)
     {
+        $this->abortIfWrongCompany($depot);
+
         $depot->is_active = ! $depot->is_active;
         $depot->save();
 

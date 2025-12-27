@@ -4,11 +4,17 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('transporters', function (Blueprint $table) {
             $table->id();
+
+            // ✅ ADDITION: company scope
+            $table->foreignId('company_id')
+                  ->constrained('companies')
+                  ->cascadeOnDelete();
 
             $table->string('name');
             $table->string('type', 20)->nullable(); // 'intl', 'local', or null
@@ -21,13 +27,15 @@ return new class extends Migration {
 
             $table->string('default_currency', 3)->default('USD');
             $table->decimal('default_rate_per_1000_l', 12, 4)->nullable(); // freight rate baseline
-
             $table->string('payment_terms', 100)->nullable(); // e.g. "30 days", "per trip"
 
             $table->boolean('is_active')->default(true);
             $table->text('notes')->nullable();
 
             $table->timestamps();
+
+            // ✅ ADDITION: fast lookups per company
+            $table->index(['company_id', 'name']);
         });
     }
 
