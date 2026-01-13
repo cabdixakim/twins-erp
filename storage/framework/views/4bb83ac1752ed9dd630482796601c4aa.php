@@ -13,7 +13,7 @@
 ?>
 
 <header class="sticky top-0 z-50 border-b border-slate-800/70 bg-slate-950">
-    <div class="px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+    <div class="px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between gap-3 md:gap-4">
 
         
         <div class="min-w-0 flex items-center gap-3">
@@ -26,31 +26,32 @@
                 </svg>
             </button>
 
-            <div class="min-w-0">
-                <div class="text-[13px] md:text-[15px] font-semibold tracking-tight truncate">
+            
+            <div class="min-w-0 hidden md:block">
+                <div class="text-[15px] font-semibold tracking-tight truncate">
                     <?php echo e($title); ?>
 
                 </div>
-                <div class="hidden md:block text-[11px] text-slate-400 truncate">
+                <div class="text-[11px] text-slate-400 truncate">
                     <?php echo $__env->yieldContent('subtitle'); ?>
                 </div>
             </div>
         </div>
 
         
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 md:gap-2">
 
             
             <button type="button"
                     data-popover-btn="company"
-                    class="h-9 flex items-center gap-2 pl-2 pr-2.5 rounded-2xl
+                    class="h-8 md:h-9 flex items-center gap-2 pl-2 pr-2.5 rounded-2xl
                            bg-slate-900 hover:bg-slate-800 ring-1 ring-slate-800 transition"
                     aria-label="Company menu">
                 <span class="h-6 w-6 rounded-xl grid place-items-center bg-slate-800 ring-1 ring-slate-700">
                     <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
                 </span>
 
-                <span class="text-[12px] font-semibold truncate max-w-[160px] md:max-w-[240px]">
+                <span class="text-[12px] font-semibold truncate max-w-[120px] md:max-w-[240px]">
                     <?php echo e($activeCompanyName); ?>
 
                 </span>
@@ -62,39 +63,39 @@
 
             
             <button type="button" data-popover-btn="quick"
-                    class="h-9 w-9 grid place-items-center rounded-2xl
+                    class="h-8 w-8 md:h-9 md:w-9 grid place-items-center rounded-2xl
                            bg-slate-900 hover:bg-slate-800 ring-1 ring-slate-800 transition"
                     aria-label="Quick create">
-                <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                 </svg>
             </button>
 
             <button type="button" data-popover-btn="search"
-                    class="h-9 w-9 grid place-items-center rounded-2xl
+                    class="h-8 w-8 md:h-9 md:w-9 grid place-items-center rounded-2xl
                            bg-slate-900 hover:bg-slate-800 ring-1 ring-slate-800 transition"
                     aria-label="Search">
-                <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="7"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 20l-3.5-3.5"/>
                 </svg>
             </button>
 
             <button type="button" data-popover-btn="notif"
-                    class="h-9 w-9 grid place-items-center rounded-2xl
+                    class="h-8 w-8 md:h-9 md:w-9 grid place-items-center rounded-2xl
                            bg-slate-900 hover:bg-slate-800 ring-1 ring-slate-800 transition"
                     aria-label="Notifications">
-                <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
             </button>
 
             <button type="button" data-popover-btn="profile"
-                    class="h-9 w-9 grid place-items-center rounded-2xl
+                    class="h-8 w-8 md:h-9 md:w-9 grid place-items-center rounded-2xl
                            bg-slate-900 hover:bg-slate-800 ring-1 ring-slate-800 transition"
                     aria-label="Profile">
-                <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 10-16 0"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 11a4 4 0 100-8 4 4 0 000 8z"/>
                 </svg>
@@ -104,11 +105,12 @@
 </header>
 
 
-<div id="twTopbarOverlay" class="hidden fixed inset-0 z-[60]"></div>
+<div id="twTopbarOverlay"
+     class="hidden fixed inset-0 z-[60] bg-black/0"></div>
 
 
 <div id="pop-company"
-     class="hidden fixed z-[70] w-[22rem] rounded-2xl overflow-hidden
+     class="hidden fixed z-[70] w-[22rem] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden
             bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.65)]">
     <div class="px-4 py-3 border-b border-slate-800">
         <div class="text-[11px] text-slate-400">Workspace</div>
@@ -131,7 +133,7 @@
 </div>
 
 <div id="pop-quick"
-     class="hidden fixed z-[70] w-[18rem] rounded-2xl overflow-hidden
+     class="hidden fixed z-[70] w-[18rem] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden
             bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.65)]">
     <div class="px-4 py-3 border-b border-slate-800">
         <div class="text-[13px] font-semibold">Quick create</div>
@@ -145,7 +147,7 @@
 </div>
 
 <div id="pop-search"
-     class="hidden fixed z-[70] w-[24rem] rounded-2xl overflow-hidden
+     class="hidden fixed z-[70] w-[24rem] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden
             bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.65)]">
     <div class="p-3 border-b border-slate-800">
         <input id="twTopbarSearch"
@@ -171,14 +173,15 @@
 </div>
 
 <div id="pop-notif"
-     class="hidden fixed z-[70] w-[22rem] rounded-2xl overflow-hidden
+     class="hidden fixed z-[70] w-[22rem] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden
             bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.65)]">
     <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
         <div>
             <div class="text-[13px] font-semibold">Notifications</div>
             <div class="text-[11px] text-slate-400">Later: approvals, credit, stock alerts</div>
         </div>
-        <button class="text-[11px] px-2 py-1 rounded-xl bg-slate-900 ring-1 ring-slate-800 hover:bg-slate-800 transition">
+        <button type="button"
+                class="text-[11px] px-2 py-1 rounded-xl bg-slate-900 ring-1 ring-slate-800 hover:bg-slate-800 transition">
             Mark all
         </button>
     </div>
@@ -193,7 +196,7 @@
 </div>
 
 <div id="pop-profile"
-     class="hidden fixed z-[70] w-[22rem] rounded-2xl overflow-hidden
+     class="hidden fixed z-[70] w-[22rem] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden
             bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.65)]">
     <div class="px-4 py-3 border-b border-slate-800">
         <div class="text-[11px] text-slate-400">Signed in</div>
@@ -249,19 +252,17 @@
     }
 
     function place(panelEl, btnEl){
-        // FIXED anchoring: always under the button, never “floating in page”
         const gap = 10;
         const br = btnEl.getBoundingClientRect();
 
         panelEl.style.top = (br.bottom + gap) + 'px';
 
-        // right-align to button, clamp to viewport
         const vw = window.innerWidth;
         const pw = panelEl.offsetWidth || 320;
 
         let left = br.right - pw;
-        if (left < 10) left = 10;
-        if (left + pw > vw - 10) left = vw - pw - 10;
+        if (left < 12) left = 12;
+        if (left + pw > vw - 12) left = vw - pw - 12;
 
         panelEl.style.left = left + 'px';
     }
@@ -274,14 +275,12 @@
         p.classList.remove('hidden');
         overlay?.classList.remove('hidden');
 
-        // Must place AFTER it’s visible (so offsetWidth is correct)
         requestAnimationFrame(() => {
             place(p, btn);
             if (key === 'search') document.getElementById('twTopbarSearch')?.focus();
         });
     }
 
-    // Click handlers
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-popover-btn]');
         const inside = e.target.closest('[id^="pop-"]');
@@ -305,11 +304,9 @@
         if (e.key === 'Escape') hideAll();
     });
 
-    // Reposition on resize/scroll so it never drifts
     window.addEventListener('resize', hideAll);
     window.addEventListener('scroll', hideAll, true);
 
-    // Search filter
     const input = document.getElementById('twTopbarSearch');
     const list  = document.getElementById('twTopbarSearchList');
     if (input && list) {

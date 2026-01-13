@@ -36,3 +36,11 @@ window.addEventListener('focus', twinsCleanupOverlays);
 document.addEventListener('visibilitychange', function () {
   if (!document.hidden) twinsCleanupOverlays();
 });
+
+// Backdrop blur fix on visibility change
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    document.body.classList.remove('backdrop-blur');
+    document.body.style.backdropFilter = 'none';
+  }
+});
