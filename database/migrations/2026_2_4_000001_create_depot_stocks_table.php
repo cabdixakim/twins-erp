@@ -16,22 +16,17 @@ return new class extends Migration {
             // Where the stock is
             $table->foreignId('depot_id')->constrained()->cascadeOnDelete();
 
-            /**
-             * Batch-aware inventory
-             * If you choose FIFO later, this table is already ready.
-             */
+            // Product (for filtering/reporting even though batch also implies product)
+            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+
+            // Batch-aware inventory (FIFO ready)
             $table->foreignId('batch_id')->nullable()->constrained('batches')->nullOnDelete();
 
-            /**
-             * Quantities
-             */
+            // Quantities
             $table->decimal('qty_on_hand', 18, 3)->default(0);
             $table->decimal('qty_reserved', 18, 3)->default(0);
 
-            /**
-             * Cost snapshot (FIFO ready)
-             * - unit_cost = cost for THIS batch at THIS depot (normally batch unit_cost unless adjusted)
-             */
+            // Cost snapshot
             $table->decimal('unit_cost', 18, 6)->default(0);
 
             // Audit
@@ -40,10 +35,11 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            // One row per depot + batch (or depot only if batch_id null)
-            $table->unique(['company_id', 'depot_id', 'batch_id']);
+            // One row per depot + product + batch (or batch null for non-batch stock if you ever allow)
+            $table->unique(['company_id', 'depot_id', 'product_id', 'batch_id']);
 
             $table->index(['company_id', 'depot_id']);
+            $table->index(['company_id', 'product_id']);
             $table->index(['company_id', 'batch_id']);
         });
     }

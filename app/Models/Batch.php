@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Concerns\BelongsToActiveCompany;
 
 class Batch extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToActiveCompany;
 
     protected $guarded = [];
 
@@ -48,20 +49,8 @@ class Batch extends Model
         return $this->hasMany(InventoryConsumption::class);
     }
 
-    public function scopeForCompany(Builder $q, int $companyId): Builder
+    public function product(): BelongsTo
     {
-        return $q->where('company_id', $companyId);
-    }
-
-    public function resolveRouteBinding($value, $field = null)
-    {
-        $model = parent::resolveRouteBinding($value, $field);
-        if (!$model) return null;
-
-        $user = auth()->user();
-        $activeCompanyId = (int) ($user?->active_company_id ?? 0);
-        if (!$activeCompanyId) return $model;
-
-        return ((int) $model->company_id === $activeCompanyId) ? $model : null;
+        return $this->belongsTo(Product::class);
     }
 }

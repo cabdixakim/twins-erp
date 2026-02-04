@@ -23,9 +23,10 @@
     19 => 'Illuminate\\Translation\\TranslationServiceProvider',
     20 => 'Illuminate\\Validation\\ValidationServiceProvider',
     21 => 'Illuminate\\View\\ViewServiceProvider',
-    22 => 'Carbon\\Laravel\\ServiceProvider',
-    23 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    24 => 'App\\Providers\\RouteServiceProvider',
+    22 => 'Laravel\\Tinker\\TinkerServiceProvider',
+    23 => 'Carbon\\Laravel\\ServiceProvider',
+    24 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    25 => 'App\\Providers\\RouteServiceProvider',
   ),
   'eager' => 
   array (
@@ -193,6 +194,7 @@
     'validator' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'validation.presence' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'Illuminate\\Contracts\\Validation\\UncompromisedVerifier' => 'Illuminate\\Validation\\ValidationServiceProvider',
+    'command.tinker' => 'Laravel\\Tinker\\TinkerServiceProvider',
   ),
   'when' => 
   array (
@@ -230,6 +232,9 @@
     array (
     ),
     'Illuminate\\Validation\\ValidationServiceProvider' => 
+    array (
+    ),
+    'Laravel\\Tinker\\TinkerServiceProvider' => 
     array (
     ),
   ),

@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\BelongsToActiveCompany;
 
 class InventoryConsumption extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToActiveCompany;
 
     protected $guarded = [];
 
@@ -39,20 +40,8 @@ class InventoryConsumption extends Model
         return $this->belongsTo(InventoryMovement::class, 'inventory_movement_id');
     }
 
-    public function scopeForCompany(Builder $q, int $companyId): Builder
+    public function product(): BelongsTo
     {
-        return $q->where('company_id', $companyId);
-    }
-
-    public function resolveRouteBinding($value, $field = null)
-    {
-        $model = parent::resolveRouteBinding($value, $field);
-        if (!$model) return null;
-
-        $user = auth()->user();
-        $activeCompanyId = (int) ($user?->active_company_id ?? 0);
-        if (!$activeCompanyId) return $model;
-
-        return ((int) $model->company_id === $activeCompanyId) ? $model : null;
+        return $this->belongsTo(Product::class);
     }
 }

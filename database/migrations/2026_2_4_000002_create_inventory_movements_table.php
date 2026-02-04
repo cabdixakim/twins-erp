@@ -13,19 +13,22 @@ return new class extends Migration {
             // Multi-company scope
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
 
+            // Product (always known even if batch null)
+            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+
             /**
              * Movement types
-             * - receipt: batch received into a depot (from import/offload OR local purchase in depot)
+             * - receipt: batch received into a depot (offload OR local purchase in depot)
              * - transfer: depot -> depot
              * - adjustment: manual correction (audit required)
-             * - issue: stock issued out (usually for sale)
+             * - issue: stock issued out (sale)
              */
             $table->string('type', 24); // receipt|transfer|adjustment|issue
 
             // Optional references
-            $table->string('ref_type', 40)->nullable();  // e.g. "offload", "sale", "opening_balance"
+            $table->string('ref_type', 40)->nullable();
             $table->unsignedBigInteger('ref_id')->nullable();
-            $table->string('reference', 120)->nullable(); // invoice / doc / internal ref
+            $table->string('reference', 120)->nullable();
 
             // Batch aware
             $table->foreignId('batch_id')->nullable()->constrained('batches')->nullOnDelete();
@@ -34,9 +37,9 @@ return new class extends Migration {
             $table->foreignId('from_depot_id')->nullable()->references('id')->on('depots')->nullOnDelete();
             $table->foreignId('to_depot_id')->nullable()->references('id')->on('depots')->nullOnDelete();
 
-            // Quantity & cost
+            // Quantity & cost snapshot
             $table->decimal('qty', 18, 3);
-            $table->decimal('unit_cost', 18, 6)->default(0); // snapshot for audit
+            $table->decimal('unit_cost', 18, 6)->default(0);
             $table->decimal('total_cost', 18, 2)->default(0);
 
             // Notes
@@ -48,6 +51,7 @@ return new class extends Migration {
 
             // Indexes
             $table->index(['company_id', 'type']);
+            $table->index(['company_id', 'product_id']);
             $table->index(['company_id', 'batch_id']);
             $table->index(['company_id', 'to_depot_id']);
             $table->index(['company_id', 'from_depot_id']);

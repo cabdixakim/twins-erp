@@ -13,11 +13,11 @@ return new class extends Migration {
             // Multi-company scope
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
 
+            // Product
+            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+
             /**
-             * Consumption is the “why” behind stock leaving:
-             * - sale: sold to client
-             * - loss: shrink/evap/leak etc (audit)
-             * - internal: internal usage
+             * Consumption reason
              */
             $table->string('type', 24)->default('sale'); // sale|loss|internal
 
@@ -46,6 +46,7 @@ return new class extends Migration {
 
             // Indexes
             $table->index(['company_id', 'type']);
+            $table->index(['company_id', 'product_id']);
             $table->index(['company_id', 'depot_id']);
             $table->index(['company_id', 'batch_id']);
             $table->index(['company_id', 'ref_type', 'ref_id']);

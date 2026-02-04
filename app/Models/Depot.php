@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToActiveCompany;
 
 class Depot extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToActiveCompany;
 
     protected $fillable = [
         'name',
@@ -28,5 +29,10 @@ class Depot extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
     }
 }

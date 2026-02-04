@@ -3,7 +3,7 @@
         'name' => 'twins/erp',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '13b0556bffad8db25b2e04476733a9878c7b6a65',
+        'reference' => 'c6dadeb5b5398d9bcdca57cf096f01004c1088e6',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -385,6 +385,15 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'laravel/tinker' => array(
+            'pretty_version' => 'v2.11.0',
+            'version' => '2.11.0.0',
+            'reference' => '3d34b97c9a1747a81a3fde90482c092bd8b66468',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../laravel/tinker',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
         'league/commonmark' => array(
             'pretty_version' => '2.7.1',
             'version' => '2.7.1.0',
@@ -727,6 +736,15 @@
             'provided' => array(
                 0 => '1.0|2.0|3.0',
             ),
+        ),
+        'psy/psysh' => array(
+            'pretty_version' => 'v0.12.19',
+            'version' => '0.12.19.0',
+            'reference' => 'a4f766e5c5b6773d8399711019bb7d90875a50ee',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../psy/psysh',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'ralouphie/getallheaders' => array(
             'pretty_version' => '3.0.3',
@@ -1187,7 +1205,7 @@
         'twins/erp' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '13b0556bffad8db25b2e04476733a9878c7b6a65',
+            'reference' => 'c6dadeb5b5398d9bcdca57cf096f01004c1088e6',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
