@@ -90,9 +90,9 @@
 
     
     <div class="mb-3">
-        <div class="relative max-w-[520px]">
+        <div class="relative max-w-130">
             <div class="absolute inset-y-0 left-3 grid place-items-center text-slate-500">
-                <svg class="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="7"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 20l-3.5-3.5"/>
                 </svg>
@@ -176,11 +176,11 @@
 
 
 <?php if($isOwner): ?>
-    <div id="twCreateCompanyOverlay" class="hidden fixed inset-0 z-[80] bg-black/55"></div>
+    <div id="twCreateCompanyOverlay" class="hidden fixed inset-0 z-80 bg-black/55"></div>
 
     <div id="twCreateCompanyModal"
-         class="hidden fixed z-[90] left-1/2 top-[14%] -translate-x-1/2
-                w-[92vw] max-w-[520px] rounded-2xl overflow-hidden
+         class="hidden fixed z-90 left-1/2 top-[14%] -translate-x-1/2
+                w-[92vw] max-w-130 rounded-2xl overflow-hidden
                 bg-slate-950 ring-1 ring-slate-800 shadow-[0_30px_90px_rgba(0,0,0,.70)]">
         <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
             <div>
@@ -192,7 +192,7 @@
                     id="btnCloseCreateCompany"
                     class="h-9 w-9 grid place-items-center rounded-xl bg-slate-900 ring-1 ring-slate-800 hover:bg-slate-800 transition"
                     aria-label="Close">
-                <svg class="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6l-12 12"/>
                 </svg>
             </button>
