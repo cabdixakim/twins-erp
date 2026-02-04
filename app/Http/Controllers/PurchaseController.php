@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Purchase;
 use App\Models\Batch;
-use App\Models\Supplier;
 use App\Models\Product;
+use App\Models\Purchase;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -97,11 +97,13 @@ class PurchaseController extends Controller
             'updated_by'    => $u?->id,
         ]);
 
-        return redirect()->route('purchases.show', $purchase)->with('status', 'Purchase created (draft).');
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Purchase created (draft).');
     }
 
     public function show(Purchase $purchase)
     {
+        // Route binding is already company-scoped by your trait
         return view('purchases.show', compact('purchase'));
     }
 
@@ -114,11 +116,12 @@ class PurchaseController extends Controller
         }
 
         DB::transaction(function () use ($purchase, $u) {
-
             if (!$purchase->batch_id) {
-
-                // Batch code (nice-to-have; keeps it unique per company)
+                // Friendly batch code (unique enough; you can later make per-company counter)
                 $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+
+                $qty = (float) $purchase->qty;
+                $unit = (float) $purchase->unit_price;
 
                 $batch = Batch::create([
                     'company_id'     => $purchase->company_id,
@@ -128,15 +131,14 @@ class PurchaseController extends Controller
 
                     'code'           => $code,
                     'name'           => null,
-
                     'supplier_id'    => $purchase->supplier_id,
 
-                    'qty_purchased'  => $purchase->qty,
+                    'qty_purchased'  => $qty,
                     'qty_received'   => 0,
-                    'qty_remaining'  => $purchase->qty,
+                    'qty_remaining'  => $qty,
 
-                    'total_cost'     => round($purchase->qty * $purchase->unit_price, 2),
-                    'unit_cost'      => ($purchase->qty > 0) ? ($purchase->unit_price) : 0,
+                    'total_cost'     => round($qty * $unit, 2),
+                    'unit_cost'      => $qty > 0 ? $unit : 0,
 
                     'status'         => 'active',
                     'purchased_at'   => $purchase->purchase_date ? $purchase->purchase_date->startOfDay() : now(),
@@ -153,6 +155,7 @@ class PurchaseController extends Controller
             $purchase->save();
         });
 
-        return redirect()->route('purchases.show', $purchase)->with('status', 'Purchase confirmed. Batch created.');
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', "Purchase confirmed. Batch created.");
     }
 }
