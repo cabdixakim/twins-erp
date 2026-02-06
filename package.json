@@ -12,5 +12,8 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "cropperjs": "^1.6.2"
   }
 }

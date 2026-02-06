@@ -77,7 +77,12 @@
             border-radius: 12px !important;
         }
     </style>
+
+    {{-- App bundles --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- Page-level extra CSS (e.g. Cropper CSS link, small per-page tweaks) --}}
+    @stack('styles')
 </head>
 
 <body class="bg-slate-950 text-slate-100 h-full flex overflow-hidden">
@@ -97,20 +102,21 @@
 
     $onDashboard     = request()->routeIs('dashboard');
     $onDepotStock    = request()->routeIs('depot-stock.*');
+    $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">
     @include('layouts.partials.topbar', compact(
-        'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+        'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
     ))
 
     <main class="flex-1 overflow-y-auto p-6 md:p-8">
@@ -123,8 +129,10 @@
     <div class="tip" id="twinsTooltipText"></div>
 </div>
 
+
 @include('layouts.partials.layout-scripts')
 
-
+{{-- Page-level extra JS (e.g. Cropper modal script) --}}
+@stack('scripts')
 </body>
 </html>

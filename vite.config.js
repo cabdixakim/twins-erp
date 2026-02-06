@@ -12,5 +12,15 @@ export default defineConfig({
     host: '127.0.0.1',
     strictPort: true,
     hmr: { host: '127.0.0.1' },
+
+    watch: {
+      ignored: [
+        '**/storage/**',
+        '**/bootstrap/cache/**',
+        '**/vendor/**',
+        '**/node_modules/**',
+      ],
+    },
   },
 })
+

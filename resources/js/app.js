@@ -1,3 +1,7 @@
+import Cropper from 'cropperjs';
+import 'cropperjs/dist/cropper.min.css';
+
+window.Cropper = Cropper;
 /**
  * Twins ERP — sleep / session restore fix
  * Prevents frozen overlays after monitor sleep or session timeout

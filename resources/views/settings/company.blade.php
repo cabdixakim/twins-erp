@@ -130,10 +130,18 @@
             <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr),160px] items-center">
                 <div>
                     <label class="block text-[11px] text-slate-400 mb-1">Logo</label>
-                    <input type="file" name="logo"
-                           class="w-full text-[11px] text-slate-300">
-                    <p class="mt-1 text-[10px] text-slate-500">
-                        PNG/JPG, max 2MB. Optional.
+                  <input
+  type="file"
+  name="logo"
+  accept="image/*"
+  class="block w-full text-[11px] text-slate-300
+         file:mr-3 file:rounded-xl file:border-0
+         file:bg-slate-800 file:px-3 file:py-2
+         file:text-xs file:font-semibold file:text-slate-100
+         hover:file:bg-slate-700
+         cursor-pointer"
+/>
+                       <span class="text-[11px] text-slate-400"> PNG/JPG, max 2MB. Optional.</span>
                     </p>
                     @error('logo')
                         <div class="mt-1 text-[11px] text-rose-400">{{ $message }}</div>

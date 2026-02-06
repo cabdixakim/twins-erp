@@ -77,7 +77,12 @@
             border-radius: 12px !important;
         }
     </style>
+
+    
     <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
+
+    
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 
 <body class="bg-slate-950 text-slate-100 h-full flex overflow-hidden">
@@ -97,20 +102,21 @@
 
     $onDashboard     = request()->routeIs('dashboard');
     $onDepotStock    = request()->routeIs('depot-stock.*');
+    $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
 ?>
 
 <?php echo $__env->make('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
 ), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
 <?php echo $__env->make('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
 ), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
 <div class="flex-1 min-w-0 flex flex-col">
     <?php echo $__env->make('layouts.partials.topbar', compact(
-        'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onSettingsRoute'
+        'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
     ), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <main class="flex-1 overflow-y-auto p-6 md:p-8">
@@ -123,8 +129,10 @@
     <div class="tip" id="twinsTooltipText"></div>
 </div>
 
+
 <?php echo $__env->make('layouts.partials.layout-scripts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
 
+<?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html><?php /**PATH C:\xampp\htdocs\twins-erp\resources\views/layouts/app.blade.php ENDPATH**/ ?>

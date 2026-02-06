@@ -54,4 +54,29 @@
         </div>
     </a>
 
+    {{-- PURCHASES --}}
+<a href="{{ route('purchases.index') }}"
+   class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 border
+          {{ $onPurchases
+                ? 'border-emerald-500/70 bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-cyan-500/10 text-emerald-100 shadow-md'
+                : 'border-slate-800 bg-slate-950/60 text-slate-200 hover:border-emerald-500/40 hover:bg-slate-900/90' }}">
+
+    <span class="tw-tip-r flex h-9 w-9 items-center justify-center rounded-lg
+                 {{ $onPurchases ? 'bg-emerald-500/15' : 'bg-slate-900/80 group-hover:bg-emerald-500/10' }}"
+          data-tip="Purchases" aria-label="Purchases">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17h18"/>
+        </svg>
+    </span>
+
+    <div class="min-w-0 sidebar-label">
+        <div class="text-[13px] font-semibold truncate">Purchases</div>
+        <div class="text-[11px] text-slate-400 truncate">
+            Draft → confirm → batch
+        </div>
+    </div>
+</a>
+
 </div>

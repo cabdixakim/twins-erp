@@ -24,10 +24,10 @@ class RoleController extends Controller
             ->get();
 
         // Group permissions by module for the UI
-        $permissionsByModule = Permission::orderBy('module')
+        $permissionsByModule = Permission::orderBy('group')
             ->orderBy('name')
             ->get()
-            ->groupBy('module');
+            ->groupBy('group');
 
         return view('admin.roles.index', [
             'roles'              => $roles,

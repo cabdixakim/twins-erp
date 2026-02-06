@@ -6,6 +6,7 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Depot;
 
 class CompanySwitcherController extends Controller
 {
@@ -125,6 +126,9 @@ class CompanySwitcherController extends Controller
                 'slug' => $slug,
             ]);
 
+            // Create CROSS DOCK depot
+            $this->ensureCrossDockDepot($company->id, auth()->id());
+
             if (method_exists($user, 'companies')) {
                 $user->companies()->syncWithoutDetaching([$company->id]);
             }
@@ -135,4 +139,21 @@ class CompanySwitcherController extends Controller
 
         return redirect()->route('companies.switcher')->with('status', 'Company created.');
     }
+
+
+private function ensureCrossDockDepot(int $companyId, ?int $userId = null): void
+{
+    Depot::query()->firstOrCreate(
+        [
+            'company_id' => $companyId,
+            'name'       => 'CROSS DOCK',
+        ],
+        [
+            'is_active'  => true,          // adjust if your column is `active`
+            'is_system'  => true,          // only if you added the migration
+            'created_by' => $userId,       // only if depots has created_by
+        ]
+    );
+}
+
 }

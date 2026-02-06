@@ -9,6 +9,8 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
+
 
 class PurchaseController extends Controller
 {
@@ -19,6 +21,7 @@ class PurchaseController extends Controller
 
         $purchases = Purchase::query()
             ->where('company_id', $cid)
+            ->with('creator')
             ->latest('id')
             ->paginate(20);
 
@@ -87,7 +90,7 @@ class PurchaseController extends Controller
             'type'          => $data['type'],
             'supplier_id'   => $data['supplier_id'] ?? null,
             'product_id'    => (int) $data['product_id'],
-            'purchase_date' => $data['purchase_date'] ?? null,
+            'purchase_date' => $data['purchase_date'] ?? Carbon::now(),
             'qty'           => $data['qty'],
             'unit_price'    => $data['unit_price'],
             'currency'      => $data['currency'],

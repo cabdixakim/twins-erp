@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Depot;
 
 class CompanyController extends Controller
 {
@@ -55,6 +56,9 @@ class CompanyController extends Controller
             'slug'          => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
             'base_currency' => $data['base_currency'],
         ]);
+        
+        // ✅ ADDITION: create CROSS DOCK depot
+        $this->ensureCrossDockDepot($company->id, $user->id ?? auth()->id());
 
         // ✅ ADDITION: attach membership + set active_company_id (multi-company)
         if (method_exists($user, 'companies')) {
@@ -69,4 +73,20 @@ class CompanyController extends Controller
         // 6) Go to dashboard
         return redirect()->route('dashboard');
     }
+
+    private function ensureCrossDockDepot(int $companyId, ?int $userId = null): void
+{
+    Depot::query()->firstOrCreate(
+        [
+            'company_id' => $companyId,
+            'name'       => 'CROSS DOCK',
+        ],
+        [
+            'is_active'  => true,          // adjust if your column is `active`
+            'is_system'  => true,          // only if you added the migration
+            'created_by' => $userId,       // only if depots has created_by
+        ]
+    );
+}
+
 }

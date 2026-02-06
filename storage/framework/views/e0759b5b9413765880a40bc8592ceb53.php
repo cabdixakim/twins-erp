@@ -25,7 +25,17 @@
                 <span class="sidebar-label">Depots</span>
             </a>
         <?php endif; ?>
-
+        <!-- products -->
+        <?php if($user && $user->hasPermission('products.view')): ?>
+            <a href="<?php echo e(route('products.index')); ?>"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] transition
+                      <?php echo e(request()->routeIs('settings.products.*')
+                            ? 'bg-slate-800 text-slate-50'
+                            : 'hover:bg-slate-800/80 text-slate-200'); ?>">
+                <span title="Products">📦</span>
+                <span class="sidebar-label">Products</span>
+            </a>
+        <?php endif; ?>
         
         <?php if($userRole === 'owner'): ?>
             <a href="<?php echo e(route('settings.company.edit')); ?>"

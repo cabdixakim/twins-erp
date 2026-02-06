@@ -18,6 +18,7 @@ class Depot extends Model
         'is_active',
         'notes',
         'company_id',
+        'is_system',
     ];
 
     protected $casts = [
@@ -35,4 +36,6 @@ class Depot extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+
 }

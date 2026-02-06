@@ -27,7 +27,7 @@
     
     <div class="flex-1 overflow-hidden">
         <div class="h-full overflow-y-auto px-3 py-4 space-y-4 text-sm">
-            <?php echo $__env->make('layouts.partials.nav-primary', compact('onDashboard','onDepotStock'), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php echo $__env->make('layouts.partials.nav-primary', compact('onDashboard','onDepotStock', 'onPurchases'), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php echo $__env->make('layouts.partials.nav-settings', compact('user','userRole','onSettingsRoute'), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
         </div>
     </div>

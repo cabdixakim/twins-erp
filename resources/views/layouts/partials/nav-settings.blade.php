@@ -24,7 +24,17 @@
                 <span class="sidebar-label">Depots</span>
             </a>
         @endif
-
+        <!-- products -->
+        @if($user && $user->hasPermission('products.view'))
+            <a href="{{ route('products.index') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] transition
+                      {{ request()->routeIs('settings.products.*')
+                            ? 'bg-slate-800 text-slate-50'
+                            : 'hover:bg-slate-800/80 text-slate-200' }}">
+                <span title="Products">📦</span>
+                <span class="sidebar-label">Products</span>
+            </a>
+        @endif
         {{-- Company profile --}}
         @if($userRole === 'owner')
             <a href="{{ route('settings.company.edit') }}"
