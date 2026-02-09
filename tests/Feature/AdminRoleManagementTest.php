@@ -37,6 +37,28 @@ class AdminRoleManagementTest extends TestCase
         return $user;
     }
 
+    protected function createOwnerUserWithCompany(): array
+    {
+        $company = \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
+        $ownerRole = Role::where('slug', 'owner')->firstOrFail();
+        $user = new User();
+        $user->name     = 'Owner Admin';
+        $user->email    = 'owner-admin@example.test';
+        $user->password = bcrypt('password');
+        $user->role_id  = $ownerRole->id;
+        $user->status   = 'active';
+        $user->save();
+        $company->users()->attach($user->id);
+        return compact('user', 'company');
+    }
+
     protected function createManagerRole(): Role
     {
         // you already have a manager role from the seeder, but
@@ -60,8 +82,8 @@ class AdminRoleManagementTest extends TestCase
     /** @test */
     public function admin_can_create_a_new_role(): void
     {
-        $admin = $this->createOwnerUser();
-        $this->actingAs($admin);
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
 
         $permIds = Permission::whereIn('slug', [
             'depots.view',
@@ -92,8 +114,8 @@ class AdminRoleManagementTest extends TestCase
     /** @test */
     public function admin_can_update_a_roles_permissions(): void
     {
-        $admin = $this->createOwnerUser();
-        $this->actingAs($admin);
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
 
         $role = $this->createManagerRole();
 
@@ -120,8 +142,8 @@ class AdminRoleManagementTest extends TestCase
     /** @test */
     public function permissions_can_be_cleared_by_sending_empty_array(): void
     {
-        $admin = $this->createOwnerUser();
-        $this->actingAs($admin);
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
 
         $role = $this->createManagerRole();
 

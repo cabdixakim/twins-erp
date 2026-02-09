@@ -29,6 +29,7 @@ class CompanyController extends Controller
         // 1) Validate input
         $data = $request->validate([
             'company_name'   => 'required|string|max:255',
+            'code'           => 'required|string|alpha_num|unique:companies,code|min:2|max:10',
             'base_currency'  => 'required|string|max:10',
             'owner_name'     => 'required|string|max:255',
             'owner_email'    => 'required|email|max:255|unique:users,email',
@@ -53,6 +54,7 @@ class CompanyController extends Controller
         // 4) Create company record
         $company = Company::create([
             'name'          => $data['company_name'],
+            'code'          => $data['code'],
             'slug'          => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
             'base_currency' => $data['base_currency'],
         ]);
@@ -75,18 +77,18 @@ class CompanyController extends Controller
     }
 
     private function ensureCrossDockDepot(int $companyId, ?int $userId = null): void
-{
-    Depot::query()->firstOrCreate(
-        [
-            'company_id' => $companyId,
-            'name'       => 'CROSS DOCK',
-        ],
-        [
-            'is_active'  => true,          // adjust if your column is `active`
-            'is_system'  => true,          // only if you added the migration
-            'created_by' => $userId,       // only if depots has created_by
-        ]
-    );
-}
+    {
+        Depot::query()->firstOrCreate(
+            [
+                'company_id' => $companyId,
+                'name'       => 'CROSS DOCK',
+            ],
+            [
+                'is_active'  => true,          // adjust if your column is `active`
+                'is_system'  => true,          // only if you added the migration
+                'created_by' => $userId,       // only if depots has created_by
+            ]
+        );
+    }
 
 }

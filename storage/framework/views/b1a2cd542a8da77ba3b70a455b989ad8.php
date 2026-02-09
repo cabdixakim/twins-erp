@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Twins - <?php echo $__env->yieldContent('title', config('twins.brand.name')); ?></title>
+    <title><?php echo e(config('app.name', 'Twins')); ?> - <?php echo $__env->yieldContent('title', config('twins.brand.name')); ?></title>
 
     
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
@@ -58,10 +58,11 @@
             <div class="mb-6 flex items-center justify-between">
                 <div class="min-w-0">
                     <div class="text-[12px] uppercase tracking-[0.18em] text-[color:var(--tw-muted)]">
-                        Twins ERP
+                        <?php echo e(config('app.name', 'Twins')); ?>
+
                     </div>
                     <div class="text-[18px] font-semibold tracking-tight">
-                        <?php echo $__env->yieldContent('title', 'Twins ERP'); ?>
+                        <?php echo $__env->yieldContent('title', config('app.name', 'Twins')); ?>
                     </div>
                 </div>
 
@@ -94,7 +95,7 @@
             </div>
 
             <div class="mt-6 text-[11px] text-[color:var(--tw-muted)]">
-                © <?php echo e(date('Y')); ?> <?php echo e(config('twins.brand.name')); ?>. All rights reserved.
+                © <?php echo e(date('Y')); ?> <?php echo e(config('app.name', 'Twins')); ?>. All rights reserved.
             </div>
         </div>
     </main>

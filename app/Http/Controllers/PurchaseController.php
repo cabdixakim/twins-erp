@@ -190,9 +190,16 @@ class PurchaseController extends Controller
             $purchaseDate = $data['purchase_date'] ?? Carbon::today();
             $year = Carbon::parse($purchaseDate)->format('Y');
 
+            $company = \App\Models\Company::find($cid);
+            $companyCode = $company?->code ?? '';
+
             $reference = trim((string)($data['reference'] ?? ''));
             if ($reference === '') {
-                $reference = "PO-{$year}-" . str_pad((string)$nextSeq, 5, '0', STR_PAD_LEFT);
+                if ($companyCode) {
+                    $reference = "PO-{$companyCode}-{$year}-" . str_pad((string)$nextSeq, 5, '0', STR_PAD_LEFT);
+                } else {
+                    $reference = "PO-{$year}-" . str_pad((string)$nextSeq, 5, '0', STR_PAD_LEFT);
+                }
             }
 
             // Ensure uniqueness per company (friendly error)

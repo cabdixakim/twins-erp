@@ -56,6 +56,22 @@ class AdminUserManagementTest extends TestCase
         return [$owner, $ownerRole];
     }
 
+    protected function createOwnerUserWithCompany(): array
+    {
+        $company = \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
+        $role = $this->createRole('Owner', 'owner');
+        $user = $this->createUser($role);
+        $company->users()->attach($user->id);
+        return compact('user', 'company');
+    }
+
     // ---------------------------------------------------------------------
     // Tests
     // ---------------------------------------------------------------------
@@ -63,7 +79,8 @@ class AdminUserManagementTest extends TestCase
     /** @test */
     public function owner_can_view_users_page(): void
     {
-        [$owner] = $this->actingAsOwner();
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
 
         $response = $this->get(route('admin.users.index'));
 
@@ -74,6 +91,14 @@ class AdminUserManagementTest extends TestCase
     /** @test */
     public function non_owner_cannot_access_admin_users(): void
     {
+        $company = \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
         $ownerRole = $this->createRole('Owner', 'owner');
         $staffRole = $this->createRole('Accountant', 'accountant');
 
@@ -82,6 +107,7 @@ class AdminUserManagementTest extends TestCase
             'name'  => 'Staff',
             'email' => 'staff@example.test',
         ]);
+        $company->users()->attach($user->id);
 
         $this->actingAs($user);
 
@@ -92,8 +118,9 @@ class AdminUserManagementTest extends TestCase
     /** @test */
     public function owner_can_create_user_with_manual_password(): void
     {
-        [$owner, $ownerRole] = $this->actingAsOwner();
-        $staffRole           = $this->createRole('Accountant', 'accountant');
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
+        $staffRole = $this->createRole('Accountant', 'accountant');
 
         $plainPassword = 'MegaStrong123!';
 
@@ -118,63 +145,68 @@ class AdminUserManagementTest extends TestCase
     /** @test */
     public function owner_can_deactivate_and_reactivate_a_normal_user(): void
     {
-        [$owner, $ownerRole] = $this->actingAsOwner();
-        $staffRole           = $this->createRole('Accountant', 'accountant');
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
+        $staffRole = $this->createRole('Accountant', 'accountant');
 
-        $user = $this->createUser($staffRole, [
+        $staff = $this->createUser($staffRole, [
             'name'  => 'Staff',
             'email' => 'staff@example.test',
         ]);
+        $company->users()->attach($staff->id);
 
         // Deactivate
-        $this->post(route('admin.users.toggle-status', $user));
-        $this->assertEquals('inactive', $user->fresh()->status);
+        $this->post(route('admin.users.toggle-status', $staff));
+        $this->assertEquals('inactive', $staff->fresh()->status);
 
         // Reactivate
-        $this->post(route('admin.users.toggle-status', $user));
-        $this->assertEquals('active', $user->fresh()->status);
+        $this->post(route('admin.users.toggle-status', $staff));
+        $this->assertEquals('active', $staff->fresh()->status);
     }
 
     /** @test */
     public function owner_cannot_be_deactivated_or_deleted(): void
     {
-        [$owner, $ownerRole] = $this->actingAsOwner();
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
 
         // Try to deactivate owner
-        $this->post(route('admin.users.toggle-status', $owner))
+        $this->post(route('admin.users.toggle-status', $user))
             ->assertRedirect(route('admin.users.index'));
 
-        $this->assertEquals('active', $owner->fresh()->status);
+        $this->assertEquals('active', $user->fresh()->status);
 
         // Try to delete owner
-        $this->delete(route('admin.users.destroy', $owner))
+        $this->delete(route('admin.users.destroy', $user))
             ->assertRedirect(route('admin.users.index'));
 
         $this->assertDatabaseHas('users', [
-            'id' => $owner->id,
+            'id' => $user->id,
         ]);
     }
 
     /** @test */
     public function owner_can_reset_user_password_and_plain_value_is_in_session(): void
     {
-        [$owner, $ownerRole] = $this->actingAsOwner();
-        $staffRole           = $this->createRole('Accountant', 'accountant');
+        extract($this->createOwnerUserWithCompany());
+        $this->actingAs($user);
+        $staffRole = $this->createRole('Accountant', 'accountant');
 
-        $user = $this->createUser($staffRole, [
+        $staff = $this->createUser($staffRole, [
             'name'  => 'Staff',
             'email' => 'staff@example.test',
         ]);
+        $company->users()->attach($staff->id);
 
-        $oldHash = $user->password;
+        $oldHash = $staff->password;
 
-        $response = $this->post(route('admin.users.reset-password', $user));
+        $response = $this->post(route('admin.users.reset-password', $staff));
 
         $response
             ->assertRedirect(route('admin.users.index'))
             ->assertSessionHas('generated_password')
-            ->assertSessionHas('generated_user_email', $user->email);
+            ->assertSessionHas('generated_user_email', $staff->email);
 
-        $this->assertNotEquals($oldHash, $user->fresh()->password);
+        $this->assertNotEquals($oldHash, $staff->fresh()->password);
     }
 }

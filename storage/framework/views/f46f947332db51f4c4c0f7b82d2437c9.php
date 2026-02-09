@@ -95,7 +95,7 @@
 
 <div id="transporterCreateModal"
      class="fixed inset-0 bg-black/55 hidden items-end sm:items-center justify-center p-4 z-50">
-    <div class="w-full max-w-md rounded-2xl <?php echo e($surface); ?> border <?php echo e($border); ?> p-4 shadow-[0_30px_90px_rgba(0,0,0,.45)]"
+    <div class="w-full max-w-md rounded-2xl <?php echo e($surface); ?> border <?php echo e($border); ?> p-4 max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_rgba(0,0,0,.45)]"
          onclick="event.stopPropagation()">
 
         <div class="flex items-center justify-between mb-2">

@@ -20,7 +20,7 @@
         $appName = config('app.name', 'Twins');
     ?>
 
-    <title><?php echo e($appName); ?> - <?php echo $__env->yieldContent('title','Dashboard'); ?></title>
+    <title><?php echo e(config('app.name', 'Twins')); ?> - <?php echo $__env->yieldContent('title','Dashboard'); ?></title>
 
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
 
@@ -118,9 +118,10 @@
     // Prefer active company if set, fallback to first company
     $company = null;
     if ($user?->active_company_id) {
-        $company = \App\Models\Company::find($user->active_company_id);
+        $company = \App\Models\Company::where('id', $user->active_company_id)->first();
     }
     $company = $company ?: \App\Models\Company::query()->orderBy('id')->first();
+    $companyCode = $company?->code;
 
     $canManageUsers  = in_array($userRole, ['owner','manager'], true);
 

@@ -9,6 +9,7 @@
 
   $initial = strtoupper(mb_substr($active?->name ?? '—', 0, 1));
   $count = $companies->count();
+  $activeCode = $active?->code ?? '';
 @endphp
 
 <a href="{{ route('companies.switcher') }}"
@@ -34,6 +35,9 @@
     <span class="min-w-0 flex-1 leading-tight">
         <span class="block text-[13px] font-semibold truncate text-[color:var(--tw-fg)]">
             {{ $active?->name ?? 'Select company' }}
+            @if($activeCode)
+                <span class="ml-2 text-xs text-[color:var(--tw-muted)]">[{{ $activeCode }}]</span>
+            @endif
         </span>
         <span class="block text-[11px] truncate text-[color:var(--tw-muted)]">
             {{ $count }} {{ $count === 1 ? 'company' : 'companies' }}

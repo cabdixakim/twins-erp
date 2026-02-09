@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Setup {{ config('app.name', 'Twins') }}</title>
+  <title>Setup Twins</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="h-full bg-slate-950 flex items-center justify-center px-4">
   <div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-emerald-500/10 overflow-hidden">
     <div class="grid grid-cols-1 md:grid-cols-5">
-      {{-- Left side: brand + copy --}}
+      
       <div class="hidden md:flex md:col-span-2 flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950/90 px-6 py-6 border-r border-slate-800">
         <div>
           <div class="inline-flex items-center gap-2 mb-6">
@@ -17,13 +17,13 @@
               Tw
             </div>
             <div>
-              <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name', 'Twins') }}</div>
+              <div class="text-sm font-semibold text-slate-50 tracking-wide">Twins</div>
               <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
             </div>
           </div>
 
           <h1 class="text-xl font-semibold text-slate-50 mb-2">
-            Welcome to {{ config('app.name', 'Twins') }}
+            Welcome to Twins
           </h1>
           <p class="text-xs leading-relaxed text-slate-400 mb-6">
             We’ll start by creating your <span class="text-emerald-400 font-medium">company</span> and
@@ -38,7 +38,7 @@
             </div>
             <div class="flex items-center gap-2 opacity-60">
               <span class="h-5 w-5 rounded-full border border-slate-700 flex items-center justify-center text-[10px] text-slate-500">2</span>
-              <span>Configure depots, clients &amp; transport (inside {{ config('app.name', 'Twins') }})</span>
+              <span>Configure depots, clients &amp; transport (inside Twins)</span>
             </div>
           </div>
         </div>
@@ -48,21 +48,22 @@
         </p>
       </div>
 
-      {{-- Right side: form --}}
+      
       <div class="md:col-span-3 px-5 py-6 md:px-7 md:py-7">
-        <form method="post" action="{{ route('company.store') }}" class="space-y-5">
-          @csrf
+        <form method="post" action="<?php echo e(route('company.store')); ?>" class="space-y-5">
+          <?php echo csrf_field(); ?>
 
           <div class="md:hidden mb-2">
-            <h1 class="text-lg font-semibold text-slate-50">Welcome to {{ config('app.name', 'Twins') }}</h1>
+            <h1 class="text-lg font-semibold text-slate-50">Welcome to Twins</h1>
             <p class="text-xs text-slate-400">Create your company and owner account.</p>
           </div>
 
-          @if($errors->any())
+          <?php if($errors->any()): ?>
             <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-100">
-              {{ $errors->first() }}
+              <?php echo e($errors->first()); ?>
+
             </div>
-          @endif
+          <?php endif; ?>
 
           <div class="space-y-3">
             <p class="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
@@ -72,7 +73,7 @@
               <label class="block text-xs text-slate-300 mb-1">Company name</label>
               <input
                 name="company_name"
-                value="{{ old('company_name') }}"
+                value="<?php echo e(old('company_name')); ?>"
                 class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
                 placeholder="e.g. Optima Diesel Congo SARL"
                 required
@@ -82,21 +83,35 @@
               <label class="block text-xs text-slate-300 mb-1">Company code <span class="text-rose-400">*</span></label>
               <input
                 name="code"
-                value="{{ old('code') }}"
-                class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition @error('code') border-rose-500 @enderror"
-                placeholder="Short unique code, e.g. {{ strtoupper(config('app.name', 'Twins')) }}"
+                value="<?php echo e(old('code')); ?>"
+                class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition <?php $__errorArgs = ['code'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-rose-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+                placeholder="Short unique code, e.g. TWINS"
                 required
               >
-              @error('code')
-                <div class="text-xs text-rose-400 mt-1">{{ $message }}</div>
-              @enderror
+              <?php $__errorArgs = ['code'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                <div class="text-xs text-rose-400 mt-1"><?php echo e($message); ?></div>
+              <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs text-slate-300 mb-1">Base currency</label>
                 <input
                   name="base_currency"
-                  value="{{ old('base_currency','USD') }}"
+                  value="<?php echo e(old('base_currency','USD')); ?>"
                   class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
                   placeholder="USD, EUR, CDF…"
                   required
@@ -106,7 +121,7 @@
                 <label class="block text-xs text-slate-300 mb-1">Timezone</label>
                 <input
                   name="timezone"
-                  value="{{ old('timezone','Africa/Lubumbashi') }}"
+                  value="<?php echo e(old('timezone','Africa/Lubumbashi')); ?>"
                   class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
                   placeholder="Africa/Lubumbashi"
                 >
@@ -123,7 +138,7 @@
                 <label class="block text-xs text-slate-300 mb-1">Owner name</label>
                 <input
                   name="owner_name"
-                  value="{{ old('owner_name') }}"
+                  value="<?php echo e(old('owner_name')); ?>"
                   class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
                   placeholder="Your full name"
                   required
@@ -134,7 +149,7 @@
                 <input
                   name="owner_email"
                   type="email"
-                  value="{{ old('owner_email') }}"
+                  value="<?php echo e(old('owner_email')); ?>"
                   class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
                   placeholder="you@example.com"
                   required
@@ -165,10 +180,10 @@
             <button
               class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm font-semibold text-slate-950 tracking-wide transition shadow-md shadow-emerald-500/20 active:scale-[0.99]"
             >
-              Start {{ config('app.name', 'Twins') }}
+              Start Twins
             </button>
             <p class="text-[11px] text-slate-500 text-center">
-              By continuing you confirm you’re setting up {{ config('app.name', 'Twins') }} for your own company.
+              By continuing you confirm you’re setting up Twins for your own company.
             </p>
           </div>
         </form>
@@ -176,4 +191,4 @@
     </div>
   </div>
 </body>
-</html>
+</html><?php /**PATH C:\xampp\htdocs\twins-erp\resources\views/onboarding/company_create.blade.php ENDPATH**/ ?>

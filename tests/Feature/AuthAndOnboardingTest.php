@@ -22,6 +22,28 @@ class AuthAndOnboardingTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
+    protected function createOwnerUserWithCompany(): array
+    {
+        $company = Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
+        $ownerRole = Role::where('slug', 'owner')->firstOrFail();
+        $user = User::create([
+            'name' => 'Owner User',
+            'email' => 'owner@example.com',
+            'password' => Hash::make('password'),
+            'role_id' => $ownerRole->id,
+            'status' => 'active',
+        ]);
+        $company->users()->attach($user->id);
+        return compact('user', 'company');
+    }
+
     /** @test */
     public function guest_is_redirected_to_login_when_visiting_dashboard(): void
     {
@@ -34,8 +56,16 @@ class AuthAndOnboardingTest extends TestCase
     /** @test */
     public function login_page_is_accessible_for_guests(): void
     {
+        // Ensure a company exists so the login page is accessible
+        \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
         $response = $this->get('/login');
-
         $response->assertStatus(200);
         $response->assertSee('Sign in to Twins');
     }
@@ -43,22 +73,12 @@ class AuthAndOnboardingTest extends TestCase
     /** @test */
     public function user_with_valid_credentials_can_log_in(): void
     {
-        // Get owner role (your seeder already inserts this)
-        $ownerRoleId = Role::where('slug', 'owner')->value('id');
-
-        // Create a user with a known password
-        $user = User::create([
-            'name'     => 'Test Owner',
-            'email'    => 'owner@example.test',
-            'password' => Hash::make('secret123'),
-            'role_id'  => $ownerRoleId,
-            'status'   => 'active',
-        ]);
+        extract($this->createOwnerUserWithCompany());
 
         // Hit the login endpoint
         $response = $this->post('/login', [
-            'email'    => 'owner@example.test',
-            'password' => 'secret123',
+            'email'    => 'owner@example.com',
+            'password' => 'password',
         ]);
 
         $response->assertStatus(302);
@@ -69,18 +89,10 @@ class AuthAndOnboardingTest extends TestCase
     /** @test */
     public function login_with_invalid_credentials_fails(): void
     {
-        $ownerRoleId = Role::where('slug', 'owner')->value('id');
-
-        User::create([
-            'name'     => 'Test Owner',
-            'email'    => 'owner@example.test',
-            'password' => Hash::make('secret123'),
-            'role_id'  => $ownerRoleId,
-            'status'   => 'active',
-        ]);
+        extract($this->createOwnerUserWithCompany());
 
         $response = $this->from('/login')->post('/login', [
-            'email'    => 'owner@example.test',
+            'email'    => 'owner@example.com',
             'password' => 'wrong-password',
         ]);
 
@@ -98,6 +110,7 @@ class AuthAndOnboardingTest extends TestCase
 
         $payload = [
             'company_name'   => 'Twins Logistics',
+            'code'          => 'TWINS',
             'base_currency'  => 'USD',
             'owner_name'     => 'Zak Owner',
             'owner_email'    => 'zak.owner@example.test',

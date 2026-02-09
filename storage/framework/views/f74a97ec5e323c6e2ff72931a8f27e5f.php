@@ -142,6 +142,9 @@
                                     <div class="tw-company-name text-[13px] font-semibold truncate <?php echo e($fg); ?>">
                                         <?php echo e($c->name); ?>
 
+                                        <?php if($c->code): ?>
+                                            <span class="ml-2 text-xs <?php echo e($muted); ?>">[<?php echo e($c->code); ?>]</span>
+                                        <?php endif; ?>
                                     </div>
 
                                         <?php if($isActive): ?>
@@ -242,12 +245,46 @@
 
                     <div>
                         <label class="block text-[11px] <?php echo e($muted); ?> mb-1">Company name</label>
-                        <input name="name" required
+                        <input name="name"
                                class="w-full h-10 px-3 rounded-2xl text-[13px]
-                                      bg-[color:var(--tw-bg)] border border-[color:var(--tw-border)]
-                                      text-[color:var(--tw-fg)] placeholder:text-[color:var(--tw-muted)]
-                                      focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent-soft)]"
-                               placeholder="e.g. Twins Lubumbashi">
+                                      bg-[--tw-bg] border <?php echo e($errors->has('name') ? 'border-rose-500 ring-2 ring-rose-400' : 'border-[--tw-border]'); ?>
+
+                                      text-[--tw-fg] placeholder:text-[--tw-muted]
+                                      focus:outline-none focus:ring-2 focus:ring-[--tw-accent-soft]"
+                               placeholder="e.g. Twins Lubumbashi"
+                               value="<?php echo e(old('name')); ?>">
+                        <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                            <div class="mt-1 text-[11px] text-rose-600"><?php echo e($message); ?></div>
+                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] <?php echo e($muted); ?> mb-1">Company code</label>
+                        <input name="code"
+                               class="w-full h-10 px-3 rounded-2xl text-[13px]
+                                      bg-[--tw-bg] border <?php echo e($errors->has('code') ? 'border-rose-500 ring-2 ring-rose-400' : 'border-[--tw-border]'); ?>
+
+                                      text-[--tw-fg] placeholder:text-[--tw-muted]
+                                      focus:outline-none focus:ring-2 focus:ring-[--tw-accent-soft]"
+                               placeholder="Unique code (e.g. TWINS-LUB)"
+                               value="<?php echo e(old('code')); ?>">
+                        <?php $__errorArgs = ['code'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                            <div class="mt-1 text-[11px] text-rose-600"><?php echo e($message); ?></div>
+                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -364,6 +401,22 @@
     });
 })();
 </script>
+
+<?php if($errors->any()): ?>
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('twCreateCompanyOverlay');
+    const modal   = document.getElementById('twCreateCompanyModal');
+    if (overlay && modal) {
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 40);
+    }
+});
+</script>
+<?php endif; ?>
 <?php $__env->stopSection(); ?>
 
 

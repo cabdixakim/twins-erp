@@ -108,6 +108,7 @@ class CompanySwitcherController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            'code' => ['required', 'string', 'alpha_num', 'min:2', 'max:10', 'unique:companies,code'],
         ]);
 
         DB::transaction(function () use ($user, $data) {
@@ -124,6 +125,7 @@ class CompanySwitcherController extends Controller
             $company = Company::create([
                 'name' => $data['name'],
                 'slug' => $slug,
+                'code' => $data['code'],
             ]);
 
             // Create CROSS DOCK depot

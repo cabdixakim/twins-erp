@@ -44,6 +44,7 @@
   "minimum-stability": "stable",
 
   "require-dev": {
+    "fakerphp/faker": "^1.24",
     "laravel/tinker": "^2.11",
     "mockery/mockery": "^1.6",
     "phpunit/phpunit": "10.5"

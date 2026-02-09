@@ -46,13 +46,13 @@ class Purchase extends Model
     }
 
     public function getDisplayRefAttribute(): string
-{
-    if (!empty($this->reference)) return $this->reference;
-
-    $year = $this->purchase_date?->format('Y') ?? $this->created_at?->format('Y') ?? now()->format('Y');
-    $seq  = $this->sequence_no ?: $this->id;
-
-    return "PO-{$year}-" . str_pad((string)$seq, 5, '0', STR_PAD_LEFT);
-}
-
+    {
+        $companyCode = $this->company?->code ?? '';
+        $year = $this->purchase_date ? $this->purchase_date->format('Y') : now()->format('Y');
+        $seq = $this->sequence_no ? str_pad((string)$this->sequence_no, 5, '0', STR_PAD_LEFT) : $this->id;
+        if ($companyCode) {
+            return "PO-{$companyCode}-{$year}-{$seq}";
+        }
+        return $this->reference ?? $this->id;
+    }
 }

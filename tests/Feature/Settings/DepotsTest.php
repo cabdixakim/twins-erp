@@ -34,10 +34,37 @@ class DepotsTest extends TestCase
         ]);
     }
 
+    protected function createCompany(): \App\Models\Company
+    {
+        return \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
+    }
+
+    protected function createOwnerUserWithCompany(): array
+    {
+        $company = $this->createCompany();
+        $ownerRole = \App\Models\Role::where('slug', 'owner')->firstOrFail();
+        $user = \App\Models\User::create([
+            'name'      => 'Owner User',
+            'email'     => 'owner@example.com',
+            'password'  => bcrypt('password'),
+            'role_id'   => $ownerRole->id,
+            'is_active' => true,
+        ]);
+        $company->users()->attach($user->id);
+        return compact('user', 'company');
+    }
+
     /** @test */
     public function owner_can_view_depots_page(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
 
         $response = $this
             ->actingAs($user)
@@ -50,7 +77,7 @@ class DepotsTest extends TestCase
     /** @test */
     public function owner_can_create_depot(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
 
         $payload = [
             'name'                   => 'Main Depot',
@@ -60,6 +87,7 @@ class DepotsTest extends TestCase
             'default_shrinkage_pct'  => 0.300,
             'is_active'              => 1,
             'notes'                  => 'Test depot',
+            'company_id'             => $company->id,
         ];
 
         $response = $this
@@ -77,7 +105,7 @@ class DepotsTest extends TestCase
     /** @test */
     public function owner_can_update_depot(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
 
         $depot = Depot::create([
             'name'                   => 'Old Name',
@@ -87,6 +115,7 @@ class DepotsTest extends TestCase
             'default_shrinkage_pct'  => 0.200,
             'is_active'              => true,
             'notes'                  => null,
+            'company_id'             => $company->id,
         ]);
 
         $payload = [
@@ -118,7 +147,7 @@ class DepotsTest extends TestCase
     /** @test */
     public function owner_can_toggle_depot_active_state(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
 
         $depot = Depot::create([
             'name'                   => 'Toggle Depot',
@@ -128,6 +157,7 @@ class DepotsTest extends TestCase
             'default_shrinkage_pct'  => 0.300,
             'is_active'              => true,
             'notes'                  => null,
+            'company_id'             => $company->id,
         ]);
 
         $response = $this

@@ -140,6 +140,9 @@
                                 <div class="flex items-center gap-2 min-w-0">
                                     <div class="tw-company-name text-[13px] font-semibold truncate {{ $fg }}">
                                         {{ $c->name }}
+                                        @if($c->code)
+                                            <span class="ml-2 text-xs {{ $muted }}">[{{ $c->code }}]</span>
+                                        @endif
                                     </div>
 
                                         @if($isActive)
@@ -240,12 +243,30 @@
 
                     <div>
                         <label class="block text-[11px] {{ $muted }} mb-1">Company name</label>
-                        <input name="name" required
+                        <input name="name"
                                class="w-full h-10 px-3 rounded-2xl text-[13px]
-                                      bg-[color:var(--tw-bg)] border border-[color:var(--tw-border)]
-                                      text-[color:var(--tw-fg)] placeholder:text-[color:var(--tw-muted)]
-                                      focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent-soft)]"
-                               placeholder="e.g. Twins Lubumbashi">
+                                      bg-[--tw-bg] border {{ $errors->has('name') ? 'border-rose-500 ring-2 ring-rose-400' : 'border-[--tw-border]'}}
+                                      text-[--tw-fg] placeholder:text-[--tw-muted]
+                                      focus:outline-none focus:ring-2 focus:ring-[--tw-accent-soft]"
+                               placeholder="e.g. Twins Lubumbashi"
+                               value="{{ old('name') }}">
+                        @error('name')
+                            <div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] {{ $muted }} mb-1">Company code</label>
+                        <input name="code"
+                               class="w-full h-10 px-3 rounded-2xl text-[13px]
+                                      bg-[--tw-bg] border {{ $errors->has('code') ? 'border-rose-500 ring-2 ring-rose-400' : 'border-[--tw-border]'}}
+                                      text-[--tw-fg] placeholder:text-[--tw-muted]
+                                      focus:outline-none focus:ring-2 focus:ring-[--tw-accent-soft]"
+                               placeholder="Unique code (e.g. TWINS-LUB)"
+                               value="{{ old('code') }}">
+                        @error('code')
+                            <div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -362,5 +383,21 @@
     });
 })();
 </script>
+
+@if ($errors->any())
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('twCreateCompanyOverlay');
+    const modal   = document.getElementById('twCreateCompanyModal');
+    if (overlay && modal) {
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => modal.querySelector('input[name="name"]')?.focus(), 40);
+    }
+});
+</script>
+@endif
 @endsection
 

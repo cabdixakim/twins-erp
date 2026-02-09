@@ -2,12 +2,17 @@
     $u = $user ?? auth()->user();
 
     $activeCompanyName = null;
+    $activeCompanyCode = null;
     if ($u && method_exists($u, 'companies')) {
         $activeCompanyName = $u->companies()
             ->whereKey($u->active_company_id)
             ->value('name');
+        $activeCompanyCode = $u->companies()
+            ->whereKey($u->active_company_id)
+            ->value('code');
     }
     $activeCompanyName = $activeCompanyName ?: ($company->name ?? 'Company');
+    $activeCompanyCode = $activeCompanyCode ?: ($company->code ?? '');
 
     $title = trim(view()->yieldContent('title', 'Dashboard'));
 
@@ -139,7 +144,12 @@
 <div id="pop-company" class="{{ $popover }}">
     <div class="px-4 py-3 border-b border-[color:var(--tw-border)]">
         <div class="text-[11px] tw-muted">Workspace</div>
-        <div class="text-[13px] font-semibold truncate">{{ $activeCompanyName }}</div>
+        <div class="text-[13px] font-semibold truncate text-[color:var(--tw-fg)]">
+            {{ $activeCompanyName }}
+            @if($activeCompanyCode)
+                <span class="ml-2 text-xs text-[color:var(--tw-muted)]">[{{ $activeCompanyCode }}]</span>
+            @endif
+        </div>
     </div>
     <div class="p-2">
         <a href="{{ route('companies.switcher') }}" class="flex items-center gap-3 {{ $popItem }}">

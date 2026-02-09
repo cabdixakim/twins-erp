@@ -12,27 +12,42 @@ class TransportersTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function createOwnerUser(): User
+    protected function createOwnerUserWithCompany(): array
     {
-        $role = Role::create([
+        $company = $this->createCompany();
+        $role = \App\Models\Role::firstOrCreate([
+            'slug' => 'owner',
+        ], [
             'name'        => 'Owner',
-            'slug'        => 'owner',
             'description' => 'Full access',
             'is_system'   => true,
         ]);
-
-        return User::create([
+        $user = \App\Models\User::create([
             'name'     => 'Owner User',
             'email'    => 'owner@example.com',
             'password' => bcrypt('password'),
             'status'   => 'active',
             'role_id'  => $role->id,
         ]);
+        $company->users()->attach($user->id);
+        return compact('user', 'company');
+    }
+
+    protected function createCompany(): \App\Models\Company
+    {
+        return \App\Models\Company::create([
+            'name' => 'Test Company',
+            'code' => 'TST',
+            'slug' => 'test-company',
+            'base_currency' => 'USD',
+            'country' => 'US',
+            'timezone' => 'UTC',
+        ]);
     }
 
     public function test_owner_can_view_transporters_index(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
         $this->actingAs($user);
 
         $response = $this->get(route('settings.transporters.index'));
@@ -43,7 +58,7 @@ class TransportersTest extends TestCase
 
     public function test_owner_can_create_transporter(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
         $this->actingAs($user);
 
         $response = $this->post(route('settings.transporters.store'), [
@@ -55,6 +70,7 @@ class TransportersTest extends TestCase
             'default_rate_per_1000_l'=> 45.1234,
             'payment_terms'          => '30 days',
             'is_active'              => true,
+            'company_id'             => $company->id,
         ]);
 
         $response->assertRedirect();
@@ -67,7 +83,7 @@ class TransportersTest extends TestCase
 
     public function test_owner_can_toggle_transporter_active(): void
     {
-        $user = $this->createOwnerUser();
+        extract($this->createOwnerUserWithCompany());
         $this->actingAs($user);
 
         $t = Transporter::create([
@@ -76,6 +92,7 @@ class TransportersTest extends TestCase
             'default_currency'       => 'USD',
             'default_rate_per_1000_l'=> 10,
             'is_active'              => true,
+            'company_id'             => $company->id,
         ]);
 
         $this->patch(route('settings.transporters.toggle-active', $t))

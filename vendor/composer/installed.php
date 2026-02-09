@@ -3,7 +3,7 @@
         'name' => 'twins/erp',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'c6dadeb5b5398d9bcdca57cf096f01004c1088e6',
+        'reference' => '5f068a61199bb92af349f9cc45915f031d7121de',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -84,6 +84,15 @@
             'install_path' => __DIR__ . '/../egulias/email-validator',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'fakerphp/faker' => array(
+            'pretty_version' => 'v1.24.1',
+            'version' => '1.24.1.0',
+            'reference' => 'e0ee18eb1e6dc3cda3ce9fd97e5a0689a88a64b5',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../fakerphp/faker',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'fruitcake/php-cors' => array(
             'pretty_version' => 'v1.3.0',
@@ -1205,7 +1214,7 @@
         'twins/erp' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'c6dadeb5b5398d9bcdca57cf096f01004c1088e6',
+            'reference' => '5f068a61199bb92af349f9cc45915f031d7121de',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

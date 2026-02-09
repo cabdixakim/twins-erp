@@ -203,7 +203,7 @@ unset($__defined_vars); ?>
 
 <div id="transporterEditModal"
      class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/55">
-    <div class="w-full max-w-md rounded-2xl <?php echo e($bg); ?> border <?php echo e($border); ?> p-4 m-3 shadow-[0_30px_90px_rgba(0,0,0,.60)]"
+    <div class="w-full max-w-md rounded-2xl <?php echo e($bg); ?> border <?php echo e($border); ?> p-4 m-3 max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_rgba(0,0,0,.60)]"
          onclick="event.stopPropagation()">
 
         <div class="flex items-center justify-between mb-2">

@@ -23,7 +23,7 @@
             <div class="min-w-0 sidebar-label">
                 <div class="font-semibold text-[12px] uppercase tracking-[0.12em] truncate"
                      style="color: var(--tw-fg);">
-                    <?php echo e($company->name ?? 'Twins ERP'); ?>
+                    <?php echo e($company->name ?? config('app.name', 'Twins ERP')); ?>
 
                 </div>
                 <div class="text-[11px] truncate"

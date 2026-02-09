@@ -27,6 +27,7 @@ class CompanySettingsController extends Controller
 
         $data = $request->validate([
             'name'          => ['required', 'string', 'max:255'],
+            'code'          => ['required', 'string', 'alpha_num', 'min:2', 'max:10', 'unique:companies,code,' . $company->id],
             'base_currency' => ['nullable', 'string', 'max:10'],
             'country'       => ['nullable', 'string', 'max:255'],
             'timezone'      => ['nullable', 'string', 'max:255'],
