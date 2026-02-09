@@ -7,132 +7,199 @@
 @php
     $authUser      = auth()->user();
     $authRoleName  = $authUser?->role?->name;
-    // Treat these role names as "admin-level". Adjust to fit your roles table.
     $isAdmin       = in_array($authRoleName, ['Admin', 'Owner']);
+
+    // Theme tokens (premium + theme aware)
+    $border   = 'border-[color:var(--tw-border)]';
+    $surface  = 'bg-[color:var(--tw-surface)]';
+    $surface2 = 'bg-[color:var(--tw-surface-2)]';
+    $bg       = 'bg-[color:var(--tw-bg)]';
+
+    $fg       = 'text-[color:var(--tw-fg)]';
+    $muted    = 'text-[color:var(--tw-muted)]';
+
+    $btnGhost   = "inline-flex items-center justify-center cursor-pointer rounded-xl border $border bg-[color:var(--tw-btn)] $fg hover:bg-[color:var(--tw-btn-hover)] transition font-semibold";
+    $btnPrimary = "inline-flex items-center justify-center cursor-pointer rounded-xl border border-emerald-500/50 bg-emerald-600 text-white hover:bg-emerald-500 transition font-semibold";
+    $btnDanger  = "inline-flex items-center justify-center cursor-pointer rounded-xl border border-rose-500/50 bg-rose-600 text-white hover:bg-rose-500 transition font-semibold";
+    $btnInfo    = "inline-flex items-center justify-center cursor-pointer rounded-xl border border-sky-500/40 bg-sky-600 text-white hover:bg-sky-500 transition font-semibold";
+
+    $label = "block text-[11px] $muted mb-1";
+    $input = "w-full rounded-xl border $border $bg px-3 py-2 text-sm $fg placeholder:opacity-70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30";
 @endphp
 
 <div class="max-w-6xl mx-auto space-y-6">
 
     {{-- Flash message --}}
     @if (session('status'))
-        <div class="rounded-lg border border-emerald-500/70 bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100">
+        <div class="rounded-2xl border border-emerald-500/35 bg-emerald-600 text-white px-4 py-3 text-[12px] font-semibold">
             {{ session('status') }}
         </div>
     @endif
 
-    <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-slate-200">Team members</h2>
-        @if($isAdmin)
-            <button
-                class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950"
-                onclick="openCreateUserModal()">
-                + New user
-            </button>
-        @endif
+    <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+            <h2 class="text-sm font-semibold {{ $fg }}">Team members</h2>
+            <p class="text-[11px] {{ $muted }}">Manage sign-in, roles, and security actions.</p>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="hidden sm:flex items-center text-[11px] {{ $muted }} rounded-xl px-2.5 py-1 border {{ $border }} {{ $surface }}">
+                <span class="{{ $fg }} font-semibold">{{ $users->count() }}</span>
+                <span class="ml-1">total</span>
+            </div>
+
+            @if($isAdmin)
+                <button type="button"
+                        class="{{ $btnPrimary }} h-9 px-3 text-[12px]"
+                        onclick="openCreateUserModal()">
+                    + New user
+                </button>
+            @endif
+        </div>
     </div>
 
     {{-- DESKTOP TABLE --}}
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/70 overflow-hidden hidden md:block">
-        <table class="min-w-full text-xs">
-            <thead class="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase tracking-wide">
-                <tr>
-                    <th class="px-3 py-2 text-left w-1/4">Name</th>
-                    <th class="px-3 py-2 text-left w-1/4">Email</th>
-                    <th class="px-3 py-2 text-left w-1/6">Role</th>
-                    <th class="px-3 py-2 text-left w-1/12">Status</th>
-                    <th class="px-3 py-2 text-right w-1/3">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($users as $user)
-                    @php
-                        // Protect the seeded owner account – adjust logic if you mark owner differently
-                        $isOwnerAccount = $user->id === 1;
-                    @endphp
-                    <tr class="border-b border-slate-800/60 hover:bg-slate-900/80">
-                        <td class="px-3 py-2 text-slate-100">{{ $user->name }}</td>
-                        <td class="px-3 py-2 text-slate-300">{{ $user->email }}</td>
-                        <td class="px-3 py-2 text-slate-300">{{ $user->role?->name ?? '—' }}</td>
-                        <td class="px-3 py-2 text-[11px]">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
-                                {{ $user->status === 'active'
-                                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/40'
-                                    : 'bg-slate-700/40 text-slate-300 border border-slate-600/50' }}">
-                                {{ ucfirst($user->status) }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-2 text-right">
-                            @if($isAdmin)
-                                <div class="inline-flex flex-wrap items-center justify-end gap-1">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden hidden md:block">
+        <div class="px-4 py-3 border-b {{ $border }} flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Users</div>
+            <div class="text-[11px] {{ $muted }}">{{ $users->count() }} total</div>
+        </div>
 
-                                    {{-- Edit – allowed even for owner --}}
-                                    <button
-                                        class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-100"
-                                        onclick="openEditUserModal({{
-                                            json_encode([
-                                                'id'     => $user->id,
-                                                'name'   => $user->name,
-                                                'email'  => $user->email,
-                                                'role_id'=> $user->role_id,
-                                                'status' => $user->status,
-                                            ])
-                                        }})">
-                                        Edit
-                                    </button>
-
-                                    {{-- Reset password – allowed even for owner --}}
-                                    <button
-                                        class="px-2 py-1 rounded-lg bg-sky-500/20 text-sky-200 hover:bg-sky-500/30 text-[11px]"
-                                        onclick="openResetPasswordModal({{
-                                            json_encode([
-                                                'id'   => $user->id,
-                                                'name' => $user->name,
-                                            ])
-                                        }})">
-                                        Reset
-                                    </button>
-
-                                    {{-- Activate / Deactivate – NOT allowed on owner --}}
-                                    @if(!$isOwnerAccount)
-                                        <form method="post" action="{{ route('admin.users.toggle-status', $user) }}" class="inline">
-                                            @csrf
-                                            <button class="px-2 py-1 rounded-lg text-[11px]
-                                                {{ $user->status === 'active'
-                                                    ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
-                                                    : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30' }}">
-                                                {{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    {{-- Delete – NOT allowed on owner --}}
-                                    @if(!$isOwnerAccount)
-                                        <button
-                                            class="px-2 py-1 rounded-lg bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 text-[11px]"
-                                            onclick="openDeleteUserModal({{
-                                                json_encode([
-                                                    'id'   => $user->id,
-                                                    'name' => $user->name,
-                                                ])
-                                            }})">
-                                            Delete
-                                        </button>
-                                    @endif
-                                </div>
-                            @else
-                                <span class="text-[11px] text-slate-500 italic">No permission</span>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead class="{{ $surface2 }} border-b {{ $border }} {{ $muted }} uppercase tracking-wide">
                     <tr>
-                        <td colspan="5" class="px-3 py-4 text-center text-slate-500">
-                            No users yet.
-                        </td>
+                        <th class="px-4 py-2.5 text-left w-[28%] font-semibold">User</th>
+                        <th class="px-4 py-2.5 text-left w-[26%] font-semibold">Email</th>
+                        <th class="px-4 py-2.5 text-left w-[16%] font-semibold">Role</th>
+                        <th class="px-4 py-2.5 text-left w-[12%] font-semibold">Status</th>
+                        <th class="px-4 py-2.5 text-right w-[18%] font-semibold">Actions</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+
+                <tbody class="divide-y divide-[color:var(--tw-border)]">
+                    @forelse($users as $user)
+                        @php
+                            $isOwnerAccount = $user->id === 1;
+                            $isActive = ($user->status === 'active');
+                            $initials = collect(explode(' ', trim($user->name ?? 'U')))
+                                ->filter()
+                                ->map(fn($p) => mb_strtoupper(mb_substr($p,0,1)))
+                                ->take(2)
+                                ->join('');
+                        @endphp
+
+                        <tr class="hover:bg-[color:var(--tw-btn-hover)] transition">
+                            {{-- USER --}}
+                            <td class="px-4 py-3 {{ $fg }}">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="h-9 w-9 rounded-2xl border {{ $border }} {{ $surface2 }} grid place-items-center shrink-0">
+                                        <span class="text-[12px] font-extrabold tracking-tight {{ $fg }}">{{ $initials }}</span>
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="font-semibold text-[13px] truncate">{{ $user->name }}</span>
+
+                                            @if($isOwnerAccount)
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full border {{ $border }} {{ $surface2 }} {{ $muted }}">
+                                                    owner
+                                                </span>
+                                            @endif
+
+                                            <span class="h-2 w-2 rounded-full {{ $isActive ? 'bg-emerald-400' : 'bg-[color:var(--tw-border)]' }} shrink-0"></span>
+                                        </div>
+
+                                        <div class="text-[11px] {{ $muted }} truncate">
+                                            {{ $user->role?->name ?? 'No role' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {{-- EMAIL --}}
+                            <td class="px-4 py-3 {{ $muted }}">
+                                <span class="text-[12px]">{{ $user->email }}</span>
+                            </td>
+
+                            {{-- ROLE --}}
+                            <td class="px-4 py-3 {{ $fg }}">
+                                <span class="text-[12px]">{{ $user->role?->name ?? '—' }}</span>
+                            </td>
+
+                            {{-- STATUS --}}
+                            <td class="px-4 py-3">
+                                @if($isActive)
+                                    <span class="inline-flex items-center text-[11px] font-semibold text-white bg-emerald-600 border border-emerald-500/50 px-2 py-0.5 rounded-lg">
+                                        Active
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center text-[11px] font-semibold {{ $fg }} border {{ $border }} {{ $surface2 }} px-2 py-0.5 rounded-lg">
+                                        Inactive
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- ACTIONS --}}
+                            <td class="px-4 py-3 text-right">
+                                @if($isAdmin)
+                                    <div class="inline-flex items-center justify-end gap-2 whitespace-nowrap">
+
+                                        {{-- Edit --}}
+                                        <button type="button"
+                                                class="btnEditUser {{ $btnGhost }} h-8 px-3 text-[11px] active:scale-[.98]"
+                                                data-id="{{ $user->id }}"
+                                                data-name="{{ e($user->name) }}"
+                                                data-email="{{ e($user->email) }}"
+                                                data-role-id="{{ $user->role_id ?? '' }}"
+                                                data-status="{{ $user->status ?? 'active' }}">
+                                            Edit
+                                        </button>
+
+                                        {{-- Reset --}}
+                                        <button type="button"
+                                                class="btnResetUser {{ $btnInfo }} h-8 px-3 text-[11px] active:scale-[.98]"
+                                                data-id="{{ $user->id }}"
+                                                data-name="{{ e($user->name) }}">
+                                            Reset
+                                        </button>
+
+                                        @if(!$isOwnerAccount)
+                                            {{-- Activate / Deactivate --}}
+                                            <form method="post"
+                                                  action="{{ route('admin.users.toggle-status', $user) }}"
+                                                  class="inline-block m-0 p-0">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="{{ $isActive ? $btnDanger : $btnPrimary }} h-8 px-3 text-[11px] active:scale-[.98]">
+                                                    {{ $isActive ? 'Deactivate' : 'Activate' }}
+                                                </button>
+                                            </form>
+
+                                            {{-- Delete --}}
+                                            <button type="button"
+                                                    class="btnDeleteUser {{ $btnDanger }} h-8 px-3 text-[11px] active:scale-[.98]"
+                                                    data-id="{{ $user->id }}"
+                                                    data-name="{{ e($user->name) }}">
+                                                Delete
+                                            </button>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-[11px] {{ $muted }} italic">No permission</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-10 text-center {{ $muted }}">
+                                No users yet.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {{-- MOBILE LIST --}}
@@ -140,85 +207,90 @@
         @forelse($users as $user)
             @php
                 $isOwnerAccount = $user->id === 1;
+                $isActive = ($user->status === 'active');
+                $initials = collect(explode(' ', trim($user->name ?? 'U')))
+                    ->filter()
+                    ->map(fn($p) => mb_strtoupper(mb_substr($p,0,1)))
+                    ->take(2)
+                    ->join('');
             @endphp
-            <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-3 space-y-2">
-                <div class="flex items-center justify-between gap-2">
-                    <div>
-                        <div class="text-sm text-slate-100 font-medium">{{ $user->name }}</div>
-                        <div class="text-[11px] text-slate-400">{{ $user->email }}</div>
+
+            <div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 space-y-2">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="h-10 w-10 rounded-2xl border {{ $border }} {{ $surface2 }} grid place-items-center shrink-0">
+                            <span class="text-[12px] font-extrabold tracking-tight {{ $fg }}">{{ $initials }}</span>
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <div class="text-[13px] {{ $fg }} font-semibold truncate">{{ $user->name }}</div>
+                                @if($isOwnerAccount)
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full border {{ $border }} {{ $surface2 }} {{ $muted }}">owner</span>
+                                @endif
+                                <span class="h-2 w-2 rounded-full {{ $isActive ? 'bg-emerald-400' : 'bg-[color:var(--tw-border)]' }}"></span>
+                            </div>
+                            <div class="text-[11px] {{ $muted }} truncate">{{ $user->email }}</div>
+                        </div>
                     </div>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
-                        {{ $user->status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-slate-700/40 text-slate-300 border border-slate-600/50' }}">
+
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0
+                        {{ $isActive ? 'bg-emerald-600 text-white border border-emerald-500/50' : 'border '.$border.' '.$surface2.' '.$fg }}">
                         {{ $user->role?->name ?? 'No role' }}
                     </span>
                 </div>
 
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] {{ $muted }}">
+                        Status:
+                        <span class="font-semibold {{ $fg }}">{{ ucfirst($user->status) }}</span>
+                    </span>
+                </div>
+
                 @if($isAdmin)
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        {{-- Edit – allowed even for owner --}}
-                        <button
-                            class="flex-1 min-w-[45%] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-100"
-                            onclick="openEditUserModal({{
-                                json_encode([
-                                    'id'     => $user->id,
-                                    'name'   => $user->name,
-                                    'email'  => $user->email,
-                                    'role_id'=> $user->role_id,
-                                    'status' => $user->status,
-                                ])
-                            }})">
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button"
+                                class="btnEditUser {{ $btnGhost }} h-9 px-3 text-[12px]"
+                                data-id="{{ $user->id }}"
+                                data-name="{{ e($user->name) }}"
+                                data-email="{{ e($user->email) }}"
+                                data-role-id="{{ $user->role_id ?? '' }}"
+                                data-status="{{ $user->status ?? 'active' }}">
                             Edit
                         </button>
 
-                        {{-- Reset – allowed even for owner --}}
-                        <button
-                            class="flex-1 min-w-[45%] px-2 py-1 rounded-lg bg-sky-500/20 text-sky-200 hover:bg-sky-500/30 text-[11px]"
-                            onclick="openResetPasswordModal({{
-                                json_encode([
-                                    'id'   => $user->id,
-                                    'name' => $user->name,
-                                ])
-                            }})">
-                            Reset password
+                        <button type="button"
+                                class="btnResetUser {{ $btnInfo }} h-9 px-3 text-[12px]"
+                                data-id="{{ $user->id }}"
+                                data-name="{{ e($user->name) }}">
+                            Reset
                         </button>
 
-                        {{-- Status toggle – NOT allowed on owner --}}
                         @if(!$isOwnerAccount)
-                            <form method="post" action="{{ route('admin.users.toggle-status', $user) }}" class="flex-1 min-w-[45%]">
+                            <form method="post" action="{{ route('admin.users.toggle-status', $user) }}">
                                 @csrf
-                                <button class="w-full px-2 py-1 rounded-lg text-[11px]
-                                    {{ $user->status === 'active'
-                                        ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
-                                        : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30' }}">
-                                    {{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}
+                                <button type="submit"
+                                        class="{{ $isActive ? $btnDanger : $btnPrimary }} w-full h-9 px-3 text-[12px]">
+                                    {{ $isActive ? 'Deactivate' : 'Activate' }}
                                 </button>
                             </form>
-                        @endif
 
-                        {{-- Delete – NOT allowed on owner --}}
-                        @if(!$isOwnerAccount)
-                            <button
-                                class="flex-1 min-w-[45%] px-2 py-1 rounded-lg bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 text-[11px]"
-                                onclick="openDeleteUserModal({{
-                                    json_encode([
-                                        'id'   => $user->id,
-                                        'name' => $user->name,
-                                    ])
-                                }})">
+                            <button type="button"
+                                    class="btnDeleteUser {{ $btnDanger }} h-9 px-3 text-[12px]"
+                                    data-id="{{ $user->id }}"
+                                    data-name="{{ e($user->name) }}">
                                 Delete
                             </button>
                         @endif
                     </div>
                 @else
-                    <div class="pt-1 text-[11px] text-slate-500 italic">
+                    <div class="pt-1 text-[11px] {{ $muted }} italic">
                         You don't have permission to manage users.
                     </div>
                 @endif
             </div>
         @empty
-            <div class="text-center text-slate-500 text-xs">
+            <div class="text-center {{ $muted }} text-xs">
                 No users yet.
             </div>
         @endforelse
@@ -226,208 +298,242 @@
 </div>
 
 {{-- MODALS --}}
-{{-- 1) Create user (admin can type or generate password) --}}
-<div id="createUserModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-40">
-    <div class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 mx-3">
-        <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-100">New user</h2>
-            <button class="text-slate-400 text-lg" onclick="closeCreateUserModal()">×</button>
+{{-- 1) Create user --}}
+<div id="createUserModal" class="fixed inset-0 z-50 hidden bg-black/60 p-3 sm:p-6 items-center justify-center">
+    <div class="absolute inset-0" onclick="closeCreateUserModal()"></div>
+
+    <div class="relative mx-auto w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }}
+                shadow-[0_35px_120px_rgba(0,0,0,.55)]
+                overflow-hidden">
+        <div class="px-4 py-3 border-b {{ $border }} flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold {{ $fg }}">New user</h2>
+                <p class="text-[11px] {{ $muted }}">Create a sign-in and assign a role.</p>
+            </div>
+            <button type="button" class="{{ $btnGhost }} h-9 w-9 text-lg leading-none" onclick="closeCreateUserModal()">×</button>
         </div>
 
-        <p class="text-[11px] text-slate-400">
-            You can type a password or let Twins generate one for you.
-            The final password will be shown after you save the user.
-        </p>
+        <div class="p-4 space-y-3">
+            <p class="text-[11px] {{ $muted }}">
+                You can type a password or let Twins generate one.
+                The final password will be shown after you save the user.
+            </p>
 
-        <form method="post" action="{{ route('admin.users.store') }}" class="space-y-3" id="createUserForm">
-            @csrf
+            <form method="post" action="{{ route('admin.users.store') }}" class="space-y-3" id="createUserForm">
+                @csrf
 
-            <div>
-                <label class="block text-xs text-slate-300 mb-1">Name</label>
-                <input name="name"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100"
-                       required>
-            </div>
-
-            <div>
-                <label class="block text-xs text-slate-300 mb-1">Email</label>
-                <input name="email" type="email"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100"
-                       required>
-            </div>
-
-            <div>
-                <label class="block text-xs text-slate-300 mb-1">Role</label>
-                <select name="role_id"
-                        class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
-                    @foreach($roles as $role)
-                        <option value="{{ $role->id }}">{{ $role->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs text-slate-300">Password</label>
-                    <button type="button"
-                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
-                            onclick="generateUserPassword()">
-                        Generate random
-                    </button>
+                <div>
+                    <label class="{{ $label }}">Name</label>
+                    <input name="name" class="{{ $input }}" required>
                 </div>
-                <input id="createUserPassword"
-                       name="password"
-                       type="text"
-                       placeholder="Leave empty to auto-generate"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
-                <p class="mt-1 text-[10px] text-slate-500">
-                    If left blank, Twins will generate a strong password.
-                </p>
-            </div>
 
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button"
-                        class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs"
-                        onclick="closeCreateUserModal()">
-                    Cancel
-                </button>
-                <button
-                    class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950">
-                    Save user
-                </button>
-            </div>
-        </form>
+                <div>
+                    <label class="{{ $label }}">Email</label>
+                    <input name="email" type="email" class="{{ $input }}" required>
+                </div>
+
+                <div>
+                    <label class="{{ $label }}">Role</label>
+                    <select name="role_id" class="{{ $input }}">
+                        @foreach($roles as $role)
+                            <option value="{{ $role->id }}">{{ $role->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="{{ $label }} mb-0">Password</label>
+                        <button type="button"
+                                class="text-[11px] text-emerald-500 hover:text-emerald-400 font-semibold cursor-pointer"
+                                onclick="generateUserPassword()">
+                            Generate random
+                        </button>
+                    </div>
+
+                    <input id="createUserPassword" name="password" type="text"
+                           placeholder="Leave empty to auto-generate"
+                           class="{{ $input }}">
+
+                    <p class="mt-1 text-[10px] {{ $muted }}">
+                        If left blank, Twins will generate a strong password.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="{{ $btnGhost }} h-9 px-3 text-[12px]" onclick="closeCreateUserModal()">Cancel</button>
+                    <button class="{{ $btnPrimary }} h-9 px-3 text-[12px]">Save user</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 {{-- 2) Edit user --}}
-<div id="editUserModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-40">
-    <div class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 mx-3">
-        <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-100">Edit user</h2>
-            <button class="text-slate-400 text-lg" onclick="closeEditUserModal()">×</button>
+<div id="editUserModal" class="fixed inset-0 z-50 hidden bg-black/60 p-3 sm:p-6 items-center justify-center">
+    <div class="absolute inset-0" onclick="closeEditUserModal()"></div>
+
+    <div class="relative mx-auto w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }}
+                shadow-[0_35px_120px_rgba(0,0,0,.55)]
+                overflow-hidden">
+        <div class="px-4 py-3 border-b {{ $border }} flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold {{ $fg }}">Edit user</h2>
+                <p class="text-[11px] {{ $muted }}">Update profile, role, or status.</p>
+            </div>
+            <button type="button" class="{{ $btnGhost }} h-9 w-9 text-lg leading-none" onclick="closeEditUserModal()">×</button>
         </div>
 
-        <form id="editUserForm" method="post" class="space-y-3">
+        <form id="editUserForm" method="post" class="p-4 space-y-3">
             @csrf
             @method('PATCH')
+
             <div>
-                <label class="block text-xs text-slate-300 mb-1">Name</label>
-                <input id="editUserName" name="name" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100" required>
+                <label class="{{ $label }}">Name</label>
+                <input id="editUserName" name="name" class="{{ $input }}" required>
             </div>
+
             <div>
-                <label class="block text-xs text-slate-300 mb-1">Email</label>
-                <input id="editUserEmail" name="email" type="email" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100" required>
+                <label class="{{ $label }}">Email</label>
+                <input id="editUserEmail" name="email" type="email" class="{{ $input }}" required>
             </div>
+
             <div>
-                <label class="block text-xs text-slate-300 mb-1">Role</label>
-                <select id="editUserRole" name="role_id" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
+                <label class="{{ $label }}">Role</label>
+                <select id="editUserRole" name="role_id" class="{{ $input }}">
                     @foreach($roles as $role)
                         <option value="{{ $role->id }}">{{ $role->name }}</option>
                     @endforeach
                 </select>
             </div>
+
             <div>
-                <label class="block text-xs text-slate-300 mb-1">Status</label>
-                <select id="editUserStatus" name="status" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
+                <label class="{{ $label }}">Status</label>
+                <select id="editUserStatus" name="status" class="{{ $input }}">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>
             </div>
+
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs" onclick="closeEditUserModal()">Cancel</button>
-                <button class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950">
-                    Save changes
-                </button>
+                <button type="button" class="{{ $btnGhost }} h-9 px-3 text-[12px]" onclick="closeEditUserModal()">Cancel</button>
+                <button class="{{ $btnPrimary }} h-9 px-3 text-[12px]">Save changes</button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- 3) Reset password (manual or generated) --}}
-<div id="resetPasswordModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-40">
-    <div class="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4 mx-3">
-        <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-100">Reset password</h2>
-            <button class="text-slate-400 text-lg" onclick="closeResetPasswordModal()">×</button>
+{{-- 3) Reset password --}}
+<div id="resetPasswordModal" class="fixed inset-0 z-50 hidden bg-black/60 p-3 sm:p-6 items-center justify-center">
+    <div class="absolute inset-0" onclick="closeResetPasswordModal()"></div>
+
+    <div class="relative mx-auto w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }}
+                shadow-[0_35px_120px_rgba(0,0,0,.55)]
+                overflow-hidden">
+        <div class="px-4 py-3 border-b {{ $border }} flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold {{ $fg }}">Reset password</h2>
+                <p class="text-[11px] {{ $muted }}">Set a new password or generate one.</p>
+            </div>
+            <button type="button" class="{{ $btnGhost }} h-9 w-9 text-lg leading-none" onclick="closeResetPasswordModal()">×</button>
         </div>
 
-        <p class="text-[11px] text-slate-400">
-            You can type a new password or let Twins generate a secure one.
-            The final password will be shown after saving.
-        </p>
+        <div class="p-4 space-y-3">
+            <p class="text-[11px] {{ $muted }}">
+                You can type a new password or let Twins generate a secure one.
+                The final password will be shown after saving.
+            </p>
 
-        <form id="resetPasswordForm" method="post" class="space-y-3">
-            @csrf
-            <div>
-                <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs text-slate-300">New password</label>
-                    <button type="button"
-                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
-                            onclick="generateResetPassword()">
-                        Generate random
-                    </button>
+            <form id="resetPasswordForm" method="post" class="space-y-3">
+                @csrf
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="{{ $label }} mb-0">New password</label>
+                        <button type="button"
+                                class="text-[11px] text-emerald-500 hover:text-emerald-400 font-semibold cursor-pointer"
+                                onclick="generateResetPassword()">
+                            Generate random
+                        </button>
+                    </div>
+
+                    <input id="resetPasswordInput" name="password" type="text"
+                           placeholder="Leave empty to auto-generate"
+                           class="{{ $input }}">
                 </div>
-                <input id="resetPasswordInput"
-                       name="password"
-                       type="text"
-                       placeholder="Leave empty to auto-generate"
-                       class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100">
-            </div>
 
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs"
-                        onclick="closeResetPasswordModal()">
-                    Cancel
-                </button>
-                <button class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950">
-                    Reset password
-                </button>
-            </div>
-        </form>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="{{ $btnGhost }} h-9 px-3 text-[12px]" onclick="closeResetPasswordModal()">Cancel</button>
+                    <button class="{{ $btnPrimary }} h-9 px-3 text-[12px]">Reset password</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 {{-- 4) Delete confirm --}}
-<div id="deleteUserModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-40">
-    <div class="w-full max-w-sm rounded-2xl border border-rose-700 bg-slate-900 p-5 space-y-4 mx-3">
-        <h2 class="text-sm font-semibold text-rose-200">Delete user</h2>
-        <p class="text-xs text-slate-300">
-            Are you sure you want to delete <span id="deleteUserName" class="font-semibold text-slate-100"></span>?
-            This cannot be undone.
-        </p>
-        <form id="deleteUserForm" method="post" class="flex justify-end gap-2">
-            @csrf
-            @method('DELETE')
-            <button type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs" onclick="closeDeleteUserModal()">Cancel</button>
-            <button class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-slate-50">
-                Delete
-            </button>
-        </form>
+<div id="deleteUserModal" class="fixed inset-0 z-50 hidden bg-black/60 p-3 sm:p-6 items-center justify-center">
+    <div class="absolute inset-0" onclick="closeDeleteUserModal()"></div>
+
+    <div class="relative mx-auto w-full max-w-sm rounded-2xl border border-rose-500/35 {{ $surface }}
+                shadow-[0_35px_120px_rgba(0,0,0,.55)]
+                overflow-hidden">
+        <div class="px-4 py-3 border-b border-rose-500/25 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-rose-200">Delete user</h2>
+                <p class="text-[11px] {{ $muted }}">This cannot be undone.</p>
+            </div>
+            <button type="button" class="{{ $btnGhost }} h-9 w-9 text-lg leading-none" onclick="closeDeleteUserModal()">×</button>
+        </div>
+
+        <div class="p-4 space-y-3">
+            <p class="text-[12px] {{ $muted }}">
+                Are you sure you want to delete <span id="deleteUserName" class="font-semibold {{ $fg }}"></span>?
+            </p>
+
+            <form id="deleteUserForm" method="post" class="flex justify-end gap-2">
+                @csrf
+                @method('DELETE')
+                <button type="button" class="{{ $btnGhost }} h-9 px-3 text-[12px]" onclick="closeDeleteUserModal()">Cancel</button>
+                <button class="{{ $btnDanger }} h-9 px-3 text-[12px]">Delete</button>
+            </form>
+        </div>
     </div>
 </div>
 
-{{-- 5) Generated password modal (used for create + reset) --}}
+{{-- 5) Generated password modal --}}
 @if(session('generated_password'))
-<div id="generatedPasswordModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-40">
-    <div class="w-full max-w-sm rounded-2xl border border-emerald-700 bg-slate-900 p-5 space-y-4 mx-3">
-        <h2 class="text-sm font-semibold text-emerald-200">Password generated</h2>
-        <p class="text-xs text-slate-300">
-            Share this password with the user (<span class="text-slate-100">{{ session('generated_user_email') }}</span>)
-            and ask them to change it after first login.
-        </p>
-        <div class="flex items-center gap-2">
-            <input id="generatedPasswordValue" readonly
-                   class="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-emerald-200"
-                   value="{{ session('generated_password') }}">
-            <button type="button"
-                    class="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-slate-950"
-                    onclick="copyGeneratedPassword()">
-                Copy
-            </button>
+<div id="generatedPasswordModal" class="fixed inset-0 z-50 bg-black/60 p-3 sm:p-6">
+    <div class="absolute inset-0" onclick="closeGeneratedPasswordModal()"></div>
+
+    <div class="relative mx-auto w-full max-w-sm rounded-2xl border border-emerald-500/35 {{ $surface }}
+                shadow-[0_35px_120px_rgba(0,0,0,.55)]
+                overflow-hidden">
+        <div class="px-4 py-3 border-b border-emerald-500/25 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-emerald-200">Password generated</h2>
+                <p class="text-[11px] {{ $muted }}">Share it securely with the user.</p>
+            </div>
+            <button type="button" class="{{ $btnGhost }} h-9 w-9 text-lg leading-none" onclick="closeGeneratedPasswordModal()">×</button>
         </div>
-        <div class="flex justify-end pt-2">
-            <button type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs" onclick="closeGeneratedPasswordModal()">Close</button>
+
+        <div class="p-4 space-y-3">
+            <p class="text-[12px] {{ $muted }}">
+                Share this password with the user (<span class="{{ $fg }}">{{ session('generated_user_email') }}</span>)
+                and ask them to change it after first login.
+            </p>
+
+            <div class="flex items-center gap-2">
+                <input id="generatedPasswordValue" readonly class="{{ $input }} text-emerald-200"
+                       value="{{ session('generated_password') }}">
+                <button type="button" class="{{ $btnPrimary }} h-10 px-3 text-[12px]" onclick="copyGeneratedPassword()">
+                    Copy
+                </button>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="button" class="{{ $btnGhost }} h-9 px-3 text-[12px]" onclick="closeGeneratedPasswordModal()">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -436,119 +542,108 @@
 <script>
     const byId = id => document.getElementById(id);
 
-    // ---------- OPEN/CLOSE HELPERS ----------
-    function openCreateUserModal() {
-        const m = byId('createUserModal');
+    function showModal(id) {
+        const m = byId(id);
+        if (!m) return;
         m.classList.remove('hidden');
         m.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+        setTimeout(() => m.querySelector('input,select,textarea,button')?.focus(), 30);
     }
-    function closeCreateUserModal() {
-        const m = byId('createUserModal');
+
+    function hideModal(id) {
+        const m = byId(id);
+        if (!m) return;
         m.classList.add('hidden');
         m.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
     }
 
-    function openEditUserModal(user) {
-        const modal = byId('editUserModal');
-        const form  = byId('editUserForm');
+    // Create
+    function openCreateUserModal() { showModal('createUserModal'); }
+    function closeCreateUserModal() { hideModal('createUserModal'); }
 
-        form.action = `/admin/users/${user.id}`;
+    // Edit (dataset-driven)
+    function openEditUserModalFromBtn(btn) {
+        const form = byId('editUserForm');
+        form.action = `/admin/users/${btn.dataset.id}`;
 
-        byId('editUserName').value   = user.name;
-        byId('editUserEmail').value  = user.email;
-        byId('editUserRole').value   = user.role_id ?? '';
-        byId('editUserStatus').value = user.status ?? 'active';
+        byId('editUserName').value   = btn.dataset.name || '';
+        byId('editUserEmail').value  = btn.dataset.email || '';
+        byId('editUserRole').value   = btn.dataset.roleId || '';
+        byId('editUserStatus').value = btn.dataset.status || 'active';
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        showModal('editUserModal');
     }
-    function closeEditUserModal() {
-        const modal = byId('editUserModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
+    function closeEditUserModal() { hideModal('editUserModal'); }
 
-    function openResetPasswordModal(user) {
-        const modal = byId('resetPasswordModal');
+    // Reset (dataset-driven)
+    function openResetPasswordModalFromBtn(btn) {
         const form  = byId('resetPasswordForm');
         const input = byId('resetPasswordInput');
 
         input.value = '';
         input.placeholder = 'Leave empty to auto-generate';
+        form.action = `/admin/users/${btn.dataset.id}/reset-password`;
 
-        form.action = `/admin/users/${user.id}/reset-password`;
+        showModal('resetPasswordModal');
+    }
+    function closeResetPasswordModal() { hideModal('resetPasswordModal'); }
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+    // Delete (dataset-driven)
+    function openDeleteUserModalFromBtn(btn) {
+        const form = byId('deleteUserForm');
+        byId('deleteUserName').innerText = btn.dataset.name || '';
+        form.action = `/admin/users/${btn.dataset.id}`;
+        showModal('deleteUserModal');
     }
-    function closeResetPasswordModal() {
-        const modal = byId('resetPasswordModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
+    function closeDeleteUserModal() { hideModal('deleteUserModal'); }
 
-    function openDeleteUserModal(user) {
-        const modal = byId('deleteUserModal');
-        const form  = byId('deleteUserForm');
-        byId('deleteUserName').innerText = user.name;
-        form.action = `/admin/users/${user.id}`;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-    function closeDeleteUserModal() {
-        const modal = byId('deleteUserModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
+    // Wire buttons (no inline JSON, no blade parsing problems)
+    document.querySelectorAll('.btnEditUser').forEach(btn => {
+        btn.addEventListener('click', () => openEditUserModalFromBtn(btn));
+    });
+    document.querySelectorAll('.btnResetUser').forEach(btn => {
+        btn.addEventListener('click', () => openResetPasswordModalFromBtn(btn));
+    });
+    document.querySelectorAll('.btnDeleteUser').forEach(btn => {
+        btn.addEventListener('click', () => openDeleteUserModalFromBtn(btn));
+    });
 
-    // ---------- PASSWORD GENERATORS ----------
-    function generateUserPassword() {
-        const field = byId('createUserPassword');
+    // Password generator
+    function genPass(len = 12) {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
         let pass = '';
-        for (let i = 0; i < 12; i++) {
-            pass += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        field.value = pass;
+        for (let i = 0; i < len; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        return pass;
     }
+    function generateUserPassword() { byId('createUserPassword').value = genPass(12); }
+    function generateResetPassword() { byId('resetPasswordInput').value = genPass(12); }
 
-    function generateResetPassword() {
-        const field = byId('resetPasswordInput');
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-        let pass = '';
-        for (let i = 0; i < 12; i++) {
-            pass += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        field.value = pass;
-    }
-
-    // ---------- GENERATED PASSWORD MODAL ----------
+    // Copy generated password
     function copyGeneratedPassword() {
         const input = byId('generatedPasswordValue');
         if (!input) return;
+        const val = input.value;
+
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(val);
+            return;
+        }
+
         input.select();
         input.setSelectionRange(0, 99999);
-        navigator.clipboard?.writeText(input.value);
+        document.execCommand('copy');
     }
-    function closeGeneratedPasswordModal() {
-        const modal = byId('generatedPasswordModal');
-        if (!modal) return;
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
+    function closeGeneratedPasswordModal() { hideModal('generatedPasswordModal'); }
 
-    // ---------- CLICK OUTSIDE TO CLOSE (ALL MODALS) ----------
-    ['createUserModal', 'editUserModal', 'resetPasswordModal', 'deleteUserModal', 'generatedPasswordModal']
-        .forEach(id => {
-            const modal = byId(id);
-            if (!modal) return;
-            modal.addEventListener('click', (e) => {
-                // only close if clicking on the dark backdrop, not inside the card
-                if (e.target === modal) {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                }
-            });
+    // ESC closes any open modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        ['createUserModal','editUserModal','resetPasswordModal','deleteUserModal','generatedPasswordModal'].forEach(id => {
+            const m = byId(id);
+            if (m && !m.classList.contains('hidden')) hideModal(id);
         });
+    });
 </script>
 @endsection

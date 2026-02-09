@@ -1,166 +1,182 @@
 <script>
-    // Mobile sidebar
-    const openMenu = document.getElementById('openMenu');
-    const closeMenu = document.getElementById('closeMenu');
-    const mobileSidebar = document.getElementById('mobileSidebar');
 
-    openMenu?.addEventListener('click', () => mobileSidebar.classList.remove('-translate-x-full'));
-    closeMenu?.addEventListener('click', () => mobileSidebar.classList.add('-translate-x-full'));
+(() => {
+  /* -------------------------------
+     MOBILE SIDEBAR (open/close)
+  --------------------------------*/
+  const openMenu = document.getElementById('openMenu');
+  const mobileSidebar = document.getElementById('mobileSidebar');
+  const mobileOverlay = document.getElementById('mobileSidebarOverlay');
 
-    // Desktop accordions
-    function toggleSettingsDesktop() {
-        const box = document.getElementById('settingsLinksDesktop');
-        const caret = document.getElementById('settingsCaretDesktop');
-        if (!box || !caret) return;
-        box.classList.toggle('hidden');
-        caret.textContent = box.classList.contains('hidden') ? '▸' : '▾';
-    }
-    function toggleUserSettingsDesktop() {
-        const box = document.getElementById('userSettingsLinksDesktop');
-        const caret = document.getElementById('userSettingsCaretDesktop');
-        if (!box || !caret) return;
-        box.classList.toggle('hidden');
-        caret.textContent = box.classList.contains('hidden') ? '▸' : '▾';
-    }
+  const closeMobile = () => {
+    mobileSidebar?.classList.add('-translate-x-full');
+    mobileOverlay?.classList.add('hidden'); // safe if you use it
+  };
 
-    // Mobile accordions
-    function toggleSettingsMobile() {
-        const box = document.getElementById('settingsLinksMobile');
-        const caret = document.getElementById('settingsCaretMobile');
-        if (!box || !caret) return;
-        box.classList.toggle('hidden');
-        caret.textContent = box.classList.contains('hidden') ? '▸' : '▾';
-    }
-    function toggleUserSettingsMobile() {
-        const box = document.getElementById('userSettingsLinksMobile');
-        const caret = document.getElementById('userSettingsCaretMobile');
-        if (!box || !caret) return;
-        box.classList.toggle('hidden');
-        caret.textContent = box.classList.contains('hidden') ? '▸' : '▾';
+  const openMobile = () => {
+    mobileSidebar?.classList.remove('-translate-x-full');
+    mobileOverlay?.classList.remove('hidden'); // safe if you use it
+  };
+
+  openMenu?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openMobile();
+  });
+
+  // Your close button is: <button data-mobile-close ...>
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-mobile-close]')) {
+      e.preventDefault();
+      closeMobile();
     }
 
-    // Desktop sidebar collapse (persist)
-    const desktopSidebar = document.getElementById('desktopSidebar');
-    const toggleDesktopSidebar = document.getElementById('toggleDesktopSidebar');
-
-    function setSidebarCollapsed(collapsed) {
-        if (!desktopSidebar) return;
-
-        desktopSidebar.classList.toggle('w-64', !collapsed);
-        desktopSidebar.classList.toggle('w-20', collapsed);
-        desktopSidebar.classList.toggle('is-collapsed', collapsed);
-
-        desktopSidebar.querySelectorAll('.sidebar-label').forEach(el => {
-            el.classList.toggle('hidden', collapsed);
-        });
-
-        if (toggleDesktopSidebar) {
-            toggleDesktopSidebar.setAttribute('data-tip', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-            toggleDesktopSidebar.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-        }
-
-        localStorage.setItem('twins_sidebar_collapsed', collapsed ? '1' : '0');
+    // Optional: click overlay to close (only if overlay exists)
+    if (mobileOverlay && e.target === mobileOverlay) {
+      closeMobile();
     }
+  });
 
-    const collapsed = localStorage.getItem('twins_sidebar_collapsed') === '1';
-    setSidebarCollapsed(collapsed);
+  /* -------------------------------
+     DESKTOP SIDEBAR COLLAPSE (persist)
+  --------------------------------*/
+  const desktopSidebar = document.getElementById('desktopSidebar');
+  const toggleDesktopSidebar = document.getElementById('toggleDesktopSidebar');
 
-    toggleDesktopSidebar?.addEventListener('click', () => {
-        const nowCollapsed = !(localStorage.getItem('twins_sidebar_collapsed') === '1');
-        setSidebarCollapsed(nowCollapsed);
+  function setSidebarCollapsed(collapsed) {
+    if (!desktopSidebar) return;
+
+    desktopSidebar.classList.toggle('w-64', !collapsed);
+    desktopSidebar.classList.toggle('w-20', collapsed);
+    desktopSidebar.classList.toggle('is-collapsed', collapsed);
+
+    desktopSidebar.querySelectorAll('.sidebar-label').forEach(el => {
+      el.classList.toggle('hidden', collapsed);
     });
 
-    /* ============================================================
-       Twins Tooltip System (quiet, tiny, NOT cursor-follow)
-       - Uses data-tip only (no title migration)
-       - Positions relative to element box (tw-tip-b / tw-tip-r)
-    ============================================================ */
-    (function initTwinsTooltips() {
-        const tipBox  = document.getElementById('twinsTooltip');
-        const tipText = document.getElementById('twinsTooltipText');
-        if (!tipBox || !tipText) return;
+    if (toggleDesktopSidebar) {
+      toggleDesktopSidebar.setAttribute('data-tip', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      toggleDesktopSidebar.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    }
 
-        let activeEl = null;
+    localStorage.setItem('twins_sidebar_collapsed', collapsed ? '1' : '0');
+  }
 
-        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  const collapsed = localStorage.getItem('twins_sidebar_collapsed') === '1';
+  setSidebarCollapsed(collapsed);
 
-        function position(el) {
-            const rect = el.getBoundingClientRect();
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
+  toggleDesktopSidebar?.addEventListener('click', () => {
+    const nowCollapsed = !(localStorage.getItem('twins_sidebar_collapsed') === '1');
+    setSidebarCollapsed(nowCollapsed);
+  });
 
-            const pad = 8;
+  /* -------------------------------
+     ACCORDIONS (desktop + mobile)
+     data-acc-toggle="settings"
+     data-acc-panel="settings"
+     data-acc-caret
+  --------------------------------*/
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-acc-toggle]');
+    if (!btn) return;
 
-            // ensure tip measured
-            const tipRect = tipBox.getBoundingClientRect();
-            const isBottom = el.classList.contains('tw-tip-b');
+    // Only toggle within the same sidebar root
+    const sidebarRoot = btn.closest('#desktopSidebar, #mobileSidebar');
+    if (!sidebarRoot) return;
 
-            let x, y;
+    const key = btn.getAttribute('data-acc-toggle');
+    const panel = sidebarRoot.querySelector(`[data-acc-panel="${key}"]`);
+    if (!panel) return;
 
-            if (isBottom) {
-                x = rect.left + (rect.width / 2) - (tipRect.width / 2);
-                y = rect.bottom + pad;
-                x = clamp(x, 8, vw - tipRect.width - 8);
+    panel.classList.toggle('hidden');
 
-                // flip upward if bottom overflows
-                if (y + tipRect.height > vh - 8) {
-                    y = rect.top - tipRect.height - pad;
-                }
-            } else {
-                // default: right
-                x = rect.right + pad;
-                y = rect.top + (rect.height / 2) - (tipRect.height / 2);
+    const caret = btn.querySelector('[data-acc-caret]');
+    if (caret) caret.textContent = panel.classList.contains('hidden') ? '▸' : '▾';
+  });
 
-                // flip left if overflow
-                if (x + tipRect.width > vw - 8) {
-                    x = rect.left - tipRect.width - pad;
-                }
+  /* -------------------------------
+     TOOLTIP SYSTEM (unchanged)
+  --------------------------------*/
+  (function initTwinsTooltips() {
+    const tipBox  = document.getElementById('twinsTooltip');
+    const tipText = document.getElementById('twinsTooltipText');
+    if (!tipBox || !tipText) return;
 
-                y = clamp(y, 8, vh - tipRect.height - 8);
-            }
+    let activeEl = null;
 
-            tipBox.style.left = `${x}px`;
-            tipBox.style.top  = `${y}px`;
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function position(el) {
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const pad = 8;
+      const tipRect = tipBox.getBoundingClientRect();
+      const isBottom = el.classList.contains('tw-tip-b');
+
+      let x, y;
+
+      if (isBottom) {
+        x = rect.left + (rect.width / 2) - (tipRect.width / 2);
+        y = rect.bottom + pad;
+        x = clamp(x, 8, vw - tipRect.width - 8);
+
+        if (y + tipRect.height > vh - 8) {
+          y = rect.top - tipRect.height - pad;
+        }
+      } else {
+        x = rect.right + pad;
+        y = rect.top + (rect.height / 2) - (tipRect.height / 2);
+
+        if (x + tipRect.width > vw - 8) {
+          x = rect.left - tipRect.width - pad;
         }
 
-        function show(el) {
-            const text = (el.getAttribute('data-tip') || '').trim();
-            if (!text) return;
+        y = clamp(y, 8, vh - tipRect.height - 8);
+      }
 
-            activeEl = el;
-            tipText.textContent = text;
-            tipBox.classList.add('show');
+      tipBox.style.left = `${x}px`;
+      tipBox.style.top  = `${y}px`;
+    }
 
-            // wait a tick so size is correct
-            requestAnimationFrame(() => {
-                if (!activeEl) return;
-                position(activeEl);
-            });
-        }
+    function show(el) {
+      const text = (el.getAttribute('data-tip') || '').trim();
+      if (!text) return;
 
-        function hide() {
-            activeEl = null;
-            tipBox.classList.remove('show');
-        }
+      activeEl = el;
+      tipText.textContent = text;
+      tipBox.classList.add('show');
 
-        document.addEventListener('pointerover', (e) => {
-            const el = e.target.closest('[data-tip]');
-            if (!el) return;
-            show(el);
-        });
+      requestAnimationFrame(() => {
+        if (!activeEl) return;
+        position(activeEl);
+      });
+    }
 
-        document.addEventListener('pointerout', (e) => {
-            const leaving = e.target.closest('[data-tip]');
-            if (!leaving) return;
+    function hide() {
+      activeEl = null;
+      tipBox.classList.remove('show');
+    }
 
-            const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('[data-tip]') : null;
-            if (to && to === leaving) return;
+    document.addEventListener('pointerover', (e) => {
+      const el = e.target.closest('[data-tip]');
+      if (!el) return;
+      show(el);
+    });
 
-            hide();
-        });
+    document.addEventListener('pointerout', (e) => {
+      const leaving = e.target.closest('[data-tip]');
+      if (!leaving) return;
 
-        window.addEventListener('scroll', hide, true);
-        window.addEventListener('resize', () => { if (activeEl) position(activeEl); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
-    })();
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('[data-tip]') : null;
+      if (to && to === leaving) return;
+
+      hide();
+    });
+
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', () => { if (activeEl) position(activeEl); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+  })();
+})();
 </script>

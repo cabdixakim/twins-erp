@@ -1,6 +1,10 @@
 <?php
 
 return [
+
+    'brand' => [
+        'name' => env('TWINS_BRAND_NAME', 'Twins ERP'),
+    ],
     // max companies a single user can have access to (0 = unlimited)
     'max_companies_per_user' => (int) env('TWINS_MAX_COMPANIES_PER_USER', 1),
 

@@ -1,7 +1,19 @@
 @props(['supplier'])
 
+@php
+    $border   = 'border-[color:var(--tw-border)]';
+    $surface  = 'bg-[color:var(--tw-surface)]';
+    $surface2 = 'bg-[color:var(--tw-surface-2)]';
+    $bg       = 'bg-[color:var(--tw-bg)]';
+
+    $fg       = 'text-[color:var(--tw-fg)]';
+    $muted    = 'text-[color:var(--tw-muted)]';
+
+    $btnGhost = "inline-flex items-center justify-center rounded-xl border $border bg-[color:var(--tw-btn)] $fg hover:bg-[color:var(--tw-btn-hover)] transition";
+@endphp
+
 @if(!$supplier)
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-xs text-slate-400">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 text-xs {{ $muted }}">
         No supplier selected yet.
     </div>
     @php return; @endphp
@@ -12,16 +24,21 @@
     {{-- Header row --}}
     <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
-            <div class="text-xs uppercase tracking-wide text-slate-500">Selected supplier</div>
-            <div class="flex items-center gap-2">
-                <h2 class="text-sm font-semibold truncate">{{ $supplier->name }}</h2>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px]
-                    {{ $supplier->is_active ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/50'
-                                             : 'bg-slate-800 text-slate-300 border border-slate-700' }}">
+            <div class="text-xs uppercase tracking-wide {{ $muted }}">Selected supplier</div>
+
+            <div class="flex items-center gap-2 min-w-0">
+                <h2 class="text-sm font-semibold truncate {{ $fg }}">{{ $supplier->name }}</h2>
+
+                {{-- STATUS PILL (BRIGHT, NO DIM) --}}
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
+                    {{ $supplier->is_active
+                        ? 'bg-emerald-600 text-white border-emerald-500/50'
+                        : 'bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)] border-[color:var(--tw-border)]' }}">
                     {{ $supplier->is_active ? 'Active' : 'Inactive' }}
                 </span>
             </div>
-            <p class="text-[11px] text-slate-400">
+
+            <p class="text-[11px] {{ $muted }} truncate">
                 {{ $supplier->type ?: 'Type not set' }}
                 @if($supplier->city || $supplier->country)
                     • {{ $supplier->city }}{{ $supplier->city && $supplier->country ? ', ' : '' }}{{ $supplier->country }}
@@ -32,16 +49,17 @@
         <div class="flex flex-col sm:flex-row gap-2 shrink-0">
             <button type="button"
                     onclick="openSupplierEditModal()"
-                    class="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/70 text-[11px] hover:bg-slate-800">
+                    class="{{ $btnGhost }} px-3 py-1.5 text-[11px]">
                 Edit
             </button>
 
+            {{-- ACTIVATE/DEACTIVATE (BRIGHT, text-white) --}}
             <button type="button"
                     onclick="openSupplierStatusModal()"
-                    class="px-3 py-1.5 rounded-xl text-[11px]
+                    class="px-3 py-1.5 rounded-xl text-[11px] font-semibold transition
                         {{ $supplier->is_active
-                            ? 'bg-rose-500 hover:bg-rose-400 text-slate-950'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' }}">
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white' }}">
                 {{ $supplier->is_active ? 'Deactivate' : 'Activate' }}
             </button>
         </div>
@@ -49,48 +67,48 @@
 
     {{-- Small metrics/cards --}}
     <div class="grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Default currency
             </div>
-            <div class="mt-1 text-sm font-semibold">
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">
                 {{ $supplier->default_currency ?: '—' }}
             </div>
-            <div class="text-[10px] text-slate-500">
+            <div class="text-[10px] {{ $muted }}">
                 Used as default on purchases
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Contact
             </div>
-            <div class="mt-1 text-[11px] text-slate-200">
+            <div class="mt-1 text-[11px] {{ $fg }}">
                 {{ $supplier->contact_person ?: 'Not set' }}
             </div>
-            <div class="text-[10px] text-slate-500">
+            <div class="text-[10px] {{ $muted }}">
                 {{ $supplier->phone ?: 'No phone' }}
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Email
             </div>
-            <div class="mt-1 text-[11px] text-slate-200 truncate">
+            <div class="mt-1 text-[11px] {{ $fg }} truncate">
                 {{ $supplier->email ?: 'No email' }}
             </div>
-            <div class="text-[10px] text-slate-500">
+            <div class="text-[10px] {{ $muted }}">
                 For POs & documents
             </div>
         </div>
     </div>
 
-    <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3">
-        <div class="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-3">
+        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">
             Notes
         </div>
-        <p class="text-[11px] text-slate-300 whitespace-pre-line">
+        <p class="text-[11px] {{ $fg }} whitespace-pre-line">
             {{ $supplier->notes ?: 'No special notes for this supplier yet.' }}
         </p>
     </div>
@@ -98,31 +116,39 @@
 
 {{-- EDIT MODAL --}}
 <div id="supplierEditModal"
-     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/40">
-    <div class="w-full max-w-md rounded-2xl bg-slate-950 border border-slate-800 p-4 m-3 shadow-xl"
+     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/55">
+    <div class="w-full max-w-md rounded-2xl {{ $surface }} border {{ $border }} p-4 m-3 max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_rgba(0,0,0,.45)]"
          onclick="event.stopPropagation()">
+
         <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold">Edit supplier</h3>
-            <button type="button" class="text-slate-500 text-lg leading-none"
+            <h3 class="text-sm font-semibold {{ $fg }}">Edit supplier</h3>
+            <button type="button"
+                    class="{{ $btnGhost }} h-9 w-9 text-lg leading-none"
                     onclick="closeSupplierEditModal()">×</button>
         </div>
+
+        @php
+            $label = "block text-[11px] $muted mb-1";
+            $input = "w-full rounded-xl border $border $bg px-3 py-2 text-sm $fg focus:outline-none focus:ring-2 focus:ring-emerald-500/30";
+            $select = $input;
+            $textarea = $input;
+        @endphp
 
         <form method="post" action="{{ route('settings.suppliers.update', $supplier) }}" class="space-y-3">
             @csrf
             @method('PATCH')
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Name</label>
+                <label class="{{ $label }}">Name</label>
                 <input type="text" name="name"
                        value="{{ old('name', $supplier->name) }}"
-                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                       class="{{ $input }}">
             </div>
 
             <div class="grid sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Type</label>
-                    <select name="type"
-                            class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                    <label class="{{ $label }}">Type</label>
+                    <select name="type" class="{{ $select }}">
                         <option value="" @selected(!$supplier->type)>Not set</option>
                         <option value="port" @selected($supplier->type === 'port')>Port / terminal</option>
                         <option value="local_depot" @selected($supplier->type === 'local_depot')>Local depot</option>
@@ -130,73 +156,74 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Default currency</label>
+                    <label class="{{ $label }}">Default currency</label>
                     <input type="text" name="default_currency"
                            value="{{ old('default_currency', $supplier->default_currency) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
             </div>
 
             <div class="grid sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Country</label>
+                    <label class="{{ $label }}">Country</label>
                     <input type="text" name="country"
                            value="{{ old('country', $supplier->country) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">City</label>
+                    <label class="{{ $label }}">City</label>
                     <input type="text" name="city"
                            value="{{ old('city', $supplier->city) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
             </div>
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Contact person</label>
+                <label class="{{ $label }}">Contact person</label>
                 <input type="text" name="contact_person"
                        value="{{ old('contact_person', $supplier->contact_person) }}"
-                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                       class="{{ $input }}">
             </div>
 
             <div class="grid sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Phone</label>
+                    <label class="{{ $label }}">Phone</label>
                     <input type="text" name="phone"
                            value="{{ old('phone', $supplier->phone) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Email</label>
+                    <label class="{{ $label }}">Email</label>
                     <input type="email" name="email"
                            value="{{ old('email', $supplier->email) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
                 <input type="checkbox" id="edit_is_active" name="is_active" value="1"
-                       class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/60"
+                       class="h-4 w-4 rounded border-[color:var(--tw-border)] bg-[color:var(--tw-bg)] text-emerald-600 focus:ring-emerald-500/40"
                        @checked(old('is_active', $supplier->is_active))>
-                <label for="edit_is_active" class="text-[11px] text-slate-300">
+                <label for="edit_is_active" class="text-[11px] {{ $fg }}">
                     Supplier is active
                 </label>
             </div>
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Notes</label>
-                <textarea name="notes" rows="2"
-                          class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">{{ old('notes', $supplier->notes) }}</textarea>
+                <label class="{{ $label }}">Notes</label>
+                <textarea name="notes" rows="2" class="{{ $textarea }}">{{ old('notes', $supplier->notes) }}</textarea>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button"
-                        class="px-3 py-1.5 rounded-xl text-[11px] border border-slate-700 text-slate-300 hover:bg-slate-800"
+                        class="{{ $btnGhost }} px-3 py-1.5 text-[11px]"
                         onclick="closeSupplierEditModal()">
                     Cancel
                 </button>
+
+                {{-- SAVE (BRIGHT) --}}
                 <button type="submit"
-                        class="px-4 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950">
+                        class="px-4 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition border border-emerald-500/50">
                     Save changes
                 </button>
             </div>
@@ -206,14 +233,15 @@
 
 {{-- STATUS MODAL --}}
 <div id="supplierStatusModal"
-     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/40">
-    <div class="w-full max-w-sm rounded-2xl bg-slate-950 border border-slate-800 p-4 m-3 shadow-xl"
+     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/55">
+    <div class="w-full max-w-sm rounded-2xl {{ $surface }} border {{ $border }} p-4 m-3 shadow-[0_30px_90px_rgba(0,0,0,.45)]"
          onclick="event.stopPropagation()">
+
         <div class="mb-2">
-            <h3 class="text-sm font-semibold mb-1">
+            <h3 class="text-sm font-semibold {{ $fg }} mb-1">
                 {{ $supplier->is_active ? 'Deactivate supplier?' : 'Activate supplier?' }}
             </h3>
-            <p class="text-[11px] text-slate-400">
+            <p class="text-[11px] {{ $muted }}">
                 {{ $supplier->is_active
                     ? 'Deactivated suppliers cannot be used for new purchases until re-activated.'
                     : 'Once activated, this supplier will be available when creating new purchases.' }}
@@ -226,16 +254,17 @@
             @method('PATCH')
 
             <button type="button"
-                    class="px-3 py-1.5 rounded-xl text-[11px] border border-slate-700 text-slate-300 hover:bg-slate-800"
+                    class="{{ $btnGhost }} px-3 py-1.5 text-[11px]"
                     onclick="closeSupplierStatusModal()">
                 Cancel
             </button>
 
+            {{-- CONFIRM (BRIGHT) --}}
             <button type="submit"
-                    class="px-4 py-1.5 rounded-xl text-[11px] font-semibold
+                    class="px-4 py-1.5 rounded-xl text-[11px] font-semibold transition border
                         {{ $supplier->is_active
-                            ? 'bg-rose-500 hover:bg-rose-400 text-slate-950'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' }}">
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500/50'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/50' }}">
                 {{ $supplier->is_active ? 'Deactivate' : 'Activate' }}
             </button>
         </form>

@@ -1,9 +1,19 @@
 @php
     /** @var \App\Models\Depot|null $depot */
+
+    $border   = 'border-[color:var(--tw-border)]';
+    $surface  = 'bg-[color:var(--tw-surface)]';
+    $surface2 = 'bg-[color:var(--tw-surface-2)]';
+    $bg       = 'bg-[color:var(--tw-bg)]';
+
+    $fg       = 'text-[color:var(--tw-fg)]';
+    $muted    = 'text-[color:var(--tw-muted)]';
+
+    $btnGhost = "inline-flex items-center justify-center rounded-xl border $border bg-[color:var(--tw-btn)] $fg hover:bg-[color:var(--tw-btn-hover)] transition";
 @endphp
 
 @if(!$depot)
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-xs text-slate-400">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 text-xs {{ $muted }}">
         No depot selected yet.
     </div>
     @php return; @endphp
@@ -14,37 +24,39 @@
     {{-- Header row: name + status + actions --}}
     <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
-            <div class="text-xs uppercase tracking-wide text-slate-500">Selected depot</div>
-            <div class="flex items-center gap-2">
-                <h2 class="text-sm font-semibold truncate">{{ $depot->name }}</h2>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px]
-                    {{ $depot->is_active ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/50'
-                                         : 'bg-slate-800 text-slate-300 border border-slate-700' }}">
+            <div class="text-xs uppercase tracking-wide {{ $muted }}">Selected depot</div>
+            <div class="flex items-center gap-2 min-w-0">
+                <h2 class="text-sm font-semibold truncate {{ $fg }}">{{ $depot->name }}</h2>
+
+                {{-- STATUS PILL (BRIGHT, NO DIM) --}}
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
+                    {{ $depot->is_active
+                        ? 'bg-emerald-600 text-white border-emerald-500/50'
+                        : 'bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)] border-[color:var(--tw-border)]' }}">
                     {{ $depot->is_active ? 'Active' : 'Inactive' }}
                 </span>
             </div>
-            <p class="text-[11px] text-slate-400">
+
+            <p class="text-[11px] {{ $muted }}">
                 {{ $depot->city ?: 'City not set' }}
             </p>
         </div>
 
         <div class="flex flex-col sm:flex-row gap-2 shrink-0">
             {{-- Edit button --}}
-            <button
-                type="button"
-                onclick="openDepotEditModal()"
-                class="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-900/70 text-[11px] hover:bg-slate-800">
+            <button type="button"
+                    onclick="openDepotEditModal()"
+                    class="{{ $btnGhost }} px-3 py-1.5 text-[11px]">
                 Edit
             </button>
 
-            {{-- Activate / deactivate --}}
-            <button
-                type="button"
-                onclick="openDepotStatusModal()"
-                class="px-3 py-1.5 rounded-xl text-[11px]
+            {{-- Activate / deactivate (BRIGHT) --}}
+            <button type="button"
+                    onclick="openDepotStatusModal()"
+                    class="px-3 py-1.5 rounded-xl text-[11px] font-semibold transition border
                     {{ $depot->is_active
-                        ? 'bg-rose-500 hover:bg-rose-400 text-slate-950'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' }}">
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500/50'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/50' }}">
                 {{ $depot->is_active ? 'Deactivate' : 'Activate' }}
             </button>
         </div>
@@ -53,35 +65,35 @@
     {{-- Tiny depot metrics --}}
     <div class="grid gap-3 sm:grid-cols-3">
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Storage fee
             </div>
-            <div class="mt-1 text-sm font-semibold">
-                {{ number_format($depot->storage_fee_per_1000_l, 2) }} $
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">
+                {{ number_format((float)$depot->storage_fee_per_1000_l, 2) }} $
             </div>
-            <div class="text-[10px] text-slate-500">
+            <div class="text-[10px] {{ $muted }}">
                 per 1,000L / day
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Default shrinkage
             </div>
-            <div class="mt-1 text-sm font-semibold">
-                {{ number_format($depot->default_shrinkage_pct, 3) }} %
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">
+                {{ number_format((float)$depot->default_shrinkage_pct, 3) }} %
             </div>
-            <div class="text-[10px] text-slate-500">
+            <div class="text-[10px] {{ $muted }}">
                 Used unless a custom allowance is set
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-500">
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide {{ $muted }}">
                 Notes
             </div>
-            <div class="mt-1 text-[11px] text-slate-300 line-clamp-3">
+            <div class="mt-1 text-[11px] {{ $fg }} line-clamp-3">
                 {{ $depot->notes ?: 'No special instructions for this depot yet.' }}
             </div>
         </div>
@@ -91,78 +103,82 @@
 
 {{-- EDIT MODAL --}}
 <div id="depotEditModal"
-     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/40">
-    <div class="w-full max-w-md rounded-2xl bg-slate-950 border border-slate-800 p-4 m-3 shadow-xl"
+     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/55 p-2">
+    <div class="w-full max-w-md rounded-2xl {{ $surface }} border {{ $border }} p-4 m-3 max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_rgba(0,0,0,.45)]"
          onclick="event.stopPropagation()">
+
         <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold">Edit depot</h3>
-            <button type="button" class="text-slate-500 text-lg leading-none"
+            <h3 class="text-sm font-semibold {{ $fg }}">Edit depot</h3>
+            <button type="button"
+                    class="{{ $btnGhost }} h-9 w-9 text-lg leading-none"
                     onclick="closeDepotEditModal()">×</button>
         </div>
+
+        @php
+            $label = "block text-[11px] $muted mb-1";
+            $input = "w-full rounded-xl border $border $bg px-3 py-2 text-sm $fg focus:outline-none focus:ring-2 focus:ring-emerald-500/30";
+        @endphp
 
         <form method="post" action="{{ route('settings.depots.update', $depot) }}" class="space-y-3">
             @csrf
             @method('PATCH')
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Name</label>
+                <label class="{{ $label }}">Name</label>
                 <input type="text" name="name"
                        value="{{ old('name', $depot->name) }}"
-                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                       class="{{ $input }}">
             </div>
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">City</label>
+                <label class="{{ $label }}">City</label>
                 <input type="text" name="city"
                        value="{{ old('city', $depot->city) }}"
-                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                       class="{{ $input }}">
             </div>
 
             <div class="grid sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">
-                        Storage fee (per 1,000L / day)
-                    </label>
+                    <label class="{{ $label }}">Storage fee (per 1,000L / day)</label>
                     <input type="number" step="0.01" min="0"
                            name="storage_fee_per_1000_l"
                            value="{{ old('storage_fee_per_1000_l', $depot->storage_fee_per_1000_l) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
 
                 <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">
-                        Default shrinkage %
-                    </label>
+                    <label class="{{ $label }}">Default shrinkage %</label>
                     <input type="number" step="0.001" min="0"
                            name="default_shrinkage_pct"
                            value="{{ old('default_shrinkage_pct', $depot->default_shrinkage_pct) }}"
-                           class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">
+                           class="{{ $input }}">
                 </div>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
                 <input type="checkbox" id="edit_is_active" name="is_active" value="1"
-                       class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/60"
+                       class="h-4 w-4 rounded border-[color:var(--tw-border)] bg-[color:var(--tw-bg)] text-emerald-600 focus:ring-emerald-500/40"
                        @checked(old('is_active', $depot->is_active))>
-                <label for="edit_is_active" class="text-[11px] text-slate-300">
+                <label for="edit_is_active" class="text-[11px] {{ $fg }}">
                     Depot is active
                 </label>
             </div>
 
             <div>
-                <label class="block text-[11px] text-slate-400 mb-1">Notes</label>
-                <textarea name="notes" rows="2"
-                          class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-emerald-500/40">{{ old('notes', $depot->notes) }}</textarea>
+                <label class="{{ $label }}">Notes</label>
+                <textarea name="notes" rows="2" class="{{ $input }}">{{ old('notes', $depot->notes) }}</textarea>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button"
-                        class="px-3 py-1.5 rounded-xl text-[11px] border border-slate-700 text-slate-300 hover:bg-slate-800"
+                        class="{{ $btnGhost }} px-3 py-1.5 text-[11px]"
                         onclick="closeDepotEditModal()">
                     Cancel
                 </button>
+
+                {{-- SAVE (BRIGHT) --}}
                 <button type="submit"
-                        class="px-4 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950">
+                        class="px-4 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition border border-emerald-500/50">
                     Save changes
                 </button>
             </div>
@@ -172,15 +188,16 @@
 
 {{-- STATUS CONFIRM MODAL --}}
 <div id="depotStatusModal"
-     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/40"
+     class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/55"
      onclick="closeDepotStatusModal()">
-    <div class="w-full max-w-sm rounded-2xl bg-slate-950 border border-slate-800 p-4 m-3 shadow-xl"
+    <div class="w-full max-w-sm rounded-2xl {{ $surface }} border {{ $border }} p-4 m-3 shadow-[0_30px_90px_rgba(0,0,0,.45)]"
          onclick="event.stopPropagation()">
+
         <div class="mb-2">
-            <h3 class="text-sm font-semibold mb-1">
+            <h3 class="text-sm font-semibold {{ $fg }} mb-1">
                 {{ $depot->is_active ? 'Deactivate depot?' : 'Activate depot?' }}
             </h3>
-            <p class="text-[11px] text-slate-400">
+            <p class="text-[11px] {{ $muted }}">
                 {{ $depot->is_active
                     ? 'Deactivated depots cannot be used for new loads or sales until re-activated.'
                     : 'Once activated, this depot can be used for stock movements and sales.' }}
@@ -193,16 +210,17 @@
             @method('PATCH')
 
             <button type="button"
-                    class="px-3 py-1.5 rounded-xl text-[11px] border border-slate-700 text-slate-300 hover:bg-slate-800"
+                    class="{{ $btnGhost }} px-3 py-1.5 text-[11px]"
                     onclick="closeDepotStatusModal()">
                 Cancel
             </button>
 
+            {{-- CONFIRM (BRIGHT) --}}
             <button type="submit"
-                    class="px-4 py-1.5 rounded-xl text-[11px] font-semibold
+                    class="px-4 py-1.5 rounded-xl text-[11px] font-semibold transition border
                         {{ $depot->is_active
-                            ? 'bg-rose-500 hover:bg-rose-400 text-slate-950'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' }}">
+                            ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500/50'
+                            : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/50' }}">
                 {{ $depot->is_active ? 'Deactivate' : 'Activate' }}
             </button>
         </form>

@@ -17,6 +17,7 @@ class Purchase extends Model
         'purchase_date' => 'date',
         'qty'           => 'float',
         'unit_price'    => 'float',
+        'reference'     => 'string',
     ];
 
     public function company(): BelongsTo
@@ -43,4 +44,15 @@ class Purchase extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function getDisplayRefAttribute(): string
+{
+    if (!empty($this->reference)) return $this->reference;
+
+    $year = $this->purchase_date?->format('Y') ?? $this->created_at?->format('Y') ?? now()->format('Y');
+    $seq  = $this->sequence_no ?: $this->id;
+
+    return "PO-{$year}-" . str_pad((string)$seq, 5, '0', STR_PAD_LEFT);
+}
+
 }

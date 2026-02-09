@@ -1,2 +1,225 @@
 @import "tailwindcss";
 
+
+
+/* =========================
+   Twins Theme Tokens
+   Clean Light + Dark (no blur)
+   ========================= */
+
+/* Light */
+:root{
+  --tw-bg: #f8fafc;          /* page background (slate-50-ish) */
+  --tw-fg: #0f172a;          /* text */
+  --tw-muted: #475569;       /* secondary text */
+
+  --tw-surface: #ffffff;     /* cards/sidebar/topbar */
+  --tw-surface-2: #f1f5f9;   /* subtle alt surface */
+  --tw-border: #e2e8f0;      /* borders */
+
+  --tw-btn: #ffffff;
+  --tw-btn-hover: #f1f5f9;
+
+  --tw-accent: #10b981;      /* emerald-500 */
+  --tw-accent-soft: rgba(16,185,129,.16);
+
+  --tw-shadow: 0 20px 50px rgba(2,6,23,.08);
+}
+
+/* Dark (matches your screenshot vibe: deep navy + slate surfaces) */
+html.dark{
+  --tw-bg: #060b16;          /* deep navy background */
+  --tw-fg: #e5e7eb;          /* slate-200 */
+  --tw-muted: #94a3b8;       /* slate-400 */
+
+  --tw-surface: #0b1220;     /* sidebar/topbar */
+  --tw-surface-2: #0f1a2b;   /* cards */
+  --tw-border: rgba(148,163,184,.16);
+
+  --tw-btn: #0f1a2b;
+  --tw-btn-hover: #13233a;
+
+  --tw-accent: #22c55e;      /* slightly brighter green in dark */
+  --tw-accent-soft: rgba(34,197,94,.18);
+
+  --tw-shadow: 0 24px 70px rgba(0,0,0,.45);
+}
+
+/* Base application surfaces (so UI changes even if some components missed classes) */
+html, body{
+  background: var(--tw-bg);
+  color: var(--tw-fg);
+}
+
+/* Reusable utility classes */
+.tw-surface{
+  background: var(--tw-surface);
+  border: 1px solid var(--tw-border);
+  box-shadow: var(--tw-shadow);
+}
+
+.tw-surface-2{
+  background: var(--tw-surface-2);
+  border: 1px solid var(--tw-border);
+  box-shadow: var(--tw-shadow);
+}
+
+/* Buttons: CLEAN, no blur */
+.tw-icon-btn{
+  cursor: pointer;
+  background: var(--tw-btn);
+  border: 1px solid var(--tw-border);
+  color: var(--tw-fg);
+  transition: background .15s ease, border-color .15s ease, transform .05s ease;
+}
+.tw-icon-btn:hover{ background: var(--tw-btn-hover); }
+.tw-icon-btn:active{ transform: translateY(1px); }
+
+/* Pills / nav items */
+.tw-pill{
+  cursor: pointer;
+  background: var(--tw-btn);
+  border: 1px solid var(--tw-border);
+  color: var(--tw-fg);
+  transition: background .15s ease, border-color .15s ease;
+}
+.tw-pill:hover{ background: var(--tw-btn-hover); }
+
+/* Accent ring / active state */
+.tw-accent-ring{
+  border-color: rgba(34,197,94,.55);
+  box-shadow: 0 0 0 3px var(--tw-accent-soft);
+}
+
+/* Muted text helper */
+.tw-muted{ color: var(--tw-muted); }
+
+/* =========================
+   Theme switch "lights" animation
+   ========================= */
+
+/* Smooth global transition (so it feels like lights changing) */
+html.theme-anim,
+html.theme-anim * {
+  transition:
+    background-color .35s ease,
+    color .35s ease,
+    border-color .35s ease,
+    box-shadow .35s ease,
+    fill .35s ease,
+    stroke .35s ease;
+}
+
+/* Little flash overlay */
+html.theme-anim::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%);
+  opacity: 0;
+  animation: tw-lights .45s ease;
+}
+
+html.dark.theme-anim::before{
+  background: radial-gradient(80% 60% at 50% 20%, rgba(0,0,0,.45), rgba(0,0,0,0) 60%);
+}
+
+@keyframes tw-lights{
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* =========================
+   Theme switch "lights" animation
+   ========================= */
+
+html.theme-anim,
+html.theme-anim * {
+  transition:
+    background-color .35s ease,
+    color .35s ease,
+    border-color .35s ease,
+    box-shadow .35s ease,
+    fill .35s ease,
+    stroke .35s ease;
+}
+
+html.theme-anim::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%);
+  opacity: 0;
+  animation: tw-lights .45s ease;
+}
+
+html.dark.theme-anim::before{
+  background: radial-gradient(80% 60% at 50% 20%, rgba(0,0,0,.45), rgba(0,0,0,0) 60%);
+}
+
+@keyframes tw-lights{
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* =========================
+   Brand block theme styling
+   ========================= */
+
+.tw-brand-logo{
+  transition: transform .18s ease, filter .35s ease, box-shadow .35s ease;
+}
+
+.tw-brand-title{
+  color: var(--tw-fg);
+}
+
+.tw-brand-sub{
+  color: var(--tw-muted);
+}
+
+.tw-brand-mark{
+  background:
+    radial-gradient(80% 80% at 30% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%),
+    linear-gradient(135deg, rgba(16,185,129,.95), rgba(34,211,238,.92));
+  box-shadow: 0 16px 40px rgba(0,0,0,.18);
+}
+
+html.dark .tw-brand-mark{
+  background:
+    radial-gradient(80% 80% at 30% 20%, rgba(255,255,255,.08), rgba(255,255,255,0) 60%),
+    linear-gradient(135deg, rgba(34,197,94,.95), rgba(56,189,248,.55));
+  box-shadow: 0 20px 55px rgba(0,0,0,.45);
+}
+
+html.dark .tw-brand-logo{
+  box-shadow: 0 18px 50px rgba(0,0,0,.55);
+  filter: saturate(1.05);
+}
+
+/* Mobile sidebar toggle */
+html.tw-mobile-open #mobileSidebar {
+  transform: translateX(0);
+}
+
+html.tw-mobile-open #mobileSidebarOverlay {
+  display: block;
+}
+
+/* Ambient background */
+.tw-ambient {
+  background:
+    radial-gradient(900px 500px at 20% 0%, rgba(16,185,129,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 10%, rgba(34,211,238,.14), transparent 60%);
+}
+html.dark .tw-ambient {
+  background:
+    radial-gradient(900px 500px at 20% 0%, rgba(16,185,129,.16), transparent 60%),
+    radial-gradient(900px 600px at 80% 10%, rgba(34,211,238,.12), transparent 60%);
+}

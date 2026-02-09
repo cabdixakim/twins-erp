@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="en" class="h-full">
 <head>
+
+<script>
+  (function () {
+    const stored = localStorage.getItem('tw-theme'); // 'dark' | 'light' | null
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+    const theme = stored || (prefersDark ? 'dark' : 'light');
+
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  })();
+</script>
+
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
@@ -34,20 +46,28 @@
             opacity: 1;
             transform: translateY(0) scale(1);
         }
+
+        /* ✅ Theme-aware tooltip */
         #twinsTooltip .tip {
-            /* background: rgba(2, 6, 23, 0.85);           slate-950 but softer */
-            color: rgb(226 232 240);                    /* slate-200 */
-            border: 1px solid rgba(51, 65, 85, 0.45);   /* slate-700 subtle */
-            box-shadow: 0 10px 26px rgba(0,0,0,.28);    /* quieter */
-            padding: 4px 8px;                           /* smaller */
+            color: rgb(15 23 42);                         /* slate-900 */
+            background: rgba(255,255,255,.92);
+            border: 1px solid rgba(148,163,184,.45);      /* slate-400 */
+            box-shadow: 0 10px 26px rgba(2,6,23,.14);
+            padding: 4px 8px;                              /* smaller */
             border-radius: 9px;
-            font-size: 9px;                            /* tiny */
+            font-size: 9px;                                /* tiny */
             line-height: 1.1;
             white-space: nowrap;
             backdrop-filter: blur(10px);
             max-width: 280px;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        html.dark #twinsTooltip .tip {
+            color: rgb(226 232 240);                       /* slate-200 */
+            background: rgba(2, 6, 23, 0.85);              /* slate-950 but softer */
+            border: 1px solid rgba(51, 65, 85, 0.45);      /* slate-700 subtle */
+            box-shadow: 0 10px 26px rgba(0,0,0,.28);
         }
 
         /*
@@ -85,7 +105,11 @@
     @stack('styles')
 </head>
 
-<body class="bg-slate-950 text-slate-100 h-full flex overflow-hidden">
+{{-- ✅ Theme-aware base surface (THIS is the main fix) --}}
+<body class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-full flex overflow-hidden">
+        <!-- <div aria-hidden="true"
+        class="fixed inset-0 z-0 pointer-events-none tw-ambient">
+    </div> -->
 
 @php
     $user            = auth()->user();
@@ -119,7 +143,8 @@
         'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
     ))
 
-    <main class="flex-1 overflow-y-auto p-6 md:p-8">
+    {{-- Optional: make main surface theme-aware without forcing dark --}}
+    <main class="flex-1 overflow-y-auto p-6 md:p-8 bg-transparent">
         @yield('content')
     </main>
 </div>
@@ -128,7 +153,6 @@
 <div id="twinsTooltip">
     <div class="tip" id="twinsTooltipText"></div>
 </div>
-
 
 @include('layouts.partials.layout-scripts')
 
