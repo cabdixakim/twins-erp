@@ -136,6 +136,23 @@ endif;
 unset($__errorArgs, $__bag); ?>
             </div>
 
+            <div>
+                <label class="<?php echo e($label); ?>">Company code *</label>
+                <input type="text" name="code"
+                       value="<?php echo e(old('code', $company->code)); ?>"
+                       class="<?php echo e($input); ?>">
+                <?php $__errorArgs = ['code'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                    <div class="mt-1 text-[11px] text-rose-600"><?php echo e($message); ?></div>
+                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+            </div>
+
             <div class="grid gap-3 sm:grid-cols-3">
                 <div>
                     <label class="<?php echo e($label); ?>">Base currency</label>
@@ -229,10 +246,10 @@ unset($__errorArgs, $__bag); ?>
                             accept="image/*"
                             class="block w-full text-[11px] <?php echo e($fg); ?>
 
-                                   file:mr-3 file:rounded-xl file:border file:border-[color:var(--tw-border)]
-                                   file:bg-[color:var(--tw-btn)] file:px-3 file:py-2
-                                   file:text-xs file:font-semibold file:text-[color:var(--tw-fg)]
-                                   hover:file:bg-[color:var(--tw-btn-hover)]
+                                   file:mr-3 file:rounded-xl file:border-(--tw-border)
+                                   file:bg-(--tw-btn) file:px-3 file:py-2
+                                   file:text-xs file:font-semibold file:text-(--tw-fg)
+                                   hover:file:bg-(--tw-btn-hover)
                                    cursor-pointer"
                         />
 
@@ -313,7 +330,7 @@ unset($__errorArgs, $__bag); ?>
 
                 
                 <div class="rounded-2xl border <?php echo e($border); ?> <?php echo e($bg); ?> overflow-hidden">
-                    <div class="w-full aspect-[16/9]">
+                    <div class="w-full aspect-video">
                         <img id="cropperImage" alt="Cropper image" class="max-w-full hidden">
                         <div id="cropperEmpty"
                              class="h-full w-full flex items-center justify-center text-[11px] <?php echo e($muted); ?>">

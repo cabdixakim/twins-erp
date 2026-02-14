@@ -20,6 +20,11 @@ class Purchase extends Model
         'reference'     => 'string',
     ];
 
+    public function depot(): BelongsTo
+    {
+        return $this->belongsTo(Depot::class);
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -55,4 +60,5 @@ class Purchase extends Model
         }
         return $this->reference ?? $this->id;
     }
+    
 }

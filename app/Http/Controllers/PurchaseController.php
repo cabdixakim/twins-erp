@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\Depot;
+use App\Services\InventoryLedger;
 
 class PurchaseController extends Controller
 {
@@ -240,113 +241,195 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase)
     {
+        $purchase->load(['supplier', 'product', 'depot', 'batch', 'creator']);
         return view('purchases.show', compact('purchase'));
     }
 
-    public function confirm(Purchase $purchase)
-    {
-        $u = auth()->user();
+public function confirm(Purchase $purchase, InventoryLedger $ledger)
+{
+    $u = auth()->user();
 
-        if ($purchase->status !== 'draft') {
-            return back()->with('error', 'Only draft purchases can be confirmed.');
+    if ($purchase->status !== 'draft') {
+        return back()->with('error', 'Only draft purchases can be confirmed.');
+    }
+
+    DB::transaction(function () use ($purchase, $u, $ledger) {
+        // 1) Ensure batch exists
+        if (!$purchase->batch_id) {
+            $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+            $qty  = (float) $purchase->qty;
+            $unit = (float) $purchase->unit_price;
+
+            $batch = Batch::create([
+                'company_id'     => $purchase->company_id,
+                'product_id'     => $purchase->product_id,
+                'source_type'    => $purchase->type, // import|local_depot|cross_dock
+                'source_ref'     => 'purchase:' . $purchase->id,
+                'code'           => $code,
+                'name'           => null,
+                'supplier_id'    => $purchase->supplier_id,
+                'qty_purchased'  => $qty,
+                'qty_received'   => 0,
+                'qty_remaining'  => 0, // available starts at 0 until received
+                'total_cost'     => round($qty * $unit, 2),
+                'unit_cost'      => $qty > 0 ? $unit : 0,
+                'status'         => 'active',
+                'purchased_at'   => $purchase->purchase_date ? $purchase->purchase_date->startOfDay() : now(),
+                'created_by'     => $u?->id,
+                'updated_by'     => $u?->id,
+            ]);
+
+            $purchase->batch_id = $batch->id;
         }
 
-        DB::transaction(function () use ($purchase, $u) {
-            // 1) Ensure batch exists
-            if (!$purchase->batch_id) {
-                $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
-                $qty  = (float) $purchase->qty;
-                $unit = (float) $purchase->unit_price;
+        // 2) Branch behaviour
+        if ($purchase->type === 'cross_dock') {
+            $crossDockId = (int) $this->getOrCreateCrossDockDepotId($purchase->company_id, $u?->id);
 
-                $batch = Batch::create([
-                    'company_id'     => $purchase->company_id,
-                    'product_id'     => $purchase->product_id,
-                    'source_type'    => $purchase->type, // import|local_depot|cross_dock
-                    'source_ref'     => 'purchase:' . $purchase->id,
-                    'code'           => $code,
-                    'name'           => null,
-                    'supplier_id'    => $purchase->supplier_id,
-                    'qty_purchased'  => $qty,
-                    'qty_received'   => 0,
-                    // remaining = AVAILABLE TO SELL (starts at 0 until received)
-                    'qty_remaining'  => 0,
-                    'total_cost'     => round($qty * $unit, 2),
-                    'unit_cost'      => $qty > 0 ? $unit : 0,
-                    'status'         => 'active',
-                    'purchased_at'   => $purchase->purchase_date ? $purchase->purchase_date->startOfDay() : now(),
-                    'created_by'     => $u?->id,
-                    'updated_by'     => $u?->id,
-                ]);
+            $qty  = (float) $purchase->qty;
+            $unit = (float) $purchase->unit_price;
 
-                $purchase->batch_id = $batch->id;
-            }
+            // Use ledger: movement + depot_stocks + batch qty update
+            $ledger->receipt(
+                [
+                    'company_id'  => $purchase->company_id,
+                    'product_id'  => $purchase->product_id,
+                    'to_depot_id' => $crossDockId,
+                    'batch_id'    => $purchase->batch_id,
+                    'qty'         => $qty,
+                    'unit_cost'   => $unit,
+                    'total_cost'  => round($qty * $unit, 2),
 
-            // 2) Branch behaviour
-            if ($purchase->type === 'cross_dock') {
-                // self-healing: ensure depot exists and get id
-                $crossDockId = (int) $this->getOrCreateCrossDockDepotId($purchase->company_id, $u?->id);
+                    'ref_type'    => 'purchase',
+                    'ref_id'      => $purchase->id,
+                    'reference'   => 'purchase:' . $purchase->id,
+                    'notes'       => 'Cross dock receipt from purchase confirm',
 
-                $qty  = (float) $purchase->qty;
-                $unit = (float) $purchase->unit_price;
-                $total = round($qty * $unit, 2);
+                    'created_by'  => $u?->id,
+                    'updated_by'  => $u?->id,
+                ],
+                // Idempotency: prevents duplicate receipts on retries
+                [
+                    'type'        => 'receipt',
+                    'ref_type'    => 'purchase',
+                    'ref_id'      => $purchase->id,
+                    'batch_id'    => $purchase->batch_id,
+                    'to_depot_id' => $crossDockId,
+                ]
+            );
+        }
 
-                // prevent duplicate receipt if confirm retried
-                $alreadyReceipted = DB::table('inventory_movements')
-                    ->where('company_id', $purchase->company_id)
-                    ->where('type', 'receipt')
-                    ->where('ref_type', 'purchase')
-                    ->where('ref_id', $purchase->id)
-                    ->where('batch_id', $purchase->batch_id)
-                    ->where('to_depot_id', $crossDockId)
-                    ->exists();
+        // local_depot + import: no receipt at confirm (receipt comes later)
 
-                if (!$alreadyReceipted) {
-                    DB::table('inventory_movements')->insert([
-                        'company_id'    => $purchase->company_id,
-                        'product_id'    => $purchase->product_id,
-                        'type'          => 'receipt',
-                        'ref_type'      => 'purchase',
-                        'ref_id'        => $purchase->id,
-                        'reference'     => 'purchase:' . $purchase->id,
-                        'batch_id'      => $purchase->batch_id,
-                        'from_depot_id' => null,
-                        'to_depot_id'   => $crossDockId,
-                        'qty'           => $qty,
-                        'unit_cost'     => $unit,
-                        'total_cost'    => $total,
-                        'notes'         => 'Cross dock receipt from purchase confirm',
-                        'created_by'    => $u?->id,
-                        'created_at'    => now(),
-                        'updated_at'    => now(),
-                    ]);
+        $purchase->status = 'confirmed';
+        $purchase->updated_by = $u?->id;
+        $purchase->save();
+    });
 
-                    DB::table('batches')
-                        ->where('id', $purchase->batch_id)
-                        ->update([
-                            'qty_received'  => DB::raw('qty_received + ' . (float) $qty),
-                            'qty_remaining' => DB::raw('qty_remaining + ' . (float) $qty),
-                            'updated_by'    => $u?->id,
-                            'updated_at'    => now(),
-                        ]);
-                }
-            }
+    $msg = match ($purchase->type) {
+        'cross_dock'  => "Purchase confirmed.\nBatch created.\nReceipted into CROSS DOCK.",
+        'local_depot' => "Purchase confirmed.\nBatch created.\nNext: Receive into the selected depot.",
+        default       => "Purchase confirmed.\nBatch created.\nNext: Continue import workflow (nominations/offload).",
+    };
 
-            // local_depot + import: no receipt at confirm (receipt comes from depot stock/offload later)
+    return redirect()->route('purchases.show', $purchase)
+        ->with('status', $msg);
+}
 
-            $purchase->status = 'confirmed';
+
+// Only for local depot purchases: creates a receipt movement into the selected depot (ownership change) and updates batch qtys. Idempotent (safe to retry if something fails after receipt creation).
+
+public function receive(Purchase $purchase, InventoryLedger $ledger)
+{
+    $u = auth()->user();
+
+    if ($purchase->status !== 'confirmed') {
+        return back()->with('error', 'Only confirmed purchases can be received.');
+    }
+
+    if ($purchase->type !== 'local_depot') {
+        return back()->with('error', 'Only local depot purchases can be received into depot.');
+    }
+
+    if (!$purchase->depot_id) {
+        return back()->with('error', 'Depot is missing on this purchase.');
+    }
+
+    DB::transaction(function () use ($purchase, $u, $ledger) {
+
+        // Safety: ensure batch exists (should already exist, but never trust)
+        if (!$purchase->batch_id) {
+            $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+            $qty  = (float) $purchase->qty;
+            $unit = (float) $purchase->unit_price;
+
+            $batch = Batch::create([
+                'company_id'     => $purchase->company_id,
+                'product_id'     => $purchase->product_id,
+                'source_type'    => $purchase->type,
+                'source_ref'     => 'purchase:' . $purchase->id,
+                'code'           => $code,
+                'name'           => null,
+                'supplier_id'    => $purchase->supplier_id,
+                'qty_purchased'  => $qty,
+                'qty_received'   => 0,
+                'qty_remaining'  => 0,
+                'total_cost'     => round($qty * $unit, 2),
+                'unit_cost'      => $qty > 0 ? $unit : 0,
+                'status'         => 'active',
+                'purchased_at'   => $purchase->purchase_date ? $purchase->purchase_date->startOfDay() : now(),
+                'created_by'     => $u?->id,
+                'updated_by'     => $u?->id,
+            ]);
+
+            // attach batch, don't set received here — ledger will do it
+            $purchase->batch_id = $batch->id;
             $purchase->updated_by = $u?->id;
             $purchase->save();
-        });
+        }
 
-        $msg = match ($purchase->type) {
-            'cross_dock'  => "Purchase confirmed.\nBatch created.\nReceipted into CROSS DOCK.",
-            'local_depot' => "Purchase confirmed.\nBatch created.\nNext: Receive into the selected depot from Depot Stock.",
-            default       => "Purchase confirmed.\nBatch created.\nNext: Continue import workflow (nominations/offload).",
-        };
+        $qty  = (float) $purchase->qty;
+        $unit = (float) $purchase->unit_price;
 
-        return redirect()->route('purchases.show', $purchase)
-            ->with('status', $msg);
-    }
+        // Ledger handles: inventory_movements + depot_stocks + batch qty updates (and idempotency)
+        $ledger->receipt(
+            [
+                'company_id'   => (int) $purchase->company_id,
+                'product_id'   => (int) $purchase->product_id,
+                'to_depot_id'  => (int) $purchase->depot_id,
+                'batch_id'     => (int) $purchase->batch_id,
+                'qty'          => $qty,
+                // ledger will prefer batch unit_cost if batch exists, but keep for completeness
+                'unit_cost'    => $unit,
+                'total_cost'   => round($qty * $unit, 2),
+
+                'ref_type'     => 'purchase',
+                'ref_id'       => (int) $purchase->id,
+                'reference'    => 'purchase:' . $purchase->id,
+                'notes'        => 'Depot receipt from purchase receive',
+
+                'created_by'   => $u?->id,
+                'updated_by'   => $u?->id,
+            ],
+            [
+                // Idempotency key (safe retries)
+                'type'        => 'receipt',
+                'ref_type'    => 'purchase',
+                'ref_id'      => (int) $purchase->id,
+                'batch_id'    => (int) $purchase->batch_id,
+                'to_depot_id' => (int) $purchase->depot_id,
+            ]
+        );
+
+        // Mark as received (make sure your app recognises this status in filters/UI)
+        $purchase->status = 'received';
+        $purchase->updated_by = $u?->id;
+        $purchase->save();
+    });
+
+    return redirect()->route('purchases.show', $purchase)
+        ->with('status', "Purchase received into depot.\nDepot stock updated (FIFO-ready).");
+}
 
     // Get or create the CROSS DOCK depot for the given company. Returns the depot ID.
     private function getOrCreateCrossDockDepotId(int $companyId, ?int $userId = null): int

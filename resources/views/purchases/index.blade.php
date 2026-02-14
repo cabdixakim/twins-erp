@@ -267,6 +267,10 @@
                     'border-emerald-600 bg-emerald-500 text-white
                     dark:border-emerald-400 dark:bg-emerald-400 dark:text-emerald-950',
 
+                'received' =>
+                    'border-blue-700 bg-blue-500 text-white
+                    dark:border-blue-400 dark:bg-blue-400 dark:text-blue-950',
+
                 default =>
                     'border-slate-400/40 bg-slate-200 text-slate-900
                     dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100',
@@ -303,7 +307,7 @@
               </td>
 
               <td class="px-3 sm:px-5 py-4">
-                <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }} px-2.5 py-1 text-xs {{ $fg }}">
+                <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }} px-2.5 py-1 text-xs {{ $fg }} whitespace-nowrap">
                   {{ $typeLabel }}
                 </span>
               </td>

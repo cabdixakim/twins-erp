@@ -4,12 +4,20 @@
 
 <script>
   (function () {
+    const root = document.documentElement;
     const stored = localStorage.getItem('tw-theme'); // 'dark' | 'light' | null
     const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
     const theme = stored || (prefersDark ? 'dark' : 'light');
+    const isDark = root.classList.contains('dark');
 
-    if (theme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    // Only animate if theme is actually changing
+    if ((theme === 'dark' && !isDark) || (theme === 'light' && isDark)) {
+      root.classList.add('theme-anim');
+      setTimeout(() => root.classList.remove('theme-anim'), 1200);
+    }
+
+    if (theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
   })();
 </script>
 

@@ -4,50 +4,76 @@ namespace App\Http\Controllers\DepotStock;
 
 use App\Http\Controllers\Controller;
 use App\Models\Depot;
+use App\Models\DepotStock;
+use App\Models\InventoryMovement;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class DepotStockController extends Controller
 {
-    /**
-     * Main Depot Stock dashboard.
-     *
-     * Shows:
-     *  - Left: list of depots
-     *  - Right: selected depot summary + action shortcuts
-     */
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $depots = Depot::orderBy('name')->get();
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
 
-        $currentDepot = null;
+        // Depots list (exclude system depots if you want only physical – but CROSS DOCK is useful here)
+        $depots = Depot::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        if ($depots->count() > 0) {
-            // default to first depot
-            $currentDepot = $depots->first();
+        $selectedDepotId = (int) $request->query('depot', 0);
 
-            // if a specific depot is requested, and exists, use it instead
-            if ($request->filled('depot')) {
-                $selected = $depots->firstWhere('id', (int) $request->input('depot'));
-                if ($selected) {
-                    $currentDepot = $selected;
-                }
-            }
+        // If no depot selected, default to first depot
+        if ($selectedDepotId <= 0 && $depots->count() > 0) {
+            $selectedDepotId = (int) $depots->first()->id;
         }
 
-        // For now, we don’t have real stock movements yet.
-        // We'll plug real numbers here once the stock tables exist.
+        $currentDepot = $selectedDepotId
+            ? $depots->firstWhere('id', $selectedDepotId)
+            : null;
+
+        $stocks = collect();
         $metrics = [
-            'on_hand_l'     => 0.0,
-            'in_transit_l'  => 0.0,
-            'reserved_l'    => 0.0,
-            'last_activity' => null,
+            'on_hand_l'   => 0,
+            'reserved_l'  => 0,
+            'value'       => 0,
+            'batches'     => 0,
         ];
 
-        return view('depot-stock.index', [
-            'depots'       => $depots,
-            'currentDepot' => $currentDepot,
-            'metrics'      => $metrics,
-        ]);
+        $recentMovements = collect();
+
+        if ($currentDepot) {
+            $stocks = DepotStock::query()
+                ->where('company_id', $cid)
+                ->where('depot_id', $currentDepot->id)
+                ->with([
+                    'product:id,name',
+                    'batch:id,code,unit_cost,purchased_at',
+                ])
+                ->orderByDesc('qty_on_hand')
+                ->get();
+
+            $metrics['on_hand_l']  = (float) $stocks->sum('qty_on_hand');
+            $metrics['reserved_l'] = (float) $stocks->sum('qty_reserved');
+            $metrics['value']      = (float) $stocks->sum(fn ($r) => ((float)$r->qty_on_hand) * ((float)$r->unit_cost));
+            $metrics['batches']    = (int) $stocks->count();
+
+            $recentMovements = InventoryMovement::query()
+                ->where('company_id', $cid)
+                ->where('to_depot_id', $currentDepot->id)
+                ->with(['product:id,name', 'batch:id,code'])
+                ->latest('id')
+                ->limit(12)
+                ->get();
+        }
+
+        return view('depot-stock.index', compact(
+            'depots',
+            'currentDepot',
+            'stocks',
+            'metrics',
+            'recentMovements'
+        ));
     }
 }

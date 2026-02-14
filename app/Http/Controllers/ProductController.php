@@ -31,6 +31,15 @@ class ProductController extends Controller
             'base_uom' => 'nullable|string|max:16',
         ]);
 
+        // Check for duplicate product (company_id + name)
+        $exists = \App\Models\Product::query()
+            ->where('company_id', $cid)
+            ->where('name', $data['name'])
+            ->exists();
+        if ($exists) {
+            return back()->withErrors(['name' => 'A product with this name already exists for your company.'])->withInput();
+        }
+
         Product::create([
             'company_id' => $cid,
             'name'       => trim($data['name']),

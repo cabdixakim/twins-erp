@@ -1,0 +1,194 @@
+@php
+  /** @var \App\Models\Sale $sale */
+
+  $border   = 'border-[color:var(--tw-border)]';
+  $surface  = 'bg-[color:var(--tw-surface)]';
+  $surface2 = 'bg-[color:var(--tw-surface-2)]';
+  $fg       = 'text-[color:var(--tw-fg)]';
+  $muted    = 'text-[color:var(--tw-muted)]';
+
+  $qty   = (float) ($sale->qty ?? 0);
+  $unit  = (float) ($sale->unit_price ?? 0);
+  $total = (float) ($sale->total ?? ($qty * $unit));
+  $cur   = strtoupper($sale->currency ?? 'USD');
+
+  $statusPill = match($sale->status) {
+    'draft'  => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
+    'posted' => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-100',
+    default  => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
+  };
+@endphp
+
+<div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
+  <div class="flex items-start justify-between gap-4">
+    <div class="min-w-0">
+      <div class="flex items-center gap-3">
+        <div class="text-xs {{ $muted }}">#{{ $sale->reference }}</div>
+        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ $statusPill }}">
+          {{ ucfirst($sale->status) }}
+        </span>
+        @if($sale->inventory_movement_id)
+          <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }} px-2.5 py-1 text-xs font-semibold {{ $fg }}">
+            Movement #{{ $sale->inventory_movement_id }}
+          </span>
+        @endif
+      </div>
+
+      <div class="mt-2 text-lg font-semibold {{ $fg }} truncate">
+        {{ $sale->client_name ?: 'Client —' }}
+      </div>
+
+      <div class="mt-1 text-xs {{ $muted }}">
+        {{ $sale->depot?->name ?? 'Depot' }} · {{ $sale->product?->name ?? 'Product' }} · {{ $sale->sale_date?->format('Y-m-d') ?? '—' }}
+      </div>
+    </div>
+
+    <div class="shrink-0 flex items-center gap-2">
+      @if($sale->status === 'draft')
+        <form method="POST" action="{{ route('sales.post', $sale) }}" id="postSaleForm">
+          @csrf
+          <button type="button" id="btnPostSale"
+            class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-emerald-500/30 bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500/20 transition">
+            Post sale
+            <span class="text-emerald-200/90">→</span>
+          </button>
+        </form>
+      @else
+        <span class="inline-flex items-center h-10 px-4 rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }}">
+          Posted
+        </span>
+      @endif
+    </div>
+  </div>
+
+  <div class="mt-5 grid gap-3 sm:grid-cols-3">
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Quantity</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span></div>
+    </div>
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Unit price</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $cur }} {{ number_format($unit, 6) }}</div>
+    </div>
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Total</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $cur }} {{ number_format($total, 2) }}</div>
+    </div>
+  </div>
+
+  <div class="mt-3 grid gap-3 sm:grid-cols-3">
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">COGS (FIFO)</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $cur }} {{ number_format((float)$sale->cogs_total, 2) }}</div>
+    </div>
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Gross profit</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $cur }} {{ number_format((float)$sale->gross_profit, 2) }}</div>
+    </div>
+    <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Delivery</div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">
+        {{ $sale->delivery_mode === 'delivered' ? 'Delivered' : 'Ex-depot' }}
+      </div>
+    </div>
+  </div>
+
+  @if($sale->delivery_mode === 'delivered')
+    <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      <div class="text-[11px] {{ $muted }}">Transport details</div>
+      <div class="mt-1 text-sm {{ $fg }}">
+        <span class="font-semibold">Transporter:</span> {{ $sale->transporter?->name ?? '—' }}
+        <span class="mx-2 {{ $muted }}">·</span>
+        <span class="font-semibold">Truck:</span> {{ $sale->truck_no ?? '—' }}
+        <span class="mx-2 {{ $muted }}">·</span>
+        <span class="font-semibold">Trailer:</span> {{ $sale->trailer_no ?? '—' }}
+      </div>
+    </div>
+  @endif
+</div>
+
+{{-- POST CONFIRM MODAL --}}
+@if($sale->status === 'draft')
+<div id="postSaleModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 p-4">
+  <div class="w-full max-w-lg rounded-2xl border {{ $border }} {{ $surface }} shadow-xl overflow-hidden">
+    <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-base font-semibold {{ $fg }}">Post sale</div>
+          <div class="mt-1 text-xs {{ $muted }}">This will issue stock FIFO and cannot be undone.</div>
+        </div>
+        <button type="button" id="closePostSale"
+          class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
+                 {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
+      </div>
+    </div>
+
+    <div class="p-5 space-y-3">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+          <div class="text-[11px] {{ $muted }}">Depot</div>
+          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $sale->depot?->name ?? '—' }}</div>
+        </div>
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+          <div class="text-[11px] {{ $muted }}">Product</div>
+          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $sale->product?->name ?? '—' }}</div>
+        </div>
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+          <div class="text-[11px] {{ $muted }}">Qty to issue</div>
+          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span></div>
+        </div>
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+          <div class="text-[11px] {{ $muted }}">Sale total</div>
+          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $cur }} {{ number_format($total, 2) }}</div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
+        <div class="font-semibold">What will happen</div>
+        <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
+          <li>Creates an <span class="{{ $fg }}">ISSUE</span> movement</li>
+          <li>Consumes depot stock by <span class="{{ $fg }}">FIFO</span> (per batch)</li>
+          <li>Writes consumption rows (audit proof)</li>
+          <li>Updates batch remaining + depot stock</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+      <button type="button" id="cancelPostSale"
+        class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+               hover:bg-[color:var(--tw-surface-2)] transition">
+        Cancel
+      </button>
+      <button type="button" id="confirmPostSale"
+        class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-500/20 transition">
+        Yes, post
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
+
+  const btn = document.getElementById('btnPostSale');
+  const modal = document.getElementById('postSaleModal');
+  const closeBtn = document.getElementById('closePostSale');
+  const cancelBtn = document.getElementById('cancelPostSale');
+  const confirmBtn = document.getElementById('confirmPostSale');
+  const form = document.getElementById('postSaleForm');
+
+  const open = () => modal && modal.classList.remove('hidden');
+  const close = () => modal && modal.classList.add('hidden');
+
+  on(btn, 'click', open);
+  on(closeBtn, 'click', close);
+  on(cancelBtn, 'click', close);
+  on(modal, 'click', (e) => { if (e.target === modal) close(); });
+  on(confirmBtn, 'click', () => { close(); form && form.submit(); });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+})();
+</script>
+@endif
