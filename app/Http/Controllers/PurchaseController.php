@@ -133,6 +133,17 @@ class PurchaseController extends Controller
             'reference' => 'nullable|string|max:64',
         ]);
 
+        // Check for duplicate purchase reference (company_id + reference)
+        if (!empty($data['reference'])) {
+            $exists = \App\Models\Purchase::query()
+                ->where('company_id', $cid)
+                ->where('reference', $data['reference'])
+                ->exists();
+            if ($exists) {
+                return back()->withErrors(['reference' => 'A purchase with this reference already exists for your company.'])->withInput();
+            }
+        }
+
         // supplier must belong to active company if provided
         if (!empty($data['supplier_id'])) {
             $ok = Supplier::query()

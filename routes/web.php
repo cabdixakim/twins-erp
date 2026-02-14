@@ -142,9 +142,8 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         ->name('purchases.receive');
 
         // Sales (company-scoped)
-        Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
-        Route::post('/sales', [SalesController::class, 'store'])->name('sales.store');
-        Route::post('/sales/{sale}/post', [SalesController::class, 'post'])->name('sales.post');
+        Route::resource('sales', SalesController::class)->only(['index','store','update']);
+        Route::post('sales/{sale}/post', [SalesController::class, 'post'])->name('sales.post');
     
     });
 });

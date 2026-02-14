@@ -137,6 +137,7 @@
     $onDepotStock    = request()->routeIs('depot-stock.*');
     $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
+    $onSales         = request()->routeIs('sales.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(

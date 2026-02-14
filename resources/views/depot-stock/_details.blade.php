@@ -5,9 +5,9 @@
   $fmtM = fn ($v) => number_format((float)$v, 2);
 
   // Buttons (stand out in BOTH light + dark)
-  $btnGreen = "border-emerald-600 bg-emerald-500 text-white";
-  $btnGhost = "inline-flex items-center gap-2 rounded-xl border $border $surface2 px-4 py-2 text-sm font-semibold $fg hover:bg-(--tw-surface)";
-  $btnLink  = "text-sm $muted hover:text-[color:var(--tw-fg)]";
+  $btnGreen = "border-emerald-600 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-700 transition";
+  $btnGhost = "inline-flex items-center gap-2 rounded-xl border $border $surface2 px-4 py-2 text-sm font-semibold $fg hover:bg-[color:var(--tw-surface)] transition";
+  $btnLink  = "text-sm $muted hover:text-[color:var(--tw-fg)] transition";
 @endphp
 
 @if(!$currentDepot)
@@ -31,18 +31,22 @@
         <div class="mt-1 text-xs {{ $muted }}">{{ $currentDepot->city ?: 'City not set' }}</div>
       </div>
 
-      {{-- Actions (disabled for now, but styled nicely) --}}
+      {{-- Actions --}}
       <div class="flex flex-wrap items-center gap-2">
-        <button type="button" disabled
-                class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $btnGreen }} opacity-40 cursor-not-allowed">
+        <a href="#"
+           class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $border }} {{ $surface2 }} {{ $fg }}
+                  hover:bg-[color:var(--tw-surface)] transition">
           Receive
-        </button>
-        <button type="button" disabled
-                class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $border }} {{ $surface2 }} {{ $fg }} opacity-40 cursor-not-allowed">
+        </a>
+
+        <a href="{{ route('sales.index', ['open_sale' => 1, 'from_depot' => $currentDepot->id]) }}"
+           class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $btnGreen }}">
           New sale
-        </button>
-        <button type="button" disabled
-                class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $border }} {{ $surface2 }} {{ $fg }} opacity-40 cursor-not-allowed">
+        </a>
+
+        <button type="button" id="btnDepotAdjust"
+                class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border {{ $border }} {{ $surface2 }} {{ $fg }}
+                       hover:bg-[color:var(--tw-surface)] transition">
           Adjustment
         </button>
       </div>
@@ -53,25 +57,34 @@
   <div class="grid sm:grid-cols-4 gap-3 mb-4">
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">On hand</div>
-      <div class="mt-1 text-xl font-semibold {{ $fg }}">{{ $fmtL($metrics['on_hand_l'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span></div>
+      <div class="mt-1 text-xl font-semibold {{ $fg }}">
+        {{ $fmtL($metrics['on_hand_l'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span>
+      </div>
       <div class="mt-1 text-[11px] {{ $muted }}">Physical available in depot</div>
     </div>
 
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Reserved</div>
-      <div class="mt-1 text-xl font-semibold {{ $fg }}">{{ $fmtL($metrics['reserved_l'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span></div>
+      <div class="mt-1 text-xl font-semibold {{ $fg }}">
+        {{ $fmtL($metrics['reserved_l'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span>
+      </div>
       <div class="mt-1 text-[11px] {{ $muted }}">Allocated to open sales</div>
     </div>
 
+    {{-- Batches metric (clean, no button) --}}
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Batches</div>
-      <div class="mt-1 text-xl font-semibold {{ $fg }}">{{ (int)($metrics['batches'] ?? 0) }}</div>
+      <div class="mt-1 text-xl font-semibold {{ $fg }}">
+        {{ (int)($metrics['batches'] ?? 0) }}
+      </div>
       <div class="mt-1 text-[11px] {{ $muted }}">FIFO layers in this depot</div>
     </div>
 
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Stock value</div>
-      <div class="mt-1 text-xl font-semibold {{ $fg }}">{{ $fmtM($metrics['value'] ?? 0) }}</div>
+      <div class="mt-1 text-xl font-semibold {{ $fg }}">
+        {{ $fmtM($metrics['value'] ?? 0) }}
+      </div>
       <div class="mt-1 text-[11px] {{ $muted }}">Qty × unit cost snapshot</div>
     </div>
   </div>
@@ -84,15 +97,25 @@
         <div class="mt-0.5 text-xs {{ $muted }}">Batch-aware rows (FIFO-ready)</div>
       </div>
 
-      <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface }} {{ $muted }}">
-        {{ $stocks->count() }} rows
-      </span>
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface }} {{ $muted }}">
+          {{ $stocks->count() }} rows
+        </span>
+
+        <button type="button"
+                id="btnViewAllBatches"
+                class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border {{ $border }} {{ $muted }} hover:text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface)] transition"
+                onclick="document.getElementById('batchesModal').classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); document.body.classList.add('overflow-hidden');">
+          See all
+        </button>
+      </div>
     </div>
 
     @if($stocks->isEmpty())
       <div class="p-6 text-sm {{ $muted }}">
         No stock recorded yet for this depot.
-        <span class="{{ $fg }} font-semibold">Receive</span> or <span class="{{ $fg }} font-semibold">confirm cross dock</span> to populate.
+        <span class="{{ $fg }} font-semibold">Receive</span> or
+        <span class="{{ $fg }} font-semibold">confirm cross dock</span> to populate.
       </div>
     @else
       <div class="overflow-x-auto">
@@ -105,6 +128,7 @@
               <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Reserved</th>
               <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Unit cost</th>
               <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Value</th>
+              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y {{ $border }}">
@@ -113,6 +137,12 @@
                 $batchCode = $row->batch?->code ?? ('Batch #' . ($row->batch_id ?? '—'));
                 $product   = $row->product?->name ?? ('Product #' . ($row->product_id ?? '—'));
                 $value     = ((float)$row->qty_on_hand) * ((float)$row->unit_cost);
+
+                $saleHref = route('sales.index', [
+                  'open_sale'   => 1,
+                  'from_depot'  => (int) $currentDepot->id,
+                  'from_product'=> (int) $row->product_id,
+                ]);
               @endphp
               <tr class="hover:bg-(--tw-surface-2)/60">
                 <td class="px-4 py-3">
@@ -136,6 +166,11 @@
                 <td class="px-4 py-3 font-semibold {{ $fg }}">
                   {{ number_format((float)$value, 2) }}
                 </td>
+                <td class="px-4 py-3">
+                  <a href="{{ $saleHref }}" class="{{ $btnLink }} font-semibold">
+                    New sale →
+                  </a>
+                </td>
               </tr>
             @endforeach
           </tbody>
@@ -143,48 +178,40 @@
       </div>
     @endif
   </div>
+
+  {{-- Adjustment modal --}}
+  @include('depot-stock.partials.adjustment-modal', [
+    'currentDepot' => $currentDepot,
+    'border' => $border,
+    'surface' => $surface,
+    'surface2' => $surface2,
+    'fg' => $fg,
+    'muted' => $muted,
+  ])
 
   {{-- Recent movements --}}
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mt-4">
-    <div class="p-4 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between gap-3">
-      <div>
-        <div class="text-sm font-semibold {{ $fg }}">Recent movements</div>
-        <div class="mt-0.5 text-xs {{ $muted }}">Last 12 receipts into this depot</div>
-      </div>
-    </div>
+  @include('depot-stock.partials.recent-movements', [
+    'recentMovements' => $recentMovements,
+    'border' => $border,
+    'surface' => $surface,
+    'surface2' => $surface2,
+    'fg' => $fg,
+    'muted' => $muted,
+    'pillGreen' => $pillGreen,
+  ])
 
-    @if($recentMovements->isEmpty())
-      <div class="p-6 text-sm {{ $muted }}">No movements yet.</div>
-    @else
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="{{ $surface2 }} border-b {{ $border }}">
-            <tr class="text-left">
-              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">When</th>
-              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Type</th>
-              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Batch</th>
-              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Product</th>
-              <th class="px-4 py-3 text-[11px] font-semibold {{ $muted }}">Qty</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y {{ $border }}">
-            @foreach($recentMovements as $m)
-              <tr class="hover:bg-(--tw-surface-2)/60">
-                <td class="px-4 py-3 {{ $muted }}">{{ $m->created_at?->format('Y-m-d H:i') }}</td>
-                <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $pillGreen }}">
-                    {{ strtoupper($m->type) }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 {{ $fg }}">{{ $m->batch?->code ?? ('#' . ($m->batch_id ?? '—')) }}</td>
-                <td class="px-4 py-3 {{ $fg }}">{{ $m->product?->name ?? ('#' . ($m->product_id ?? '—')) }}</td>
-                <td class="px-4 py-3 font-semibold {{ $fg }}">{{ number_format((float)$m->qty, 3) }}</td>
-              </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
-    @endif
-  </div>
+  {{-- Batches metric modal --}}
+  @include('depot-stock.partials.batches-metric-modal', [
+    'metrics' => $metrics,
+    'currentDepot' => $currentDepot,
+    'stocks' => $stocks,
+    'border' => $border,
+    'surface' => $surface,
+    'surface2' => $surface2,
+    'fg' => $fg,
+    'muted' => $muted,
+    'pillGreen' => $pillGreen,
+    'modalSize' => 'max-w-6xl', // Make modal 3x bigger
+  ])
 
 @endif

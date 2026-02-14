@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\Depot;
 use App\Models\Product;
 use App\Models\Sale;
@@ -40,7 +41,6 @@ class SalesController extends Controller
                 ->with(['depot', 'product', 'transporter', 'movement'])
                 ->find($saleId);
         } else {
-            // default select first item on page
             $selected = $sales->first();
         }
 
@@ -55,8 +55,14 @@ class SalesController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+          
+        $prefill = [
+            'open'       => (bool) $request->boolean('open_sale'),
+            'depot_id'   => (int) $request->query('from_depot', 0),
+            'product_id' => (int) $request->query('from_product', 0),
+            ];
 
-        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters'));
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'prefill'));
     }
 
     public function store(Request $request)
@@ -72,6 +78,7 @@ class SalesController extends Controller
             'qty'            => 'required|numeric|min:0.001',
             'unit_price'     => 'required|numeric|min:0',
             'currency'       => 'required|string|max:8',
+            'reference'      => 'nullable|string|max:64',
 
             'delivery_mode'  => 'required|in:ex_depot,delivered',
             'transporter_id' => 'nullable|integer',
@@ -81,33 +88,42 @@ class SalesController extends Controller
             'delivery_notes' => 'nullable|string',
         ]);
 
-        // Validate depot belongs to company
-        $depotOk = Depot::query()
-            ->where('company_id', $cid)
-            ->whereKey((int) $data['depot_id'])
-            ->exists();
-        if (!$depotOk) {
-            return back()->withErrors(['depot_id' => 'Invalid depot for this company.'])->withInput();
-        }
-
-        // Validate product belongs to company
-        $productOk = Product::query()
-            ->where('company_id', $cid)
-            ->whereKey((int) $data['product_id'])
-            ->exists();
-        if (!$productOk) {
-            return back()->withErrors(['product_id' => 'Invalid product for this company.'])->withInput();
-        }
-
-        // If delivered, transporter optional for now, but if set must belong
-        if (!empty($data['transporter_id'])) {
-            $transporterOk = Transporter::query()
+        // Check for duplicate sale reference (company_id + reference)
+        if (!empty($data['reference'])) {
+            $exists = \App\Models\Sale::query()
                 ->where('company_id', $cid)
-                ->whereKey((int) $data['transporter_id'])
+                ->where('reference', $data['reference'])
                 ->exists();
-            if (!$transporterOk) {
-                return back()->withErrors(['transporter_id' => 'Invalid transporter for this company.'])->withInput();
+            if ($exists) {
+                return back()->withErrors(['reference' => 'A sale with this reference already exists for your company.'])->withInput();
             }
+        }
+
+        $depotOk = Depot::query()->where('company_id', $cid)->whereKey((int) $data['depot_id'])->exists();
+        if (!$depotOk) return back()->withErrors(['depot_id' => 'Invalid depot for this company.'])->withInput();
+
+        $productOk = Product::query()->where('company_id', $cid)->whereKey((int) $data['product_id'])->exists();
+        if (!$productOk) return back()->withErrors(['product_id' => 'Invalid product for this company.'])->withInput();
+
+        if (!empty($data['transporter_id'])) {
+            $transporterOk = Transporter::query()->where('company_id', $cid)->whereKey((int) $data['transporter_id'])->exists();
+            if (!$transporterOk) return back()->withErrors(['transporter_id' => 'Invalid transporter for this company.'])->withInput();
+        }
+
+        // Check for sufficient stock before allowing new sale
+        $qty = (float) $data['qty'];
+        $availableTotal = 0.0;
+        $layers = \App\Models\DepotStock::query()
+            ->where('company_id', $cid)
+            ->where('depot_id', (int) $data['depot_id'])
+            ->where('product_id', (int) $data['product_id'])
+            ->whereRaw('(qty_on_hand - qty_reserved) > 0')
+            ->get();
+        foreach ($layers as $l) {
+            $availableTotal += max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved);
+        }
+        if ($availableTotal + 1e-9 < $qty) {
+            return back()->withErrors(['qty' => 'Insufficient stock in depot for this product.'])->withInput();
         }
 
         $sale = DB::transaction(function () use ($cid, $u, $data) {
@@ -121,7 +137,7 @@ class SalesController extends Controller
             $saleDate = $data['sale_date'] ?? Carbon::today();
             $year = Carbon::parse($saleDate)->format('Y');
 
-            $company = \App\Models\Company::find($cid);
+            $company = Company::find($cid);
             $companyCode = $company?->code ?? '';
 
             $reference = $companyCode
@@ -164,72 +180,169 @@ class SalesController extends Controller
             ->with('status', 'Sale created (draft).');
     }
 
-public function post(Sale $sale, InventoryLedger $ledger)
-{
-    $u = auth()->user();
+    public function update(Request $request, Sale $sale)
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
 
-    if ($sale->status !== 'draft') {
-        return back()->with('error', 'Only draft sales can be posted.');
-    }
-
-    if (!$sale->depot_id) {
-        return back()->with('error', 'Depot is missing on this sale.');
-    }
-
-    $qty = (float) $sale->qty;
-    if ($qty <= 0) {
-        return back()->with('error', 'Quantity must be greater than zero.');
-    }
-
-    DB::transaction(function () use ($sale, $u, $ledger, $qty) {
-
-        $result = $ledger->issue(
-            [
-                'company_id'    => (int) $sale->company_id,
-                'product_id'    => (int) $sale->product_id,
-                'from_depot_id' => (int) $sale->depot_id,
-                'qty'           => $qty,
-
-                'ref_type'      => 'sale',
-                'ref_id'        => (int) $sale->id,
-                'reference'     => 'sale:' . $sale->id,
-                'notes'         => 'Sale issue (FIFO)',
-
-                'created_by'    => $u?->id,
-                'updated_by'    => $u?->id,
-            ],
-            [
-                'type'          => 'issue',
-                'ref_type'      => 'sale',
-                'ref_id'        => (int) $sale->id,
-                'from_depot_id' => (int) $sale->depot_id,
-            ]
-        );
-
-        // If your issue() is idempotent and returns existing, still fine.
-        $movement  = $result['movement'] ?? null;
-        $cogsTotal = (float) ($result['cogs_total'] ?? 0);
-
-        if (!$movement) {
-            throw new \RuntimeException('Inventory issue failed: missing movement.');
+        if ((int)$sale->company_id !== $cid) {
+            abort(404);
         }
 
-        $sale->inventory_movement_id = $movement->id;
-        $sale->cogs_total = round($cogsTotal, 2);
+        if ($sale->status !== 'draft') {
+            return back()->with('error', 'Only draft sales can be edited.');
+        }
 
-        $gross = (float) $sale->total - (float) $sale->cogs_total;
-        $sale->gross_profit = round($gross, 2);
+        $data = $request->validate([
+            'depot_id'       => 'required|integer',
+            'product_id'     => 'required|integer',
+            'client_name'    => 'nullable|string|max:120',
+            'sale_date'      => 'nullable|date',
+            'qty'            => 'required|numeric|min:0.001',
+            'unit_price'     => 'required|numeric|min:0',
+            'currency'       => 'required|string|max:8',
 
-        $sale->status    = 'posted';
-        $sale->posted_by = $u?->id;
-        $sale->posted_at = now();
+            'delivery_mode'  => 'required|in:ex_depot,delivered',
+            'transporter_id' => 'nullable|integer',
+            'truck_no'       => 'nullable|string|max:32',
+            'trailer_no'     => 'nullable|string|max:32',
+            'waybill_no'     => 'nullable|string|max:64',
+            'delivery_notes' => 'nullable|string',
+        ]);
+
+        $depotOk = Depot::query()->where('company_id', $cid)->whereKey((int) $data['depot_id'])->exists();
+        if (!$depotOk) return back()->withErrors(['depot_id' => 'Invalid depot for this company.'])->withInput();
+
+        $productOk = Product::query()->where('company_id', $cid)->whereKey((int) $data['product_id'])->exists();
+        if (!$productOk) return back()->withErrors(['product_id' => 'Invalid product for this company.'])->withInput();
+
+        if (!empty($data['transporter_id'])) {
+            $transporterOk = Transporter::query()->where('company_id', $cid)->whereKey((int) $data['transporter_id'])->exists();
+            if (!$transporterOk) return back()->withErrors(['transporter_id' => 'Invalid transporter for this company.'])->withInput();
+        }
+
+        $qty   = (float) $data['qty'];
+        // Check for sufficient stock before allowing edit
+        $availableTotal = 0.0;
+        $layers = \App\Models\DepotStock::query()
+            ->where('company_id', $cid)
+            ->where('depot_id', (int) $data['depot_id'])
+            ->where('product_id', (int) $data['product_id'])
+            ->whereRaw('(qty_on_hand - qty_reserved) > 0')
+            ->get();
+        foreach ($layers as $l) {
+            $availableTotal += max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved);
+        }
+        if ($availableTotal + 1e-9 < $qty) {
+            return back()->withErrors(['qty' => 'Insufficient stock in depot for this product.'])->withInput();
+        }
+
+        $unit  = (float) $data['unit_price'];
+        $total = round($qty * $unit, 2);
+
+        $sale->depot_id     = (int) $data['depot_id'];
+        $sale->product_id   = (int) $data['product_id'];
+        $sale->client_name  = $data['client_name'] ?? null;
+        $sale->sale_date    = $data['sale_date'] ?? $sale->sale_date;
+        $sale->qty          = $qty;
+        $sale->unit_price   = $unit;
+        $sale->currency     = $data['currency'] ?? 'USD';
+        $sale->total        = $total;
+
+        $sale->delivery_mode = $data['delivery_mode'];
+
+        if ($data['delivery_mode'] === 'delivered') {
+            $sale->transporter_id = $data['transporter_id'] ?? null;
+            $sale->truck_no       = $data['truck_no'] ?? null;
+            $sale->trailer_no     = $data['trailer_no'] ?? null;
+            $sale->waybill_no     = $data['waybill_no'] ?? null;
+            $sale->delivery_notes = $data['delivery_notes'] ?? null;
+        } else {
+            $sale->transporter_id = null;
+            $sale->truck_no       = null;
+            $sale->trailer_no     = null;
+            $sale->waybill_no     = null;
+            $sale->delivery_notes = null;
+        }
 
         $sale->updated_by = $u?->id;
         $sale->save();
-    });
 
-    // I'd usually redirect to sales.show after posting:
-    return redirect()->route('sales.index', $sale)
-        ->with('status', "Sale posted.\nFIFO consumed stock.\nMovement created.");
-}
+        return redirect()->route('sales.index', ['sale' => $sale->id])
+            ->with('status', 'Draft updated.');
+    }
+
+    public function post(Sale $sale, InventoryLedger $ledger)
+    {
+        $u = auth()->user();
+
+        if ($sale->status !== 'draft') {
+            return back()->with('error', 'Only draft sales can be posted.');
+        }
+
+        if (!$sale->depot_id) {
+            return back()->with('error', 'Depot is missing on this sale.');
+        }
+
+        $qty = (float) $sale->qty;
+        if ($qty <= 0) {
+            return back()->with('error', 'Quantity must be greater than zero.');
+        }
+
+        try {
+            DB::transaction(function () use ($sale, $u, $ledger, $qty) {
+
+                $result = $ledger->issue(
+                    [
+                        'company_id'    => (int) $sale->company_id,
+                        'product_id'    => (int) $sale->product_id,
+                        'from_depot_id' => (int) $sale->depot_id,
+                        'qty'           => $qty,
+
+                        'ref_type'      => 'sale',
+                        'ref_id'        => (int) $sale->id,
+                        'reference'     => 'sale:' . $sale->id,
+                        'notes'         => 'Sale issue (FIFO)',
+
+                        'created_by'    => $u?->id,
+                        'updated_by'    => $u?->id,
+                    ],
+                    [
+                        'type'          => 'issue',
+                        'ref_type'      => 'sale',
+                        'ref_id'        => (int) $sale->id,
+                        'from_depot_id' => (int) $sale->depot_id,
+                    ]
+                );
+
+                $movement  = $result['movement'] ?? null;
+                $cogsTotal = (float) ($result['cogs_total'] ?? 0);
+
+                if (!$movement) {
+                    throw new \RuntimeException('Inventory issue failed: missing movement.');
+                }
+
+                $sale->inventory_movement_id = $movement->id;
+                $sale->cogs_total = round($cogsTotal, 2);
+
+                $gross = (float) $sale->total - (float) $sale->cogs_total;
+                $sale->gross_profit = round($gross, 2);
+
+                $sale->status    = 'posted';
+                $sale->posted_by = $u?->id;
+                $sale->posted_at = now();
+
+                $sale->updated_by = $u?->id;
+                $sale->save();
+            });
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'Insufficient stock')) {
+                return back()->withErrors(['qty' => 'Insufficient stock in depot for this product.'])->withInput();
+            }
+            throw $e;
+        }
+
+        return redirect()->route('sales.index', ['sale' => $sale->id])
+            ->with('status', "Sale posted.\nFIFO consumed stock.\nMovement created.");
+    }
 }

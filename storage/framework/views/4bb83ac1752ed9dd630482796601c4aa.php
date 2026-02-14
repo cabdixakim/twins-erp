@@ -42,7 +42,7 @@
             
             <button id="openMenu"
                     type="button"
-                    class="tw-icon-btn cursor-pointer select-none md:hidden h-9 w-9 grid place-items-center rounded-xl"
+                    class="tw-icon-btn cursor-pointer select-none md:hidden h-6 w-7 grid place-items-center rounded-lg"
                     aria-label="Open menu"
                     data-mobile-menu-open>
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

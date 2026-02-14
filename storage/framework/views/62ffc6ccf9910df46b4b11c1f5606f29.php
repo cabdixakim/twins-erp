@@ -2,11 +2,8 @@
 <?php
     /**
      * Theme-aware + premium (token-based)
-     * Uses app.css tokens:
-     *  --tw-bg, --tw-fg, --tw-muted, --tw-surface, --tw-surface-2, --tw-border, --tw-accent, --tw-accent-soft
-     *
      * Flags expected:
-     *  $onDashboard, $onDepotStock, $onPurchases
+     *  $onDashboard, $onDepotStock, $onPurchases, $onSales
      */
 
     $itemBase =
@@ -45,12 +42,10 @@
     
     <a href="<?php echo e(route('dashboard')); ?>"
        class="<?php echo e($itemBase); ?> <?php echo e($onDashboard ? $itemActive : $itemIdle); ?>">
-        
         <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
                      <?php echo e($onDashboard ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent'); ?>"></span>
 
-        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onDashboard ? $iconWrapActive : $iconWrapIdle); ?>"
-              data-tip="Summary" aria-label="Summary">
+        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onDashboard ? $iconWrapActive : $iconWrapIdle); ?>">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 19V11"/>
@@ -64,14 +59,6 @@
             <div class="<?php echo e($title); ?>">Summary</div>
             <div class="<?php echo e($kicker); ?>">High-level view of all activity</div>
         </div>
-
-        
-        <span class="ml-auto opacity-0 translate-x-[-2px] transition
-                     group-hover:opacity-100 group-hover:translate-x-0 sidebar-label">
-            <svg class="w-4 h-4 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
-            </svg>
-        </span>
     </a>
 
     
@@ -80,8 +67,7 @@
         <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
                      <?php echo e($onDepotStock ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent'); ?>"></span>
 
-        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onDepotStock ? $iconWrapActive : $iconWrapIdle); ?>"
-              data-tip="Depot stock" aria-label="Depot stock">
+        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onDepotStock ? $iconWrapActive : $iconWrapIdle); ?>">
             <svg class="w-5 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5-9 5-9-5z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10v9l9 5 9-5v-9"/>
@@ -89,32 +75,10 @@
             </svg>
         </span>
 
-<div class="grid grid-cols-[1fr_auto] items-start gap-x-3 min-w-0">
-    
-    <div class="min-w-0">
-        <div class="<?php echo e($title); ?>">Depot Stock</div>
-
-        <div class="<?php echo e($kicker); ?>">
-            Receive, sell, adjust by depot (soon)
+        <div class="min-w-0 sidebar-label">
+            <div class="<?php echo e($title); ?>">Depot Stock</div>
+            <div class="<?php echo e($kicker); ?>">Receive, sell, adjust by depot</div>
         </div>
-    </div>
-
-    
-    <span
-        class="shrink-0 self-start rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide
-               border bg-[color:var(--tw-surface-2)] border-[color:var(--tw-border)] tw-muted
-               <?php echo e($onDepotStock ? 'bg-[color:var(--tw-accent-soft)] text-[color:var(--tw-fg)]' : ''); ?>"
-    >
-        Live 
-    </span>
-</div>
-
-        <span class="ml-auto opacity-0 translate-x-[-2px] transition
-                     group-hover:opacity-100 group-hover:translate-x-0 sidebar-label">
-            <svg class="w-4 h-4 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
-            </svg>
-        </span>
     </a>
 
     
@@ -123,8 +87,7 @@
         <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
                      <?php echo e($onPurchases ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent'); ?>"></span>
 
-        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onPurchases ? $iconWrapActive : $iconWrapIdle); ?>"
-              data-tip="Purchases" aria-label="Purchases">
+        <span class="<?php echo e($iconWrapBase); ?> <?php echo e($onPurchases ? $iconWrapActive : $iconWrapIdle); ?>">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18"/>
@@ -135,6 +98,26 @@
         <div class="min-w-0 sidebar-label">
             <div class="<?php echo e($title); ?>">Purchases</div>
             <div class="<?php echo e($kicker); ?>">Draft → confirm → batch</div>
+        </div>
+    </a>
+
+    
+    <a href="<?php echo e(route('sales.index')); ?>"
+       class="<?php echo e($itemBase); ?> <?php echo e($onSales ?? false ? $itemActive : $itemIdle); ?>">
+        <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
+                     <?php echo e(($onSales ?? false) ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent'); ?>"></span>
+
+        <span class="<?php echo e($iconWrapBase); ?> <?php echo e(($onSales ?? false) ? $iconWrapActive : $iconWrapIdle); ?>">
+            
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16l-3-2-3 2-3-2-3 2-4-2V4z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 8h8M8 12h8M8 16h5"/>
+            </svg>
+        </span>
+
+        <div class="min-w-0 sidebar-label">
+            <div class="<?php echo e($title); ?>">Sales</div>
+            <div class="<?php echo e($kicker); ?>">Draft → post → FIFO issue</div>
         </div>
 
         <span class="ml-auto opacity-0 translate-x-[-2px] transition
