@@ -34,9 +34,9 @@
               <span class="{{ $pillBase }} {{ $border }} {{ $surface2 }} {{ $fg }}">{{ $client->code }}</span>
             @endif
             @if($client->is_active)
-              <span class="{{ $pillBase }} border-emerald-400/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300">Active</span>
+              <span class="{{ $pillBase }} s-green">Active</span>
             @else
-              <span class="{{ $pillBase }} border-slate-400/30 bg-slate-500/10 text-slate-600 dark:text-slate-400">Inactive</span>
+              <span class="{{ $pillBase }} s-slate">Inactive</span>
             @endif
           </div>
           <p class="mt-0.5 text-[11px] {{ $muted }}">
@@ -55,8 +55,7 @@
         <form method="POST" action="{{ route('clients.destroy', $client) }}"
               onsubmit="return confirm('Delete this client? This cannot be undone.')">
           @csrf @method('DELETE')
-          <button type="submit" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-rose-500/30
-                   bg-rose-500/10 text-rose-700 dark:text-rose-300 text-[12px] font-semibold hover:bg-rose-500/20 transition">
+          <button type="submit" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-rose text-[12px] font-semibold transition">
             Delete
           </button>
         </form>
@@ -65,13 +64,13 @@
   </div>
 
   @if(session('status'))
-    <div class="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-800 dark:text-emerald-200">
+    <div class="alert-ok rounded-xl px-4 py-2.5 text-sm font-medium">
       {{ session('status') }}
     </div>
   @endif
 
   @if(session('error'))
-    <div class="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-800 dark:text-rose-200">
+    <div class="alert-err rounded-xl px-4 py-2.5 text-sm font-medium">
       {{ session('error') }}
     </div>
   @endif
@@ -145,7 +144,7 @@
             </div>
             <div class="text-right">
               <div class="font-semibold {{ $fg }}">{{ number_format((float)$p->qty, 3) }} L</div>
-              <span class="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 text-blue-800 dark:text-blue-300 px-2 py-0.5 text-[10px] font-semibold">dispatched</span>
+              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold s-purple">dispatched</span>
             </div>
           </div>
         @endforeach

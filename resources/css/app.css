@@ -162,6 +162,61 @@ html.dark .tw-brand-logo {
 html.tw-mobile-open #mobileSidebar        { transform: translateX(0); }
 html.tw-mobile-open #mobileSidebarOverlay { display: block; }
 
+/* =========================
+   Semantic status pill colours
+   Properly calibrated for light & dark.
+   Pair with border + layout utilities.
+   ========================= */
+.s-green  { background:rgba(16,185,129,.12);  border-color:rgba(52,211,153,.40);  color:#065f46; }
+.s-amber  { background:rgba(245,158,11,.12);  border-color:rgba(251,191,36,.40);  color:#92400e; }
+.s-blue   { background:rgba(59,130,246,.12);  border-color:rgba(96,165,250,.40);  color:#1e40af; }
+.s-rose   { background:rgba(239,68,68,.12);   border-color:rgba(252,165,165,.40); color:#991b1b; }
+.s-purple { background:rgba(168,85,247,.12);  border-color:rgba(216,180,254,.40); color:#6b21a8; }
+.s-slate  { background:rgba(100,116,139,.12); border-color:rgba(148,163,184,.40); color:#475569; }
+
+html.dark .s-green  { background:rgba(16,185,129,.22);  border-color:rgba(52,211,153,.60);  color:#6ee7b7; }
+html.dark .s-amber  { background:rgba(245,158,11,.22);  border-color:rgba(253,230,138,.60);  color:#fcd34d; }
+html.dark .s-blue   { background:rgba(59,130,246,.22);  border-color:rgba(147,197,253,.60);  color:#93c5fd; }
+html.dark .s-rose   { background:rgba(239,68,68,.22);   border-color:rgba(252,165,165,.60);  color:#fca5a5; }
+html.dark .s-purple { background:rgba(168,85,247,.22);  border-color:rgba(216,180,254,.60);  color:#d8b4fe; }
+html.dark .s-slate  { background:rgba(100,116,139,.22); border-color:rgba(203,213,225,.50);  color:#cbd5e1; }
+
+/* =========================
+   Alert / flash banners
+   ========================= */
+.alert-ok   { border:1px solid rgba(52,211,153,.45);  background:rgba(16,185,129,.10);  color:#065f46; }
+.alert-err  { border:1px solid rgba(252,165,165,.45); background:rgba(239,68,68,.10);   color:#991b1b; }
+.alert-warn { border:1px solid rgba(253,230,138,.45); background:rgba(245,158,11,.10);  color:#92400e; }
+
+html.dark .alert-ok   { border-color:rgba(52,211,153,.60);  background:rgba(16,185,129,.22);  color:#a7f3d0; }
+html.dark .alert-err  { border-color:rgba(252,165,165,.60); background:rgba(239,68,68,.22);   color:#fecaca; }
+html.dark .alert-warn { border-color:rgba(253,230,138,.60); background:rgba(245,158,11,.22);  color:#fef9c3; }
+
+/* Semi-transparent action buttons — theme-aware */
+.btn-soft-green  { background:rgba(16,185,129,.10);  border-color:rgba(52,211,153,.40);  color:#065f46; }
+.btn-soft-amber  { background:rgba(245,158,11,.10);  border-color:rgba(251,191,36,.40);  color:#92400e; }
+.btn-soft-blue   { background:rgba(59,130,246,.10);  border-color:rgba(96,165,250,.40);  color:#1e40af; }
+.btn-soft-rose   { background:rgba(239,68,68,.10);   border-color:rgba(252,165,165,.40); color:#991b1b; }
+.btn-soft-purple { background:rgba(168,85,247,.10);  border-color:rgba(216,180,254,.40); color:#6b21a8; }
+
+html.dark .btn-soft-green  { background:rgba(16,185,129,.22);  border-color:rgba(52,211,153,.55);  color:#6ee7b7; }
+html.dark .btn-soft-amber  { background:rgba(245,158,11,.22);  border-color:rgba(251,191,36,.55);  color:#fcd34d; }
+html.dark .btn-soft-blue   { background:rgba(59,130,246,.22);  border-color:rgba(96,165,250,.55);  color:#93c5fd; }
+html.dark .btn-soft-rose   { background:rgba(239,68,68,.22);   border-color:rgba(252,165,165,.55); color:#fca5a5; }
+html.dark .btn-soft-purple { background:rgba(168,85,247,.22);  border-color:rgba(216,180,254,.55); color:#d8b4fe; }
+
+.btn-soft-green:hover  { background:rgba(16,185,129,.20); }
+.btn-soft-amber:hover  { background:rgba(245,158,11,.20); }
+.btn-soft-blue:hover   { background:rgba(59,130,246,.20); }
+.btn-soft-rose:hover   { background:rgba(239,68,68,.20);  }
+.btn-soft-purple:hover { background:rgba(168,85,247,.20); }
+
+html.dark .btn-soft-green:hover  { background:rgba(16,185,129,.30); }
+html.dark .btn-soft-amber:hover  { background:rgba(245,158,11,.30); }
+html.dark .btn-soft-blue:hover   { background:rgba(59,130,246,.30); }
+html.dark .btn-soft-rose:hover   { background:rgba(239,68,68,.30);  }
+html.dark .btn-soft-purple:hover { background:rgba(168,85,247,.30); }
+
 /* Ambient background */
 .tw-ambient {
   background:

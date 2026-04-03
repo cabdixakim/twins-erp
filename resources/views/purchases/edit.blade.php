@@ -65,7 +65,7 @@
 </div>
 
 @if(session('error'))
-  <div class="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-900 dark:text-rose-100">
+  <div class="alert-err mt-4 rounded-xl p-3 text-sm font-medium">
     {{ session('error') }}
   </div>
 @endif

@@ -28,14 +28,14 @@
 @section('content')
 
 @if(session('status'))
-  <div class="mb-4 rounded-xl border border-emerald-400/20 bg-emerald-100/60 text-emerald-900 px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-sm">
-    <svg class="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+  <div class="alert-ok mb-4 rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2">
+    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
     <span>{{ session('status') }}</span>
   </div>
 @endif
 
 @if(session('error'))
-  <div class="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-100">
+  <div class="alert-err mb-4 rounded-xl p-3 text-sm font-medium">
     {{ session('error') }}
   </div>
 @endif

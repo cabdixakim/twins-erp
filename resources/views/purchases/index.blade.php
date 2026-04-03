@@ -95,7 +95,7 @@
   </style>
 
   @if (session('status'))
-    <div class="rounded-xl border border-emerald-500/30 bg-[color:var(--tw-accent-soft)] p-3 text-sm text-emerald-100">
+    <div class="alert-ok rounded-xl p-3 text-sm font-medium">
       {!! nl2br(e(session('status'))) !!}
     </div>
   @endif

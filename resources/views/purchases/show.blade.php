@@ -19,17 +19,17 @@
     default => ucfirst(str_replace('_',' ', (string) $purchase->type)),
   };
 
-  // Status pill (tokenised + consistent)
+  // Status pill — uses semantic CSS classes from app.css (s-*)
   $statusPill = match($purchase->status) {
-    'draft'       => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
-    'confirmed'   => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
-    'nominated'   => 'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100',
-    'received'    => 'border-emerald-500/30 bg-emerald-500/20 text-emerald-900 dark:text-emerald-100',
-    'transferred' => 'border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-100',
-    'dispatched'  => 'border-purple-500/30 bg-purple-500/10 text-purple-900 dark:text-purple-100',
-    'cancelled'   => 'border-rose-500/30 bg-rose-500/10 text-rose-900 dark:text-rose-100',
-    'voided'      => 'border-rose-700/40 bg-rose-700/10 text-rose-900 dark:text-rose-200',
-    default       => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
+    'draft'       => 's-slate',
+    'confirmed'   => 's-green',
+    'nominated'   => 's-amber',
+    'received'    => 's-green',
+    'transferred' => 's-blue',
+    'dispatched'  => 's-purple',
+    'cancelled'   => 's-rose',
+    'voided'      => 's-rose',
+    default       => 's-slate',
   };
 
   $qty   = (float) ($purchase->qty ?? 0);
@@ -118,9 +118,8 @@
           <form method="POST" action="{{ route('purchases.receive', $purchase) }}" id="receiveForm">
             @csrf
             <button type="button" id="btnReceive"
-                    class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-emerald-500/40
-                           bg-emerald-500/10 text-emerald-900 dark:text-emerald-100
-                           text-sm font-semibold hover:bg-emerald-500/20 transition">
+                    class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-green
+                           text-sm font-semibold transition">
               Receive
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4"/></svg>
             </button>
@@ -130,9 +129,8 @@
         {{-- Import: Nominate Vessel (confirmed import) --}}
         @if($purchase->type === 'import' && $purchase->status === 'confirmed')
           <button type="button" id="btnNominate"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-amber-500/40
-                         bg-amber-500/10 text-amber-900 dark:text-amber-100
-                         text-sm font-semibold hover:bg-amber-500/20 transition">
+                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-amber
+                         text-sm font-semibold transition">
             Nominate vessel
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l7-7-7-7M5 19l7-7-7-7"/></svg>
           </button>
@@ -141,9 +139,8 @@
         {{-- Import: Deliver to Depot (nominated import) --}}
         @if($purchase->type === 'import' && $purchase->status === 'nominated')
           <button type="button" id="btnImportDeliver"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-emerald-500/40
-                         bg-emerald-500/10 text-emerald-900 dark:text-emerald-100
-                         text-sm font-semibold hover:bg-emerald-500/20 transition">
+                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-green
+                         text-sm font-semibold transition">
             Deliver to depot
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4"/></svg>
           </button>
@@ -152,16 +149,14 @@
         {{-- Cross-dock actions (confirmed cross_dock) --}}
         @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
           <button type="button" id="btnCrossDockTransfer"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-blue-500/40
-                         bg-blue-500/10 text-blue-900 dark:text-blue-100
-                         text-sm font-semibold hover:bg-blue-500/20 transition">
+                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-blue
+                         text-sm font-semibold transition">
             Transfer to depot
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
           </button>
           <button type="button" id="btnCrossDockDispatch"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-purple-500/40
-                         bg-purple-500/10 text-purple-900 dark:text-purple-100
-                         text-sm font-semibold hover:bg-purple-500/20 transition">
+                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-purple
+                         text-sm font-semibold transition">
             Dispatch out
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-7-7l7 7-7 7"/></svg>
           </button>
@@ -172,9 +167,8 @@
       {{-- CANCEL button (draft / confirmed / nominated without deliveries) --}}
       @if(in_array($purchase->status, ['draft', 'confirmed', 'nominated']))
         <button type="button" id="btnCancel"
-                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-rose-500/30
-                       bg-rose-500/8 text-rose-700 dark:text-rose-300
-                       text-sm font-semibold hover:bg-rose-500/15 transition">
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-rose
+                       text-sm font-semibold transition">
           Cancel purchase
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -183,9 +177,8 @@
       {{-- VOID / Return to seller (received local_depot) --}}
       @if($purchase->type === 'local_depot' && $purchase->status === 'received')
         <button type="button" id="btnVoid"
-                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-rose-700/40
-                       bg-rose-700/10 text-rose-800 dark:text-rose-200
-                       text-sm font-semibold hover:bg-rose-700/20 transition">
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-rose
+                       text-sm font-semibold transition">
           Return to seller
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
         </button>
@@ -195,13 +188,13 @@
   </div>
 
   @if(session('status'))
-    <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/20 p-3 text-sm text-emerald-900 dark:text-emerald-100">
+    <div class="alert-ok rounded-xl p-3 text-sm font-medium">
       {!! nl2br(e(session('status'))) !!}
     </div>
   @endif
 
   @if(session('error'))
-    <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/20 p-3 text-sm text-rose-900 dark:text-rose-100">
+    <div class="alert-err rounded-xl p-3 text-sm font-medium">
       {{ session('error') }}
     </div>
   @endif
@@ -1022,7 +1015,7 @@
     <form method="POST" action="{{ route('purchases.void', $purchase) }}" id="voidForm">
       @csrf
       <div class="p-5 space-y-4">
-        <div class="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-xs text-rose-800 dark:text-rose-200">
+        <div class="alert-err rounded-xl p-3 text-xs">
           This action is irreversible. The batch stock for {{ number_format($qty, 3) }} L will be removed from <strong>{{ $depotName }}</strong>.
         </div>
 

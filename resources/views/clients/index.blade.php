@@ -48,13 +48,13 @@
   </div>
 
   @if(session('status'))
-    <div class="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-800 dark:text-emerald-200">
+    <div class="alert-ok rounded-xl px-4 py-2.5 text-sm font-medium">
       {{ session('status') }}
     </div>
   @endif
 
   @if(session('error'))
-    <div class="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-800 dark:text-rose-200">
+    <div class="alert-err rounded-xl px-4 py-2.5 text-sm font-medium">
       {{ session('error') }}
     </div>
   @endif
@@ -134,9 +134,9 @@
                 <td class="px-4 py-3 {{ $muted }} hidden md:table-cell">{{ $client->contact_person ?: '—' }}</td>
                 <td class="px-4 py-3">
                   @if($client->is_active)
-                    <span class="{{ $pillBase }} border-emerald-400/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300">Active</span>
+                    <span class="{{ $pillBase }} s-green">Active</span>
                   @else
-                    <span class="{{ $pillBase }} border-slate-400/30 bg-slate-500/10 text-slate-600 dark:text-slate-400">Inactive</span>
+                    <span class="{{ $pillBase }} s-slate">Inactive</span>
                   @endif
                 </td>
                 <td class="px-4 py-3 text-right">
