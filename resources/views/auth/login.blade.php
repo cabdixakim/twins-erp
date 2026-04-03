@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sign in • Twins</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  @vite(['resources/css/app.css'])
 </head>
 <body class="h-full bg-slate-950 flex items-center justify-center px-4">
   <div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-emerald-500/10 overflow-hidden">

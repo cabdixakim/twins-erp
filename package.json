@@ -6,6 +6,7 @@
     "build": "vite build"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.1",
     "@tailwindcss/postcss": "^4.1.18",
     "autoprefixer": "^10.4.23",
     "laravel-vite-plugin": "^1.0.0",
