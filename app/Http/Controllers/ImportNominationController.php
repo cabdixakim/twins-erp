@@ -7,29 +7,26 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Purchase;
 use App\Models\ImportNomination;
 use App\Models\ImportTruck;
-use App\Models\Transporter;
 
 class ImportNominationController extends Controller
 {
-    // ── Create or update nomination ──────────────────────────────────────────
+    // ── Create nomination ────────────────────────────────────────────────────
 
     public function store(Request $request, Purchase $purchase)
     {
-        $this->authorise($purchase);
+        $cid = $this->authorise($purchase);
 
         $data = $request->validate([
-            'transporter_id'       => 'nullable|integer',
-            'currency'             => 'required|string|max:8',
-            'rate_per_1000l'       => 'required|numeric|min:0',
-            'allowed_loss_pct'     => 'required|numeric|min:0|max:100',
-            'short_charge_rate'    => 'required|numeric|min:0',
-            'short_charge_currency'=> 'required|string|max:8',
-            'advances'             => 'nullable|numeric|min:0',
-            'advances_currency'    => 'required|string|max:8',
-            'notes'                => 'nullable|string|max:2000',
+            'transporter_id'        => 'nullable|integer',
+            'currency'              => 'required|string|max:8',
+            'rate_per_1000l'        => 'required|numeric|min:0',
+            'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
+            'short_charge_rate'     => 'required|numeric|min:0',
+            'short_charge_currency' => 'required|string|max:8',
+            'advances'              => 'nullable|numeric|min:0',
+            'advances_currency'     => 'required|string|max:8',
+            'notes'                 => 'nullable|string|max:2000',
         ]);
-
-        $cid = session('active_company_id');
 
         if ($purchase->importNomination) {
             $purchase->importNomination->update(array_merge($data, [
@@ -45,7 +42,6 @@ class ImportNominationController extends Controller
             'created_by'  => auth()->id(),
         ]));
 
-        // Advance purchase status to nominated when logistics nomination is created
         if ($purchase->status === 'confirmed') {
             $purchase->update(['status' => 'nominated']);
         }
@@ -53,23 +49,23 @@ class ImportNominationController extends Controller
         return back()->with('status', 'Import nomination created. You can now add trucks.');
     }
 
-    // ── Update nomination (edit) ─────────────────────────────────────────────
+    // ── Update nomination ────────────────────────────────────────────────────
 
     public function update(Request $request, Purchase $purchase, ImportNomination $nomination)
     {
         $this->authorise($purchase);
-        abort_if($nomination->purchase_id !== $purchase->id, 403);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
 
         $data = $request->validate([
-            'transporter_id'       => 'nullable|integer',
-            'currency'             => 'required|string|max:8',
-            'rate_per_1000l'       => 'required|numeric|min:0',
-            'allowed_loss_pct'     => 'required|numeric|min:0|max:100',
-            'short_charge_rate'    => 'required|numeric|min:0',
-            'short_charge_currency'=> 'required|string|max:8',
-            'advances'             => 'nullable|numeric|min:0',
-            'advances_currency'    => 'required|string|max:8',
-            'notes'                => 'nullable|string|max:2000',
+            'transporter_id'        => 'nullable|integer',
+            'currency'              => 'required|string|max:8',
+            'rate_per_1000l'        => 'required|numeric|min:0',
+            'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
+            'short_charge_rate'     => 'required|numeric|min:0',
+            'short_charge_currency' => 'required|string|max:8',
+            'advances'              => 'nullable|numeric|min:0',
+            'advances_currency'     => 'required|string|max:8',
+            'notes'                 => 'nullable|string|max:2000',
         ]);
 
         $nomination->update(array_merge($data, [
@@ -83,22 +79,22 @@ class ImportNominationController extends Controller
 
     public function addTruck(Request $request, Purchase $purchase, ImportNomination $nomination)
     {
-        $this->authorise($purchase);
-        abort_if($nomination->purchase_id !== $purchase->id, 403);
+        $cid = $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
 
         $data = $request->validate([
-            'truck_reg'      => 'nullable|string|max:40',
-            'trailer_reg'    => 'nullable|string|max:40',
-            'driver_name'    => 'nullable|string|max:150',
-            'driver_passport'=> 'nullable|string|max:60',
-            'driver_license' => 'nullable|string|max:60',
-            'driver_phone'   => 'nullable|string|max:30',
-            'capacity'       => 'required|numeric|min:1',
-            'notes'          => 'nullable|string|max:1000',
+            'truck_reg'       => 'nullable|string|max:40',
+            'trailer_reg'     => 'nullable|string|max:40',
+            'driver_name'     => 'nullable|string|max:150',
+            'driver_passport' => 'nullable|string|max:60',
+            'driver_license'  => 'nullable|string|max:60',
+            'driver_phone'    => 'nullable|string|max:30',
+            'capacity'        => 'required|numeric|min:1',
+            'notes'           => 'nullable|string|max:1000',
         ]);
 
         ImportTruck::create(array_merge($data, [
-            'company_id'    => session('active_company_id'),
+            'company_id'    => $cid,
             'nomination_id' => $nomination->id,
             'status'        => 'nominated',
             'created_by'    => auth()->id(),
@@ -112,19 +108,19 @@ class ImportNominationController extends Controller
     public function updateTruck(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
         $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if(in_array($truck->status, ['loaded', 'in_transit', 'border_cleared', 'delivered']), 422,
             'Cannot edit a truck that has already been loaded.');
 
         $data = $request->validate([
-            'truck_reg'      => 'nullable|string|max:40',
-            'trailer_reg'    => 'nullable|string|max:40',
-            'driver_name'    => 'nullable|string|max:150',
-            'driver_passport'=> 'nullable|string|max:60',
-            'driver_license' => 'nullable|string|max:60',
-            'driver_phone'   => 'nullable|string|max:30',
-            'capacity'       => 'required|numeric|min:1',
-            'notes'          => 'nullable|string|max:1000',
+            'truck_reg'       => 'nullable|string|max:40',
+            'trailer_reg'     => 'nullable|string|max:40',
+            'driver_name'     => 'nullable|string|max:150',
+            'driver_passport' => 'nullable|string|max:60',
+            'driver_license'  => 'nullable|string|max:60',
+            'driver_phone'    => 'nullable|string|max:30',
+            'capacity'        => 'required|numeric|min:1',
+            'notes'           => 'nullable|string|max:1000',
         ]);
 
         $truck->update($data);
@@ -136,14 +132,14 @@ class ImportNominationController extends Controller
     public function recordLoad(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
         $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if($truck->status !== 'nominated', 422, 'Truck must be in nominated status to record loading.');
 
         $data = $request->validate([
-            'qty_loaded'       => 'required|numeric|min:1',
-            'pickup_date'      => 'required|date',
-            'pickup_terminal'  => 'nullable|string|max:200',
-            'load_notes'       => 'nullable|string|max:1000',
+            'qty_loaded'      => 'required|numeric|min:1',
+            'pickup_date'     => 'required|date',
+            'pickup_terminal' => 'nullable|string|max:200',
+            'load_notes'      => 'nullable|string|max:1000',
         ]);
 
         $truck->update(array_merge($data, ['status' => 'loaded']));
@@ -156,7 +152,7 @@ class ImportNominationController extends Controller
     public function failLoad(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
         $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if($truck->status !== 'nominated', 422, 'Only nominated trucks can be marked as load-failed.');
 
         $truck->update(['status' => 'loading_failed', 'load_notes' => $request->input('load_notes')]);
@@ -169,7 +165,7 @@ class ImportNominationController extends Controller
     public function markInTransit(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
         $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if($truck->status !== 'loaded', 422, 'Truck must be loaded before marking in transit.');
 
         $truck->update(['status' => 'in_transit']);
@@ -177,12 +173,12 @@ class ImportNominationController extends Controller
         return back()->with('status', "Truck {$truck->truck_reg} marked as in transit.");
     }
 
-    // ── Record border clearance ───────────────────────────────────────────────
+    // ── Record border clearance ──────────────────────────────────────────────
 
     public function recordBorder(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
         $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if($truck->status !== 'in_transit', 422, 'Truck must be in transit to record border clearance.');
 
         $data = $request->validate([
@@ -200,8 +196,8 @@ class ImportNominationController extends Controller
 
     public function recordDelivery(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
-        $this->authorise($purchase);
-        abort_if($truck->nomination_id !== $nomination->id, 403);
+        $cid = $this->authorise($purchase);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
         abort_if($truck->status !== 'border_cleared', 422, 'Truck must be border-cleared before recording delivery.');
 
         $data = $request->validate([
@@ -211,9 +207,8 @@ class ImportNominationController extends Controller
             'delivery_notes' => 'nullable|string|max:1000',
         ]);
 
-        // Validate depot belongs to company
         $depotOk = DB::table('depots')
-            ->where('company_id', session('active_company_id'))
+            ->where('company_id', $cid)
             ->where('id', (int) $data['depot_id'])
             ->where('is_active', true)
             ->exists();
@@ -221,13 +216,12 @@ class ImportNominationController extends Controller
             return back()->with('error', 'Invalid depot selected.');
         }
 
-        $qtyLoaded    = (float) $truck->qty_loaded;
-        $qtyDelivered = (float) $data['qty_delivered'];
-        $lossPct      = (float) $nomination->allowed_loss_pct / 100;
-
-        $shortfallQty   = max(0, $qtyLoaded - $qtyDelivered);
-        $allowedLossQty = round($qtyLoaded * $lossPct, 3);
-        $excessLossQty  = max(0, round($shortfallQty - $allowedLossQty, 3));
+        $qtyLoaded       = (float) $truck->qty_loaded;
+        $qtyDelivered    = (float) $data['qty_delivered'];
+        $lossPct         = (float) $nomination->allowed_loss_pct / 100;
+        $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
+        $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
+        $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
         $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / 1000), 2);
 
         $truck->update(array_merge($data, [
@@ -240,7 +234,8 @@ class ImportNominationController extends Controller
 
         $msg = "Delivery recorded: {$qtyDelivered} L.";
         if ($excessLossQty > 0) {
-            $msg .= " Chargeable shortfall: {$excessLossQty} L → {$nomination->short_charge_currency} " . number_format($shortfallCharge, 2) . '.';
+            $msg .= " Chargeable shortfall: {$excessLossQty} L → {$nomination->short_charge_currency} "
+                  . number_format($shortfallCharge, 2) . '.';
         }
 
         return back()->with('status', $msg);
@@ -248,9 +243,15 @@ class ImportNominationController extends Controller
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private function authorise(Purchase $purchase): void
+    /**
+     * Verify the current user owns this purchase's company.
+     * Returns the company ID for use in queries.
+     */
+    private function authorise(Purchase $purchase): int
     {
-        abort_if((int)$purchase->company_id !== (int)session('active_company_id'), 403);
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $purchase->company_id !== $cid, 403);
         abort_if($purchase->type !== 'import', 422, 'Import logistics only applies to import purchases.');
+        return $cid;
     }
 }
