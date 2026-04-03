@@ -284,7 +284,22 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('purchases.show', compact('purchase', 'depots', 'importMovements', 'clients'));
+        // Import logistics nomination + trucks
+        $importNomination = null;
+        if ($purchase->type === 'import') {
+            $importNomination = $purchase->importNomination()->with(['transporter', 'trucks.depot'])->first();
+        }
+
+        $transporters = \App\Models\Transporter::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.show', compact(
+            'purchase', 'depots', 'importMovements', 'clients',
+            'importNomination', 'transporters'
+        ));
     }
 
 public function confirm(Purchase $purchase, InventoryLedger $ledger)

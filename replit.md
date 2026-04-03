@@ -49,8 +49,28 @@ State machine: `draft → confirmed → transferred | dispatched`
 - **Transfer to depot** *(new)*: modal with depot dropdown + qty + note; posts issue from CROSS DOCK + receipt into target depot; status → `transferred`; `depot_id` updated to target
 - **Dispatch out** *(new)*: modal with qty + note; posts issue from CROSS DOCK (stock exits); status → `dispatched`
 
-#### Import (`type = import`) — skeleton only
-- Create/confirm works; no nomination/offload/delivery pipeline yet (Phase 2 remaining)
+#### Import (`type = import`) — full logistics pipeline ✅
+State machine: `draft → confirmed → nominated → received`
+
+**Import Logistics Pipeline** (truck-level tracking via `ImportNominationController`):
+- **Nomination setup** — transporter, rate/1000L, allowed loss %, short-charge rate, advances
+- **Add trucks** — truck reg, trailer reg, driver (name/passport/license/phone), capacity
+- **Record load** — qty loaded + pickup date + terminal; truck moves to `loaded`
+- **Mark loading failed** — records reason; capacity counted as remaining at shipper
+- **Mark in transit** — one-click; truck moves to `in_transit`
+- **DRC border clearance** — TR8 number, T1 number, border date; truck moves to `border_cleared`
+- **Record delivery** — depot, qty delivered, date; auto-calculates shortfall:
+  - `shortfall_qty = max(0, qty_loaded - qty_delivered)`
+  - `allowed_loss = qty_loaded × allowed_loss_pct / 100` (default 0.3% AGO / 0.5% PMS)
+  - `excess_loss = max(0, shortfall_qty - allowed_loss)`
+  - `shortfall_charge = excess_loss × short_charge_rate / 1000`
+- **Remaining at shipper** = purchase qty − total qty loaded
+- **Financial summary** = gross (loaded × rate/1000) − advances − shortfall charges = net payable
+
+**New tables**: `import_nominations`, `import_trucks`
+**New models**: `ImportNomination`, `ImportTruck`
+**New controller**: `app/Http/Controllers/ImportNominationController.php` (9 route actions)
+**New partial**: `resources/views/purchases/_import_logistics.blade.php`
 
 #### Purchase lifecycle actions (all in PurchaseController)
 - **Edit** (`GET /purchases/{id}/edit`, `PATCH /purchases/{id}`): edit any field on a draft. Type is locked.

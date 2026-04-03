@@ -342,7 +342,21 @@
   @endif
 
   {{-- ================================================================
-       IMPORT: Delivery progress + history card
+       IMPORT: Truck nominations + logistics pipeline
+       ================================================================ --}}
+  @if($purchase->type === 'import' && in_array($purchase->status, ['confirmed', 'nominated', 'received']))
+    @include('purchases._import_logistics', [
+      'purchase'          => $purchase,
+      'importNomination'  => $importNomination,
+      'transporters'      => $transporters,
+      'depots'            => $depots,
+      'qty'               => $qty,
+      'currency'          => $currency,
+    ])
+  @endif
+
+  {{-- ================================================================
+       IMPORT: Delivery progress + history card (legacy movements)
        ================================================================ --}}
   @if($purchase->type === 'import' && in_array($purchase->status, ['nominated', 'received']))
     @php

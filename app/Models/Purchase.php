@@ -59,6 +59,11 @@ class Purchase extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function importNomination()
+    {
+        return $this->hasOne(ImportNomination::class, 'purchase_id');
+    }
+
     public function getDisplayRefAttribute(): string
     {
         $companyCode = $this->company?->code ?? '';

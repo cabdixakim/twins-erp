@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
 
 /*
@@ -169,6 +170,43 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('purchases.cancel');
         Route::post('/purchases/{purchase}/void', [PurchaseController::class, 'void'])
             ->name('purchases.void');
+
+        // Import logistics (nominations + truck lifecycle)
+        Route::post('/purchases/{purchase}/import-nomination',
+            [ImportNominationController::class, 'store'])
+            ->name('purchases.import-nomination.store');
+
+        Route::patch('/purchases/{purchase}/import-nomination/{nomination}',
+            [ImportNominationController::class, 'update'])
+            ->name('purchases.import-nomination.update');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks',
+            [ImportNominationController::class, 'addTruck'])
+            ->name('purchases.import-nomination.trucks.store');
+
+        Route::patch('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}',
+            [ImportNominationController::class, 'updateTruck'])
+            ->name('purchases.import-nomination.trucks.update');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/record-load',
+            [ImportNominationController::class, 'recordLoad'])
+            ->name('purchases.import-nomination.trucks.record-load');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/fail-load',
+            [ImportNominationController::class, 'failLoad'])
+            ->name('purchases.import-nomination.trucks.fail-load');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/mark-in-transit',
+            [ImportNominationController::class, 'markInTransit'])
+            ->name('purchases.import-nomination.trucks.mark-in-transit');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/record-border',
+            [ImportNominationController::class, 'recordBorder'])
+            ->name('purchases.import-nomination.trucks.record-border');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/record-delivery',
+            [ImportNominationController::class, 'recordDelivery'])
+            ->name('purchases.import-nomination.trucks.record-delivery');
 
         // Clients moved to settings group above
 
