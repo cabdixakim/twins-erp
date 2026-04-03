@@ -138,7 +138,7 @@
     $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
     $onSales         = request()->routeIs('sales.*');
-    $onClients       = request()->routeIs('clients.*');
+    $onClients       = request()->routeIs('settings.clients.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(

@@ -872,7 +872,7 @@
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">
               Client
-              <span class="ml-1 text-[10px] font-normal {{ $muted }}">optional — <a href="{{ route('clients.create') }}" class="underline hover:text-[color:var(--tw-accent)]" target="_blank">add client</a></span>
+              <span class="ml-1 text-[10px] font-normal {{ $muted }}">optional — <a href="{{ route('settings.clients.index') }}" class="underline hover:text-[color:var(--tw-accent)]" target="_blank">add client</a></span>
             </label>
             <select name="client_id"
                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }}

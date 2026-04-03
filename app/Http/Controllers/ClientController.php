@@ -37,14 +37,18 @@ class ClientController extends Controller
             $query->where('type', $type);
         }
 
-        $clients = $query->orderBy('name')->paginate(30)->withQueryString();
+        $clients = $query->orderBy('name')->get();
 
-        return view('clients.index', compact('clients', 'q', 'status', 'type'));
-    }
+        $clientId      = (int) $request->query('client', 0);
+        $currentClient = $clientId
+            ? Client::where('company_id', $cid)->find($clientId)
+            : null;
 
-    public function create()
-    {
-        return view('clients.create', ['client' => null]);
+        if (!$currentClient && $clients->isNotEmpty()) {
+            $currentClient = $clients->first();
+        }
+
+        return view('settings.clients.index', compact('clients', 'currentClient', 'q', 'status', 'type'));
     }
 
     public function store(Request $request)
@@ -72,34 +76,18 @@ class ClientController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['name' => 'A client with this name already exists.'])->withInput();
+            return back()->with('error', 'A client with this name already exists.');
         }
 
-        Client::create(array_merge($data, [
+        $client = Client::create(array_merge($data, [
             'company_id'   => $cid,
             'currency'     => strtoupper($data['currency'] ?? 'USD'),
             'credit_limit' => $data['credit_limit'] ?? 0,
             'is_active'    => true,
         ]));
 
-        return redirect()->route('clients.index')
-            ->with('status', 'Client created successfully.');
-    }
-
-    public function show(Client $client)
-    {
-        $client->load(['purchases' => function ($q) {
-            $q->whereIn('status', ['dispatched'])->latest()->limit(20);
-        }]);
-
-        $dispatchCount = $client->purchases()->where('status', 'dispatched')->count();
-
-        return view('clients.show', compact('client', 'dispatchCount'));
-    }
-
-    public function edit(Client $client)
-    {
-        return view('clients.create', compact('client'));
+        return redirect()->route('settings.clients.index', ['client' => $client->id])
+            ->with('status', 'Client "' . $client->name . '" created.');
     }
 
     public function update(Request $request, Client $client)
@@ -118,7 +106,6 @@ class ClientController extends Controller
             'email'          => 'nullable|email|max:150',
             'currency'       => 'nullable|string|size:3',
             'credit_limit'   => 'nullable|numeric|min:0',
-            'is_active'      => 'nullable|boolean',
             'notes'          => 'nullable|string|max:2000',
         ]);
 
@@ -129,29 +116,24 @@ class ClientController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->withErrors(['name' => 'Another client with this name already exists.'])->withInput();
+            return back()->with('error', 'Another client with this name already exists.');
         }
 
         $client->update(array_merge($data, [
             'currency'     => strtoupper($data['currency'] ?? $client->currency ?? 'USD'),
             'credit_limit' => $data['credit_limit'] ?? $client->credit_limit,
-            'is_active'    => $request->boolean('is_active', $client->is_active),
         ]));
 
-        return redirect()->route('clients.show', $client)
+        return redirect()->route('settings.clients.index', ['client' => $client->id])
             ->with('status', 'Client updated.');
     }
 
-    public function destroy(Client $client)
+    public function toggleActive(Request $request, Client $client)
     {
-        $hasPurchases = $client->purchases()->exists();
-        if ($hasPurchases) {
-            return back()->with('error', 'Cannot delete a client that has dispatches attached.');
-        }
+        $newState = !$client->is_active;
+        $client->update(['is_active' => $newState]);
 
-        $client->delete();
-
-        return redirect()->route('clients.index')
-            ->with('status', 'Client deleted.');
+        return redirect()->route('settings.clients.index', ['client' => $client->id])
+            ->with('status', $newState ? 'Client activated.' : 'Client deactivated.');
     }
 }

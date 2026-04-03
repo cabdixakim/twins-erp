@@ -125,6 +125,11 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
                 ->name('inventory.index');
             Route::patch('/inventory/costing', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'updateCosting'])
                 ->name('inventory.update-costing');
+
+            Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+            Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
+            Route::patch('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
+            Route::patch('/clients/{client}/toggle-active', [ClientController::class, 'toggleActive'])->name('clients.toggle-active');
         });
 
         Route::post('/logout', [AuthController::class, 'logout'])
@@ -165,8 +170,7 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::post('/purchases/{purchase}/void', [PurchaseController::class, 'void'])
             ->name('purchases.void');
 
-        // Clients (company-scoped)
-        Route::resource('clients', ClientController::class);
+        // Clients moved to settings group above
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);
