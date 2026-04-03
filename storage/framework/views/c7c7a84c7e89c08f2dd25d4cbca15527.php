@@ -142,6 +142,22 @@
 
         
         <?php if($userRole === 'owner'): ?>
+            <a href="<?php echo e(route('settings.inventory.index')); ?>"
+               class="<?php echo e($linkBase); ?> <?php echo e(request()->routeIs('settings.inventory.*') ? $linkActive : ''); ?>">
+                <span class="h-7 w-7 rounded-2xl grid place-items-center
+                             bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
+                    <span aria-hidden="true">📊</span>
+                </span>
+                <span class="sidebar-label truncate">Inventory</span>
+                <span class="ml-auto text-[10px] <?php echo e($muted); ?> sidebar-label">
+                    <?php echo e(request()->routeIs('settings.inventory.*') ? 'Active' : ''); ?>
+
+                </span>
+            </a>
+        <?php endif; ?>
+
+        
+        <?php if($userRole === 'owner'): ?>
             <button type="button"
                     class="w-full mt-2 px-3 py-2 rounded-2xl flex items-center justify-between transition
                         border border-[color:var(--tw-border)]
