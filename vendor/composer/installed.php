@@ -3,7 +3,7 @@
         'name' => 'twins/erp',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '5f068a61199bb92af349f9cc45915f031d7121de',
+        'reference' => '56ffaf4a2e330cb528b0773970444d714537d630',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -1214,7 +1214,7 @@
         'twins/erp' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '5f068a61199bb92af349f9cc45915f031d7121de',
+            'reference' => '56ffaf4a2e330cb528b0773970444d714537d630',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
