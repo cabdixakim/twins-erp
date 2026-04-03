@@ -144,7 +144,13 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
         Route::post('/purchases/{purchase}/confirm', [PurchaseController::class, 'confirm'])->name('purchases.confirm');
         Route::post('/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])
-        ->name('purchases.receive');
+            ->name('purchases.receive');
+        Route::post('/purchases/{purchase}/undo-receipt', [PurchaseController::class, 'undoReceipt'])
+            ->name('purchases.undo-receipt');
+        Route::post('/purchases/{purchase}/cross-dock-transfer', [PurchaseController::class, 'crossDockTransfer'])
+            ->name('purchases.cross-dock-transfer');
+        Route::post('/purchases/{purchase}/cross-dock-dispatch', [PurchaseController::class, 'crossDockDispatch'])
+            ->name('purchases.cross-dock-dispatch');
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);

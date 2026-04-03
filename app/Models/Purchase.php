@@ -15,6 +15,7 @@ class Purchase extends Model
 
     protected $casts = [
         'purchase_date' => 'date',
+        'actioned_at'   => 'datetime',
         'qty'           => 'float',
         'unit_price'    => 'float',
         'reference'     => 'string',

@@ -14,7 +14,7 @@ A specialized Enterprise Resource Planning (ERP) system for the **Fuel & Transpo
 
 - Multi-tenant (multi-company) platform
 - Inventory management with FIFO costing across depots
-- Purchase workflow (import, local_depot, cross_dock)
+- Purchase workflow: local_depot (draft→confirmed→received, undo-receipt), cross_dock (draft→confirmed→transferred|dispatched), import (skeleton)
 - Sales & logistics management with delivery tracking
 - Role-based access control (RBAC)
 

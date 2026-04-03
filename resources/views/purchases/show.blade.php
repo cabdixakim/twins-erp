@@ -21,10 +21,13 @@
 
   // Status pill (tokenised + consistent)
   $statusPill = match($purchase->status) {
-    'draft' => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
-    'confirmed' => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
-    'received' => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
-    default => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
+    'draft'       => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
+    'confirmed'   => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
+    'received'    => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
+    'transferred' => 'border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-100',
+    'dispatched'  => 'border-purple-500/30 bg-purple-500/10 text-purple-900 dark:text-purple-100',
+    'cancelled'   => 'border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100',
+    default       => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
   };
 
   $qty   = (float) ($purchase->qty ?? 0);
@@ -117,6 +120,38 @@
               <span class="opacity-80">↓</span>
             </button>
           </form>
+        @endif
+
+        {{-- Undo Receipt (ONLY local_depot + received) --}}
+        @if($purchase->type === 'local_depot' && $purchase->status === 'received')
+          <button type="button"
+                  id="btnUndoReceipt"
+                  class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-orange-500/30
+                         bg-orange-500/10 text-orange-900 dark:text-orange-100
+                         text-sm font-semibold hover:bg-orange-500/20 transition">
+            Undo Receipt
+            <span class="opacity-80">↩</span>
+          </button>
+        @endif
+
+        {{-- Cross-dock actions (confirmed cross_dock only) --}}
+        @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
+          <button type="button"
+                  id="btnCrossDockTransfer"
+                  class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-blue-500/30
+                         bg-blue-500/10 text-blue-900 dark:text-blue-100
+                         text-sm font-semibold hover:bg-blue-500/20 transition">
+            Transfer to depot
+            <span class="opacity-80">→</span>
+          </button>
+          <button type="button"
+                  id="btnCrossDockDispatch"
+                  class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-purple-500/30
+                         bg-purple-500/10 text-purple-900 dark:text-purple-100
+                         text-sm font-semibold hover:bg-purple-500/20 transition">
+            Dispatch out
+            <span class="opacity-80">↗</span>
+          </button>
         @endif
       @endif
 
@@ -427,6 +462,164 @@
   </div>
 @endif
 
+{{-- UNDO RECEIPT MODAL (local_depot + received only) --}}
+@if($purchase->type === 'local_depot' && $purchase->status === 'received')
+  <div id="undoReceiptModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
+        <div class="text-base font-semibold {{ $fg }}">Undo depot receipt</div>
+        <button type="button" data-close="undo-receipt" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
+      </div>
+      <div class="p-5 space-y-3 text-sm {{ $muted }}">
+        <p>This will <strong class="{{ $fg }}">reverse</strong> the receipt movement for this purchase.</p>
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
+          <div class="font-semibold">What will happen</div>
+          <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
+            <li>The depot stock for batch #{{ $purchase->batch_id }} will be reduced by <strong class="{{ $fg }}">{{ number_format($qty, 3) }} L</strong></li>
+            <li>Purchase status returns to <strong class="{{ $fg }}">confirmed</strong></li>
+            <li>The original movement is flagged as reversed</li>
+          </ul>
+        </div>
+        <div class="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 text-xs text-orange-900 dark:text-orange-200">
+          Use this only to correct a wrongly posted receipt. If stock has already been issued from this batch, the undo may leave a negative balance.
+        </div>
+      </div>
+      <form method="POST" action="{{ route('purchases.undo-receipt', $purchase) }}" id="undoReceiptForm">
+        @csrf
+        <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+          <button type="button" data-close="undo-receipt"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+                         hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-orange-500/30 bg-orange-500/10
+                         text-sm font-semibold text-orange-900 dark:text-orange-100 hover:bg-orange-500/20 transition">
+            Yes, undo receipt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endif
+
+{{-- CROSS-DOCK TRANSFER MODAL (cross_dock + confirmed only) --}}
+@if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
+  <div id="crossDockTransferModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
+        <div class="text-base font-semibold {{ $fg }}">Transfer to depot</div>
+        <button type="button" data-close="cross-dock-transfer" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
+      </div>
+      <form method="POST" action="{{ route('purchases.cross-dock-transfer', $purchase) }}" id="crossDockTransferForm">
+        @csrf
+        <div class="p-5 space-y-4 text-sm">
+          <p class="{{ $muted }}">Move stock from <strong class="{{ $fg }}">Cross Dock</strong> into a physical depot.</p>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Destination depot <span class="text-rose-500">*</span></label>
+            <select name="depot_id" required
+                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                           focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+              <option value="">— select depot —</option>
+              @foreach($depots as $d)
+                <option value="{{ $d->id }}">{{ $d->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Quantity (L)</label>
+            <input type="number" name="qty" step="0.001" min="0.001" value="{{ number_format($qty, 3, '.', '') }}"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                          focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Note (optional)</label>
+            <input type="text" name="note" placeholder="e.g. truck manifest ref…"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                          focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+          </div>
+
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
+            <div class="font-semibold">What will happen</div>
+            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
+              <li>Issue movement posted from Cross Dock</li>
+              <li>Receipt movement posted into selected depot</li>
+              <li>Purchase status becomes <strong class="{{ $fg }}">transferred</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+          <button type="button" data-close="cross-dock-transfer"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+                         hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-blue-500/30 bg-blue-500/10
+                         text-sm font-semibold text-blue-900 dark:text-blue-100 hover:bg-blue-500/20 transition">
+            Transfer →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {{-- CROSS-DOCK DISPATCH MODAL --}}
+  <div id="crossDockDispatchModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
+        <div class="text-base font-semibold {{ $fg }}">Dispatch straight out</div>
+        <button type="button" data-close="cross-dock-dispatch" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
+      </div>
+      <form method="POST" action="{{ route('purchases.cross-dock-dispatch', $purchase) }}" id="crossDockDispatchForm">
+        @csrf
+        <div class="p-5 space-y-4 text-sm">
+          <p class="{{ $muted }}">Issue stock directly from <strong class="{{ $fg }}">Cross Dock</strong> to the customer without going into a depot.</p>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Quantity (L)</label>
+            <input type="number" name="qty" step="0.001" min="0.001" value="{{ number_format($qty, 3, '.', '') }}"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                          focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Note (optional)</label>
+            <input type="text" name="note" placeholder="e.g. delivery note, customer ref…"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                          focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          </div>
+
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
+            <div class="font-semibold">What will happen</div>
+            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
+              <li>Issue movement posted from Cross Dock (stock leaves inventory)</li>
+              <li>Purchase status becomes <strong class="{{ $fg }}">dispatched</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+          <button type="button" data-close="cross-dock-dispatch"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+                         hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-purple-500/30 bg-purple-500/10
+                         text-sm font-semibold text-purple-900 dark:text-purple-100 hover:bg-purple-500/20 transition">
+            Dispatch ↗
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endif
+
 <script>
   (function () {
     const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
@@ -477,11 +670,74 @@
     }
     on(confirmReceive, 'click', () => { closeReceive(); receiveForm && receiveForm.submit(); });
 
+    // Undo Receipt modal
+    const btnUndoReceipt  = document.getElementById('btnUndoReceipt');
+    const undoReceiptModal = document.getElementById('undoReceiptModal');
+
+    function openUndoReceipt() {
+      if (!undoReceiptModal) return;
+      undoReceiptModal.classList.remove('hidden');
+      document.documentElement.classList.add('overflow-hidden');
+    }
+    function closeUndoReceipt() {
+      if (!undoReceiptModal) return;
+      undoReceiptModal.classList.add('hidden');
+      document.documentElement.classList.remove('overflow-hidden');
+    }
+
+    on(btnUndoReceipt, 'click', openUndoReceipt);
+    if (undoReceiptModal) {
+      undoReceiptModal.querySelectorAll('[data-close="undo-receipt"]').forEach(el => on(el, 'click', closeUndoReceipt));
+    }
+
+    // Cross-dock transfer modal
+    const btnCrossDockTransfer   = document.getElementById('btnCrossDockTransfer');
+    const crossDockTransferModal = document.getElementById('crossDockTransferModal');
+
+    function openCrossDockTransfer() {
+      if (!crossDockTransferModal) return;
+      crossDockTransferModal.classList.remove('hidden');
+      document.documentElement.classList.add('overflow-hidden');
+    }
+    function closeCrossDockTransfer() {
+      if (!crossDockTransferModal) return;
+      crossDockTransferModal.classList.add('hidden');
+      document.documentElement.classList.remove('overflow-hidden');
+    }
+
+    on(btnCrossDockTransfer, 'click', openCrossDockTransfer);
+    if (crossDockTransferModal) {
+      crossDockTransferModal.querySelectorAll('[data-close="cross-dock-transfer"]').forEach(el => on(el, 'click', closeCrossDockTransfer));
+    }
+
+    // Cross-dock dispatch modal
+    const btnCrossDockDispatch   = document.getElementById('btnCrossDockDispatch');
+    const crossDockDispatchModal = document.getElementById('crossDockDispatchModal');
+
+    function openCrossDockDispatch() {
+      if (!crossDockDispatchModal) return;
+      crossDockDispatchModal.classList.remove('hidden');
+      document.documentElement.classList.add('overflow-hidden');
+    }
+    function closeCrossDockDispatch() {
+      if (!crossDockDispatchModal) return;
+      crossDockDispatchModal.classList.add('hidden');
+      document.documentElement.classList.remove('overflow-hidden');
+    }
+
+    on(btnCrossDockDispatch, 'click', openCrossDockDispatch);
+    if (crossDockDispatchModal) {
+      crossDockDispatchModal.querySelectorAll('[data-close="cross-dock-dispatch"]').forEach(el => on(el, 'click', closeCrossDockDispatch));
+    }
+
     // ESC closes any open modal
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       closeConfirm();
       closeReceive();
+      closeUndoReceipt();
+      closeCrossDockTransfer();
+      closeCrossDockDispatch();
     });
   })();
 </script>

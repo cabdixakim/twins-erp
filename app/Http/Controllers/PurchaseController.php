@@ -74,7 +74,7 @@ class PurchaseController extends Controller
         }
 
         // Status filter
-        if ($status !== '' && in_array($status, ['draft', 'confirmed'], true)) {
+        if ($status !== '' && in_array($status, ['draft', 'confirmed', 'received', 'transferred', 'dispatched', 'cancelled'], true)) {
             $purchasesQuery->where('status', $status);
         }
 
@@ -253,7 +253,16 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase)
     {
         $purchase->load(['supplier', 'product', 'depot', 'batch', 'creator']);
-        return view('purchases.show', compact('purchase'));
+
+        $cid    = (int) $purchase->company_id;
+        $depots = \App\Models\Depot::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->where(function ($q) { $q->whereNull('is_system')->orWhere('is_system', 0); })
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.show', compact('purchase', 'depots'));
     }
 
 public function confirm(Purchase $purchase, InventoryLedger $ledger)
@@ -441,6 +450,215 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
     return redirect()->route('purchases.show', $purchase)
         ->with('status', "Purchase received into depot.\nDepot stock updated (FIFO-ready).");
 }
+
+    /**
+     * Undo a depot receipt for a local_depot purchase.
+     * Reverses the inventory movement, restores batch quantities, and sets status back to confirmed.
+     */
+    public function undoReceipt(Purchase $purchase)
+    {
+        $u = auth()->user();
+
+        if ($purchase->status !== 'received') {
+            return back()->with('error', 'Only received purchases can have their receipt undone.');
+        }
+
+        if ($purchase->type !== 'local_depot') {
+            return back()->with('error', 'Undo receipt is only available for local depot purchases.');
+        }
+
+        DB::transaction(function () use ($purchase, $u) {
+            // Find the original receipt movement
+            $movement = \App\Models\InventoryMovement::query()
+                ->where('company_id', $purchase->company_id)
+                ->where('type', 'receipt')
+                ->where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('batch_id', $purchase->batch_id)
+                ->where('to_depot_id', $purchase->depot_id)
+                ->latest('id')
+                ->first();
+
+            if ($movement) {
+                $qty = (float) $movement->qty;
+
+                // Reverse depot stock
+                \App\Models\DepotStock::query()
+                    ->where('company_id', $purchase->company_id)
+                    ->where('depot_id', $purchase->depot_id)
+                    ->where('product_id', $purchase->product_id)
+                    ->where('batch_id', $purchase->batch_id)
+                    ->update([
+                        'qty_on_hand' => DB::raw('GREATEST(0, qty_on_hand - ' . $qty . ')'),
+                        'updated_at'  => now(),
+                    ]);
+
+                // Reverse batch quantities
+                \App\Models\Batch::query()
+                    ->where('company_id', $purchase->company_id)
+                    ->whereKey($purchase->batch_id)
+                    ->update([
+                        'qty_received'  => DB::raw('GREATEST(0, qty_received - ' . $qty . ')'),
+                        'qty_remaining' => DB::raw('GREATEST(0, qty_remaining - ' . $qty . ')'),
+                        'updated_at'    => now(),
+                    ]);
+
+                // Mark original movement as reversed
+                $movement->update(['notes' => ($movement->notes ? $movement->notes . ' | ' : '') . 'REVERSED by undo-receipt']);
+            }
+
+            $purchase->status     = 'confirmed';
+            $purchase->actioned_at = null;
+            $purchase->actioned_by = null;
+            $purchase->action_note = 'Receipt reversed';
+            $purchase->updated_by  = $u?->id;
+            $purchase->save();
+        });
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Receipt reversed. Purchase is back to Confirmed — ready to receive again.');
+    }
+
+    /**
+     * Transfer stock from CROSS DOCK depot into a physical depot.
+     */
+    public function crossDockTransfer(Purchase $purchase, InventoryLedger $ledger)
+    {
+        $u   = auth()->user();
+        $cid = (int) $purchase->company_id;
+
+        if ($purchase->status !== 'confirmed' || $purchase->type !== 'cross_dock') {
+            return back()->with('error', 'Only confirmed cross-dock purchases can be transferred.');
+        }
+
+        $request  = request();
+        $depotId  = (int) $request->input('depot_id');
+        $qty      = (float) $request->input('qty', $purchase->qty);
+        $note     = trim((string) $request->input('note', ''));
+
+        if (!$depotId) {
+            return back()->withErrors(['depot_id' => 'Please select a destination depot.']);
+        }
+
+        $depotOk = \App\Models\Depot::query()
+            ->where('company_id', $cid)
+            ->whereKey($depotId)
+            ->where('is_active', true)
+            ->where(function ($q) { $q->whereNull('is_system')->orWhere('is_system', 0); })
+            ->exists();
+
+        if (!$depotOk) {
+            return back()->withErrors(['depot_id' => 'Invalid destination depot.']);
+        }
+
+        DB::transaction(function () use ($purchase, $ledger, $u, $cid, $depotId, $qty, $note) {
+            $crossDockDepotId = $this->getOrCreateCrossDockDepotId($cid, $u?->id);
+
+            // Issue from CROSS DOCK
+            $ledger->issue([
+                'company_id'   => $cid,
+                'product_id'   => (int) $purchase->product_id,
+                'from_depot_id'=> $crossDockDepotId,
+                'batch_id'     => (int) $purchase->batch_id,
+                'qty'          => $qty,
+                'ref_type'     => 'purchase',
+                'ref_id'       => (int) $purchase->id,
+                'reference'    => 'cross-dock-transfer:' . $purchase->id,
+                'notes'        => 'Cross-dock transfer to depot #' . $depotId . ($note ? ': ' . $note : ''),
+                'created_by'   => $u?->id,
+                'updated_by'   => $u?->id,
+            ], [
+                'type'          => 'issue',
+                'ref_type'      => 'purchase',
+                'ref_id'        => (int) $purchase->id,
+                'from_depot_id' => $crossDockDepotId,
+            ]);
+
+            // Receipt into target depot
+            $ledger->receipt([
+                'company_id'  => $cid,
+                'product_id'  => (int) $purchase->product_id,
+                'to_depot_id' => $depotId,
+                'batch_id'    => (int) $purchase->batch_id,
+                'qty'         => $qty,
+                'unit_cost'   => (float) $purchase->unit_price,
+                'ref_type'    => 'purchase',
+                'ref_id'      => (int) $purchase->id,
+                'reference'   => 'cross-dock-transfer:' . $purchase->id,
+                'notes'       => 'Cross-dock transfer from CROSS DOCK' . ($note ? ': ' . $note : ''),
+                'created_by'  => $u?->id,
+                'updated_by'  => $u?->id,
+            ], [
+                'type'        => 'receipt',
+                'ref_type'    => 'purchase',
+                'ref_id'      => (int) $purchase->id,
+                'to_depot_id' => $depotId,
+                'batch_id'    => (int) $purchase->batch_id,
+            ]);
+
+            $purchase->status      = 'transferred';
+            $purchase->depot_id    = $depotId;
+            $purchase->actioned_at = now();
+            $purchase->actioned_by = $u?->id;
+            $purchase->action_note = $note ?: 'Transferred to depot';
+            $purchase->updated_by  = $u?->id;
+            $purchase->save();
+        });
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Stock transferred from Cross Dock into the selected depot.');
+    }
+
+    /**
+     * Mark a cross-dock purchase as dispatched (straight-out delivery).
+     * Inventory issue from CROSS DOCK is posted; status becomes dispatched.
+     */
+    public function crossDockDispatch(Purchase $purchase, InventoryLedger $ledger)
+    {
+        $u   = auth()->user();
+        $cid = (int) $purchase->company_id;
+
+        if ($purchase->status !== 'confirmed' || $purchase->type !== 'cross_dock') {
+            return back()->with('error', 'Only confirmed cross-dock purchases can be dispatched.');
+        }
+
+        $note = trim((string) request()->input('note', ''));
+        $qty  = (float) request()->input('qty', $purchase->qty);
+
+        DB::transaction(function () use ($purchase, $ledger, $u, $cid, $qty, $note) {
+            $crossDockDepotId = $this->getOrCreateCrossDockDepotId($cid, $u?->id);
+
+            // Issue from CROSS DOCK (stock leaves the system)
+            $ledger->issue([
+                'company_id'    => $cid,
+                'product_id'    => (int) $purchase->product_id,
+                'from_depot_id' => $crossDockDepotId,
+                'batch_id'      => (int) $purchase->batch_id,
+                'qty'           => $qty,
+                'ref_type'      => 'purchase',
+                'ref_id'        => (int) $purchase->id,
+                'reference'     => 'cross-dock-dispatch:' . $purchase->id,
+                'notes'         => 'Cross-dock direct dispatch' . ($note ? ': ' . $note : ''),
+                'created_by'    => $u?->id,
+                'updated_by'    => $u?->id,
+            ], [
+                'type'          => 'issue',
+                'ref_type'      => 'purchase',
+                'ref_id'        => (int) $purchase->id,
+                'from_depot_id' => $crossDockDepotId,
+            ]);
+
+            $purchase->status      = 'dispatched';
+            $purchase->actioned_at = now();
+            $purchase->actioned_by = $u?->id;
+            $purchase->action_note = $note ?: 'Dispatched directly';
+            $purchase->updated_by  = $u?->id;
+            $purchase->save();
+        });
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Cross-dock stock dispatched. Inventory issued from Cross Dock.');
+    }
 
     // Get or create the CROSS DOCK depot for the given company. Returns the depot ID.
     private function getOrCreateCrossDockDepotId(int $companyId, ?int $userId = null): int

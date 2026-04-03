@@ -11,7 +11,7 @@
   // If controller hasn't provided options yet, fallback.
   $supplierOptions = $supplierOptions ?? [];
   $typeOptions     = $typeOptions ?? ['import','local_depot','cross_dock'];
-  $statusOptions   = $statusOptions ?? ['draft','confirmed'];
+  $statusOptions   = $statusOptions ?? ['draft','confirmed','received','transferred','dispatched','cancelled'];
 
   // Theme tokens
   $fg      = 'text-[color:var(--tw-fg)]';
@@ -270,6 +270,18 @@
                 'received' =>
                     'border-blue-700 bg-blue-500 text-white
                     dark:border-blue-400 dark:bg-blue-400 dark:text-blue-950',
+
+                'transferred' =>
+                    'border-sky-600 bg-sky-500 text-white
+                    dark:border-sky-400 dark:bg-sky-400 dark:text-sky-950',
+
+                'dispatched' =>
+                    'border-purple-600 bg-purple-500 text-white
+                    dark:border-purple-400 dark:bg-purple-400 dark:text-purple-950',
+
+                'cancelled' =>
+                    'border-rose-600 bg-rose-500 text-white
+                    dark:border-rose-400 dark:bg-rose-400 dark:text-rose-950',
 
                 default =>
                     'border-slate-400/40 bg-slate-200 text-slate-900
