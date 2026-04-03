@@ -126,25 +126,7 @@
           </form>
         @endif
 
-        {{-- Import: Nominate Vessel (confirmed import) --}}
-        @if($purchase->type === 'import' && $purchase->status === 'confirmed')
-          <button type="button" id="btnNominate"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-amber
-                         text-sm font-semibold transition">
-            Nominate vessel
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l7-7-7-7M5 19l7-7-7-7"/></svg>
-          </button>
-        @endif
-
-        {{-- Import: Deliver to Depot (nominated import) --}}
-        @if($purchase->type === 'import' && $purchase->status === 'nominated')
-          <button type="button" id="btnImportDeliver"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-green
-                         text-sm font-semibold transition">
-            Deliver to depot
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4"/></svg>
-          </button>
-        @endif
+        {{-- Import: old nominate-vessel / deliver-to-depot buttons replaced by inline logistics section --}}
 
         {{-- Cross-dock actions (confirmed cross_dock) --}}
         @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
@@ -263,13 +245,13 @@
     <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
       @if($purchase->type === 'import')
         @if($purchase->status === 'draft')
-          <span class="{{ $muted }}">Next:</span> confirm to create a Batch, then nominate a vessel.
+          <span class="{{ $muted }}">Next:</span> confirm to create a batch, then set up the import nomination below.
         @elseif($purchase->status === 'confirmed')
-          <span class="{{ $muted }}">Next:</span> nominate a vessel (vessel name, BL#, ETA) to begin the offload workflow.
+          <span class="{{ $muted }}">Next:</span> set up the import nomination (transporter, rate, allowed loss) below, then add trucks.
         @elseif($purchase->status === 'nominated')
-          <span class="{{ $muted }}">Next:</span> deliver cargo to depot(s). Each delivery posts a receipt movement. The purchase closes automatically when fully delivered.
+          <span class="{{ $muted }}">Next:</span> add trucks, record loadings, track transit → border clearance → depot delivery.
         @else
-          <span class="{{ $muted }}">Status:</span> {{ ucfirst($purchase->status) }}. All deliveries posted.
+          <span class="{{ $muted }}">Status:</span> {{ ucfirst($purchase->status) }}. All trucks delivered.
         @endif
       @elseif($purchase->type === 'local_depot')
         <span class="{{ $muted }}">After confirmation:</span>

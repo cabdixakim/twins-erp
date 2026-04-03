@@ -45,6 +45,11 @@ class ImportNominationController extends Controller
             'created_by'  => auth()->id(),
         ]));
 
+        // Advance purchase status to nominated when logistics nomination is created
+        if ($purchase->status === 'confirmed') {
+            $purchase->update(['status' => 'nominated']);
+        }
+
         return back()->with('status', 'Import nomination created. You can now add trucks.');
     }
 
@@ -245,7 +250,7 @@ class ImportNominationController extends Controller
 
     private function authorise(Purchase $purchase): void
     {
-        abort_if($purchase->company_id !== session('active_company_id'), 403);
+        abort_if((int)$purchase->company_id !== (int)session('active_company_id'), 403);
         abort_if($purchase->type !== 'import', 422, 'Import logistics only applies to import purchases.');
     }
 }

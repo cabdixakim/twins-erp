@@ -293,6 +293,7 @@ class PurchaseController extends Controller
         $transporters = \App\Models\Transporter::query()
             ->where('company_id', $cid)
             ->where('is_active', true)
+            ->where('type', 'intl')
             ->orderBy('name')
             ->get();
 
