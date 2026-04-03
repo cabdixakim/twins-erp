@@ -4,6 +4,7 @@ return [
     'env' => env('APP_ENV', 'local'),
     'debug' => (bool) env('APP_DEBUG', true),
     'url' => env('APP_URL', 'http://127.0.0.1:8000'),
+    'asset_url' => env('ASSET_URL', ''),
     'timezone' => env('TIMEZONE', 'Africa/Lubumbashi'),
     'locale' => 'en',
     'fallback_locale' => 'en',
