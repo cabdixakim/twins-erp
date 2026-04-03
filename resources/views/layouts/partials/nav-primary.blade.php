@@ -57,7 +57,6 @@
 
         <div class="min-w-0 sidebar-label">
             <div class="{{ $title }}">Summary</div>
-            <div class="{{ $kicker }}">High-level view of all activity</div>
         </div>
     </a>
 
@@ -68,7 +67,7 @@
                      {{ $onDepotStock ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent' }}"></span>
 
         <span class="{{ $iconWrapBase }} {{ $onDepotStock ? $iconWrapActive : $iconWrapIdle }}">
-            <svg class="w-5 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5-9 5-9-5z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 10v9l9 5 9-5v-9"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v9"/>
@@ -77,7 +76,6 @@
 
         <div class="min-w-0 sidebar-label">
             <div class="{{ $title }}">Depot Stock</div>
-            <div class="{{ $kicker }}">Receive, sell, adjust by depot</div>
         </div>
     </a>
 
@@ -89,15 +87,12 @@
 
         <span class="{{ $iconWrapBase }} {{ $onPurchases ? $iconWrapActive : $iconWrapIdle }}">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 17h18"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
         </span>
 
         <div class="min-w-0 sidebar-label">
             <div class="{{ $title }}">Purchases</div>
-            <div class="{{ $kicker }}">Draft → confirm → batch</div>
         </div>
     </a>
 
@@ -108,7 +103,6 @@
                      {{ ($onSales ?? false) ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent' }}"></span>
 
         <span class="{{ $iconWrapBase }} {{ ($onSales ?? false) ? $iconWrapActive : $iconWrapIdle }}">
-            {{-- invoice / receipt style icon --}}
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16l-3-2-3 2-3-2-3 2-4-2V4z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 8h8M8 12h8M8 16h5"/>
@@ -117,15 +111,7 @@
 
         <div class="min-w-0 sidebar-label">
             <div class="{{ $title }}">Sales</div>
-            <div class="{{ $kicker }}">Draft → post → FIFO issue</div>
         </div>
-
-        <span class="ml-auto opacity-0 translate-x-[-2px] transition
-                     group-hover:opacity-100 group-hover:translate-x-0 sidebar-label">
-            <svg class="w-4 h-4 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
-            </svg>
-        </span>
     </a>
 
 </div>

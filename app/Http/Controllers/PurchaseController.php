@@ -74,7 +74,7 @@ class PurchaseController extends Controller
         }
 
         // Status filter
-        if ($status !== '' && in_array($status, ['draft', 'confirmed', 'nominated', 'received', 'transferred', 'dispatched', 'cancelled'], true)) {
+        if ($status !== '' && in_array($status, ['draft', 'confirmed', 'nominated', 'received', 'transferred', 'dispatched', 'cancelled', 'voided'], true)) {
             $purchasesQuery->where('status', $status);
         }
 
@@ -673,6 +673,209 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Cross-dock stock dispatched. Inventory issued from Cross Dock.');
+    }
+
+    /**
+     * Show edit form for a draft purchase.
+     */
+    public function edit(Purchase $purchase)
+    {
+        if ($purchase->status !== 'draft') {
+            return redirect()->route('purchases.show', $purchase)
+                ->with('error', 'Only draft purchases can be edited.');
+        }
+
+        $purchase->load(['supplier', 'product', 'depot']);
+        $cid = (int) $purchase->company_id;
+
+        $suppliers = Supplier::query()->where('company_id', $cid)->orderBy('name')->get();
+        $products  = Product::query()->where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+        $depots    = DB::table('depots')
+            ->where('company_id', $cid)
+            ->where('is_active', 1)
+            ->where(function ($q) { $q->whereNull('is_system')->orWhere('is_system', 0); })
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.edit', compact('purchase', 'suppliers', 'products', 'depots'));
+    }
+
+    /**
+     * Update a draft purchase.
+     */
+    public function update(Request $request, Purchase $purchase)
+    {
+        $u   = auth()->user();
+        $cid = (int) $purchase->company_id;
+
+        if ($purchase->status !== 'draft') {
+            return back()->with('error', 'Only draft purchases can be edited.');
+        }
+
+        $data = $request->validate([
+            'supplier_id'   => 'nullable|integer',
+            'product_id'    => 'required|integer',
+            'depot_id'      => 'nullable|integer',
+            'purchase_date' => 'nullable|date',
+            'qty'           => 'required|numeric|min:0.001',
+            'unit_price'    => 'required|numeric|min:0',
+            'currency'      => 'required|string|max:8',
+            'notes'         => 'nullable|string',
+            'reference'     => 'nullable|string|max:64',
+        ]);
+
+        // Allow same reference on this purchase, but block collision with others
+        if (!empty($data['reference']) && $data['reference'] !== $purchase->reference) {
+            $exists = Purchase::query()
+                ->where('company_id', $cid)
+                ->where('reference', $data['reference'])
+                ->where('id', '!=', $purchase->id)
+                ->exists();
+            if ($exists) {
+                return back()->withErrors(['reference' => 'Reference already exists for this company.'])->withInput();
+            }
+        }
+
+        // Depot rules: import/cross_dock must not store a depot_id
+        if ($purchase->type !== 'local_depot') {
+            $data['depot_id'] = null;
+        } elseif (empty($data['depot_id'])) {
+            return back()->withErrors(['depot_id' => 'Depot is required for local depot purchases.'])->withInput();
+        }
+
+        $purchase->fill($data);
+        $purchase->updated_by = $u?->id;
+        $purchase->save();
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Purchase updated.');
+    }
+
+    /**
+     * Cancel a purchase (draft, confirmed, or nominated-import with no deliveries).
+     * For cross_dock confirmed: automatically reverses the CROSS DOCK receipt.
+     */
+    public function cancel(Purchase $purchase)
+    {
+        $u      = auth()->user();
+        $reason = trim((string) request()->input('reason', ''));
+
+        $cancelable = ['draft', 'confirmed', 'nominated'];
+        if (!in_array($purchase->status, $cancelable, true)) {
+            return back()->with('error', 'This purchase cannot be cancelled in its current status.');
+        }
+
+        // Block nominated import with posted deliveries
+        if ($purchase->type === 'import' && $purchase->status === 'nominated'
+            && ((float) $purchase->qty_delivered) > 0) {
+            return back()->with('error', 'Cannot cancel: partial deliveries have already been posted.');
+        }
+
+        DB::transaction(function () use ($purchase, $u, $reason) {
+            // Cross-dock confirmed → reverse the CROSS DOCK receipt
+            if ($purchase->type === 'cross_dock' && $purchase->status === 'confirmed' && $purchase->batch_id) {
+                $crossDockDepotId = $this->getOrCreateCrossDockDepotId($purchase->company_id, $u?->id);
+
+                $movement = \App\Models\InventoryMovement::query()
+                    ->where('company_id', $purchase->company_id)
+                    ->where('type', 'receipt')
+                    ->where('ref_type', 'purchase')
+                    ->where('ref_id', $purchase->id)
+                    ->where('to_depot_id', $crossDockDepotId)
+                    ->latest('id')
+                    ->first();
+
+                if ($movement) {
+                    $qty = (float) $movement->qty;
+
+                    \App\Models\DepotStock::query()
+                        ->where('company_id', $purchase->company_id)
+                        ->where('depot_id', $crossDockDepotId)
+                        ->where('product_id', $purchase->product_id)
+                        ->where('batch_id', $purchase->batch_id)
+                        ->update(['qty_on_hand' => DB::raw('GREATEST(0, qty_on_hand - ' . $qty . ')'), 'updated_at' => now()]);
+
+                    \App\Models\Batch::query()
+                        ->where('company_id', $purchase->company_id)
+                        ->whereKey($purchase->batch_id)
+                        ->update([
+                            'qty_received'  => DB::raw('GREATEST(0, qty_received - ' . $qty . ')'),
+                            'qty_remaining' => DB::raw('GREATEST(0, qty_remaining - ' . $qty . ')'),
+                            'updated_at'    => now(),
+                        ]);
+
+                    $movement->update(['notes' => trim(($movement->notes ?? '') . ' | CANCELLED: ' . $reason)]);
+                }
+            }
+
+            $purchase->status      = 'cancelled';
+            $purchase->action_note = $reason ?: 'Cancelled';
+            $purchase->actioned_at = now();
+            $purchase->actioned_by = $u?->id;
+            $purchase->updated_by  = $u?->id;
+            $purchase->save();
+        });
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Purchase cancelled.' . ($reason ? ' Reason: ' . $reason : ''));
+    }
+
+    /**
+     * Void a received local_depot purchase (return to seller).
+     * Reverses the depot receipt and marks as voided.
+     */
+    public function void(Purchase $purchase)
+    {
+        $u      = auth()->user();
+        $reason = trim((string) request()->input('reason', ''));
+
+        if ($purchase->status !== 'received' || $purchase->type !== 'local_depot') {
+            return back()->with('error', 'Only received local depot purchases can be returned to seller.');
+        }
+
+        DB::transaction(function () use ($purchase, $u, $reason) {
+            $movement = \App\Models\InventoryMovement::query()
+                ->where('company_id', $purchase->company_id)
+                ->where('type', 'receipt')
+                ->where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('batch_id', $purchase->batch_id)
+                ->where('to_depot_id', $purchase->depot_id)
+                ->latest('id')
+                ->first();
+
+            if ($movement) {
+                $qty = (float) $movement->qty;
+
+                \App\Models\DepotStock::query()
+                    ->where('company_id', $purchase->company_id)
+                    ->where('depot_id', $purchase->depot_id)
+                    ->where('product_id', $purchase->product_id)
+                    ->where('batch_id', $purchase->batch_id)
+                    ->update(['qty_on_hand' => DB::raw('GREATEST(0, qty_on_hand - ' . $qty . ')'), 'updated_at' => now()]);
+
+                \App\Models\Batch::query()
+                    ->where('company_id', $purchase->company_id)
+                    ->whereKey($purchase->batch_id)
+                    ->update([
+                        'qty_received'  => DB::raw('GREATEST(0, qty_received - ' . $qty . ')'),
+                        'qty_remaining' => DB::raw('GREATEST(0, qty_remaining - ' . $qty . ')'),
+                        'updated_at'    => now(),
+                    ]);
+
+                $movement->update(['notes' => trim(($movement->notes ?? '') . ' | VOIDED/RETURNED: ' . $reason)]);
+            }
+
+            $purchase->status      = 'voided';
+            $purchase->action_note = $reason ?: 'Returned to seller';
+            $purchase->actioned_at = now();
+            $purchase->actioned_by = $u?->id;
+            $purchase->updated_by  = $u?->id;
+            $purchase->save();
+        });
+
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', 'Purchase voided. Stock reversed and returned to seller.');
     }
 
     /**

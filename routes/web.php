@@ -155,6 +155,14 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('purchases.nominate');
         Route::post('/purchases/{purchase}/import-deliver', [PurchaseController::class, 'importDeliver'])
             ->name('purchases.import-deliver');
+        Route::get('/purchases/{purchase}/edit', [PurchaseController::class, 'edit'])
+            ->name('purchases.edit');
+        Route::patch('/purchases/{purchase}', [PurchaseController::class, 'update'])
+            ->name('purchases.update');
+        Route::post('/purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])
+            ->name('purchases.cancel');
+        Route::post('/purchases/{purchase}/void', [PurchaseController::class, 'void'])
+            ->name('purchases.void');
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);

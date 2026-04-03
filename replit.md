@@ -52,18 +52,33 @@ State machine: `draft → confirmed → transferred | dispatched`
 #### Import (`type = import`) — skeleton only
 - Create/confirm works; no nomination/offload/delivery pipeline yet (Phase 2 remaining)
 
+#### Purchase lifecycle actions (all in PurchaseController)
+- **Edit** (`GET /purchases/{id}/edit`, `PATCH /purchases/{id}`): edit any field on a draft. Type is locked.
+- **Cancel** (`POST /purchases/{id}/cancel`): available for draft, confirmed, nominated. For cross_dock confirmed: auto-reverses the CROSS DOCK receipt. Reason field optional.
+- **Void / Return to seller** (`POST /purchases/{id}/void`): available for received local_depot only. Reverses the depot receipt movement, reduces batch qty, marks status `voided`.
+
 #### Status colours (both list + detail views)
 | Status | Colour |
 |---|---|
 | draft | grey |
-| confirmed | green |
-| received | blue |
+| confirmed | emerald |
+| nominated | amber |
+| received | emerald (solid) |
 | transferred | sky |
 | dispatched | purple |
-| cancelled | red |
+| cancelled | rose |
+| voided | rose-dark |
 
 #### New fields on `purchases` table (migration `2026_04_03_000005`)
 `actioned_at`, `actioned_by`, `action_note`
+
+---
+
+### Phase 3 — Design Overhaul ✅
+- **CSS palette** (`resources/css/app.css`): fixed light mode `--tw-accent-soft` (was wrong green, now `rgba(16,185,129,.12)`); light bg `#f4f6fb`; dark navy remains. Removed duplicate animation block. Cleaner borders/shadows.
+- **Sidebar navigation**: all emoji icons replaced with inline SVGs in `nav-settings.blade.php`. Verbose kicker sub-labels removed from `nav-primary.blade.php`.
+- **Purchase show.blade.php**: new Edit/Cancel/Void buttons; Cancel modal + Void modal; cleaner header subtitle; removed "Tip:" idempotency note; buttons use SVG icons not text glyphs.
+- **edit.blade.php**: new view — clone of create adapted for PATCH editing of drafts. Type is shown as read-only badge, not changeable.
 
 ---
 
