@@ -138,14 +138,15 @@
     $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
     $onSales         = request()->routeIs('sales.*');
+    $onClients       = request()->routeIs('clients.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">

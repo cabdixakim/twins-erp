@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\Client;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -277,7 +278,13 @@ class PurchaseController extends Controller
                 ->get();
         }
 
-        return view('purchases.show', compact('purchase', 'depots', 'importMovements'));
+        $clients = Client::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.show', compact('purchase', 'depots', 'importMovements', 'clients'));
     }
 
 public function confirm(Purchase $purchase, InventoryLedger $ledger)
@@ -637,11 +644,25 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             return back()->with('error', 'Only confirmed cross-dock purchases can be dispatched.');
         }
 
-        $note = trim((string) request()->input('note', ''));
-        $qty  = (float) request()->input('qty', $purchase->qty);
+        $note     = trim((string) request()->input('note', ''));
+        $qty      = (float) request()->input('qty', $purchase->qty);
+        $clientId = (int) request()->input('client_id', 0) ?: null;
 
-        DB::transaction(function () use ($purchase, $ledger, $u, $cid, $qty, $note) {
+        // Resolve client name for the movement note
+        $clientName = null;
+        if ($clientId) {
+            $clientName = Client::query()
+                ->where('company_id', $cid)
+                ->where('id', $clientId)
+                ->value('name');
+        }
+
+        DB::transaction(function () use ($purchase, $ledger, $u, $cid, $qty, $note, $clientId, $clientName) {
             $crossDockDepotId = $this->getOrCreateCrossDockDepotId($cid, $u?->id);
+
+            $movementNotes = 'Cross-dock direct dispatch';
+            if ($clientName) $movementNotes .= ' → ' . $clientName;
+            if ($note) $movementNotes .= ': ' . $note;
 
             // Issue from CROSS DOCK (stock leaves the system)
             $ledger->issue([
@@ -653,7 +674,7 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 'ref_type'      => 'purchase',
                 'ref_id'        => (int) $purchase->id,
                 'reference'     => 'cross-dock-dispatch:' . $purchase->id,
-                'notes'         => 'Cross-dock direct dispatch' . ($note ? ': ' . $note : ''),
+                'notes'         => $movementNotes,
                 'created_by'    => $u?->id,
                 'updated_by'    => $u?->id,
             ], [
@@ -664,9 +685,10 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ]);
 
             $purchase->status      = 'dispatched';
+            $purchase->client_id   = $clientId;
             $purchase->actioned_at = now();
             $purchase->actioned_by = $u?->id;
-            $purchase->action_note = $note ?: 'Dispatched directly';
+            $purchase->action_note = ($clientName ? 'Client: ' . $clientName . '. ' : '') . ($note ?: 'Dispatched directly');
             $purchase->updated_by  = $u?->id;
             $purchase->save();
         });

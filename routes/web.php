@@ -18,6 +18,7 @@ use App\Http\Controllers\Settings\TransporterController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SalesController;
 
@@ -163,6 +164,9 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('purchases.cancel');
         Route::post('/purchases/{purchase}/void', [PurchaseController::class, 'void'])
             ->name('purchases.void');
+
+        // Clients (company-scoped)
+        Route::resource('clients', ClientController::class);
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);

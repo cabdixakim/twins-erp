@@ -874,7 +874,22 @@
       <form method="POST" action="{{ route('purchases.cross-dock-dispatch', $purchase) }}" id="crossDockDispatchForm">
         @csrf
         <div class="p-5 space-y-4 text-sm">
-          <p class="{{ $muted }}">Issue stock directly from <strong class="{{ $fg }}">Cross Dock</strong> to the customer without going into a depot.</p>
+          <p class="{{ $muted }}">Issue stock directly from <strong class="{{ $fg }}">Cross Dock</strong> to the client without going into a depot.</p>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">
+              Client
+              <span class="ml-1 text-[10px] font-normal {{ $muted }}">optional — <a href="{{ route('clients.create') }}" class="underline hover:text-[color:var(--tw-accent)]" target="_blank">add client</a></span>
+            </label>
+            <select name="client_id"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }}
+                           focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+              <option value="">— No client —</option>
+              @foreach($clients ?? [] as $cl)
+                <option value="{{ $cl->id }}">{{ $cl->name }}{{ $cl->code ? ' ('.$cl->code.')' : '' }}</option>
+              @endforeach
+            </select>
+          </div>
 
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Quantity (L)</label>
@@ -885,7 +900,7 @@
 
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Note (optional)</label>
-            <input type="text" name="note" placeholder="e.g. delivery note, customer ref…"
+            <input type="text" name="note" placeholder="e.g. delivery note ref…"
                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
                           focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
           </div>
@@ -895,6 +910,7 @@
             <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
               <li>Issue movement posted from Cross Dock (stock leaves inventory)</li>
               <li>Purchase status becomes <strong class="{{ $fg }}">dispatched</strong></li>
+              <li>Client is recorded on this purchase</li>
             </ul>
           </div>
         </div>

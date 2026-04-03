@@ -54,6 +54,11 @@ class Purchase extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function getDisplayRefAttribute(): string
     {
         $companyCode = $this->company?->code ?? '';

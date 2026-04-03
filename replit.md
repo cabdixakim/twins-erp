@@ -80,6 +80,15 @@ State machine: `draft → confirmed → transferred | dispatched`
 - **Purchase show.blade.php**: new Edit/Cancel/Void buttons; Cancel modal + Void modal; cleaner header subtitle; removed "Tip:" idempotency note; buttons use SVG icons not text glyphs.
 - **edit.blade.php**: new view — clone of create adapted for PATCH editing of drafts. Type is shown as read-only badge, not changeable.
 
+### Phase 4 — Clients Module ✅
+- **`clients` table**: `company_id`, `name`, `code`, `type`, `country`, `city`, `contact_person`, `phone`, `email`, `currency`, `credit_limit`, `is_active`, `notes`
+- **`purchases.client_id`**: nullable FK to `clients` — set when a cross-dock purchase is dispatched
+- **`app/Models/Client.php`**: uses `BelongsToActiveCompany`, `$guarded = []`, `client()` relationship on Purchase
+- **`ClientController`**: full CRUD (index/create/store/show/edit/update/destroy). Duplicate name check per company. Blocks delete if dispatches exist.
+- **Views**: `clients/index.blade.php` (paginated table + filters), `clients/create.blade.php` (create + edit), `clients/show.blade.php` (info + recent dispatches)
+- **Nav**: "Clients" added to primary nav (after Sales), `$onClients` flag in `app.blade.php`, passed through both desktop + mobile sidebars
+- **Dispatch modal** (`purchases/show.blade.php`): Client dropdown added with link to create-new. `crossDockDispatch()` stores `client_id` + includes client name in movement notes.
+
 ---
 
 ## Key Architectural Rules
