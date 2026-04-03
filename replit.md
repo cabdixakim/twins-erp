@@ -1,68 +1,256 @@
-# Twins ERP
+# Twins ERP — Project State Document
 
-A specialized Enterprise Resource Planning (ERP) system for the **Fuel & Transport** industry, built with Laravel 11.
+> **Fuel & Transport ERP** — Laravel 11 / PHP 8.2 / PostgreSQL / Tailwind CSS 4 / Vite 5
+> Running on Replit, port 5000, proxied via mTLS iframe.
+> Active user: `kim@twins.com`
+
+---
 
 ## Architecture
 
-- **Backend**: PHP 8.2 + Laravel 11 (Blade templating, Eloquent ORM)
-- **Frontend**: Tailwind CSS 4.0 + Vite 5 (asset bundling, no JS framework)
-- **Database**: PostgreSQL (Replit built-in)
-- **PHP Dependencies**: Composer
-- **JS Dependencies**: npm
+| Layer | Stack |
+|---|---|
+| Backend | PHP 8.2, Laravel 11 (Blade, Eloquent, artisan) |
+| Frontend | Tailwind CSS 4.0 (CDN in dev, Vite-built for prod) + vanilla JS |
+| Database | PostgreSQL (Replit built-in, credentials via env secrets) |
+| Session/Cache | File driver |
+| Auth | Custom `AuthController` (no Breeze/Jetstream) |
+| Asset URL | `ASSET_URL=/` in `.env` + `asset_url` key in `config/app.php` — never remove |
 
-## Features
+---
 
-- Multi-tenant (multi-company) platform
-- Inventory management with FIFO costing across depots
-- Purchase workflow: local_depot (draft→confirmed→received, undo-receipt), cross_dock (draft→confirmed→transferred|dispatched), import (skeleton)
-- Sales & logistics management with delivery tracking
-- Role-based access control (RBAC)
+## Completed Milestones
 
-## Project Structure
+### Phase 1 — Inventory Foundation ✅
+- **Inventory periods** (`inventory_periods` table, `InventoryPeriod` model)
+  - Auto-creates Period 1 on first posting via `PeriodResolver`
+  - Supports `weighted_average` (default) and `specific_lot` costing
+- **PostingGate** (`app/Services/PostingGate.php`) — single choke point; blocks if no open period or period paused
+- **PeriodResolver** (`app/Services/PeriodResolver.php`) — resolves or auto-creates open period
+- **InventoryLedger** (`app/Services/InventoryLedger.php`) — fully rewritten, period-aware
+  - `receipt(array $data, array $idempotencyWhere)` — updates depot stock + batch, recalculates weighted avg
+  - `issue(array $data, array $idempotencyWhere)` — FIFO allocation, creates `inventory_consumptions`
+- **BootstrapInventoryPeriods** artisan command — created for initial setup
+- **Inventory Settings page** at `/settings/inventory` — view/change costing method, open/close periods
+- Migrations: costing fields on `companies`, `inventory_periods`, `period_id` on movements/consumptions
+
+### Phase 2 — Purchase Workflows (Local Depot + Cross-Dock) ✅
+
+#### Local Depot (`type = local_depot`)
+State machine: `draft → confirmed → received`
+- **Create**: reference auto-generated as `PO-{CODE}-{YEAR}-{SEQ}` if blank; duplicate reference blocked
+- **Confirm**: locks draft, creates/attaches a Batch, gates through PostingGate
+- **Receive into depot**: posts `receipt` movement via InventoryLedger; updates depot_stock + batch
+- **Undo Receipt** *(new)*: reverses the receipt movement, restores depot_stock and batch qty, returns to `confirmed`
+
+#### Cross-Dock (`type = cross_dock`)
+State machine: `draft → confirmed → transferred | dispatched`
+- **Confirm**: locks draft, creates Batch, stock goes into virtual `CROSS DOCK` depot (`is_system=true`, auto-created via `getOrCreateCrossDockDepotId()`)
+- **Transfer to depot** *(new)*: modal with depot dropdown + qty + note; posts issue from CROSS DOCK + receipt into target depot; status → `transferred`; `depot_id` updated to target
+- **Dispatch out** *(new)*: modal with qty + note; posts issue from CROSS DOCK (stock exits); status → `dispatched`
+
+#### Import (`type = import`) — skeleton only
+- Create/confirm works; no nomination/offload/delivery pipeline yet (Phase 2 remaining)
+
+#### Status colours (both list + detail views)
+| Status | Colour |
+|---|---|
+| draft | grey |
+| confirmed | green |
+| received | blue |
+| transferred | sky |
+| dispatched | purple |
+| cancelled | red |
+
+#### New fields on `purchases` table (migration `2026_04_03_000005`)
+`actioned_at`, `actioned_by`, `action_note`
+
+---
+
+## Key Architectural Rules
+
+1. **All inventory postings MUST go through `PostingGate::assertCanPost()`** — throws `RuntimeException` if no open period or period is paused.
+2. **Weighted average costing** recalculates after every receipt and propagates to all `depot_stock` rows for that (company, product, depot).
+3. **Idempotency** — both `InventoryLedger::receipt()` and `::issue()` accept an `$idempotencyWhere` array; if a matching movement already exists it returns that instead of double-posting.
+4. **CROSS DOCK depot** is a system depot (`is_system=true`) — excluded from all user-facing depot dropdowns; auto-created on first cross-dock confirm.
+5. **`ASSET_URL=/`** must stay in `.env` + `asset_url` in `config/app.php` — assets use root-relative paths to work through Replit's proxy.
+6. **PSR-4 quirks** (non-breaking): `CompanySettingsController.php` has class `CompanyController`; `RoleMiddleWare.php` has class `RoleMiddleware`.
+7. **`bootstrap/app.php`** uses old Laravel 10 singleton Kernel pattern — not Laravel 11 style.
+8. **Console\Kernel** uses `$this->load(__DIR__.'/Commands')` for command discovery.
+9. **DemoDataSeeder has been deleted** — do not re-add.
+
+---
+
+## Database Tables (key ones)
+
+| Table | Purpose |
+|---|---|
+| `companies` | Multi-tenant anchor; has `costing_method`, `weighted_avg_cost` |
+| `users` | Auth; `active_company_id` FK |
+| `products` | Fuel products per company |
+| `depots` | Physical depots + CROSS DOCK system depot |
+| `depot_stock` | Running stock by (company, depot, product, batch) |
+| `batches` | Shipment/lot tracking; `qty_ordered`, `qty_received`, `qty_remaining` |
+| `purchases` | 3 types: `local_depot`, `cross_dock`, `import`; statuses: draft/confirmed/received/transferred/dispatched/cancelled |
+| `sales` | Sales orders |
+| `inventory_periods` | Accounting periods with costing method + status (open/closed/paused) |
+| `inventory_movements` | All stock in/out; `type`: receipt/issue/adjustment/transfer; `ref_type`/`ref_id` for source linking |
+| `inventory_consumptions` | COGS breakdown per issue movement (FIFO lots) |
+| `suppliers` | Supplier master per company |
+| `transporters` | Transporter master per company |
+| `roles`, `permissions`, `role_permissions`, `user_roles` | RBAC |
+
+---
+
+## Full Route Map (55 routes)
 
 ```
-app/
-  Http/Controllers/   # Domain controllers
-  Models/             # Eloquent models (Company, Batch, Depot, Sale, Purchase...)
-  Services/           # Business logic (InventoryLedger, DepotService)
-  Providers/          # Service providers
-database/
-  migrations/         # Schema history (renamed to consistent YYYY_MM_DD format)
-  seeders/            # Role/permission + demo data seeders
-resources/
-  views/              # Blade templates (admin, auth, dashboard, products, purchases, sales)
-  css/js/             # Frontend assets (Tailwind CSS + vanilla JS)
-routes/
-  web.php             # Web routes with auth/company middleware groups
-public/build/         # Compiled assets (Vite output)
+GET    /                            → redirect/home
+GET    /login                       → AuthController@showLogin
+POST   /login                       → AuthController@login
+POST   /logout                      → AuthController@logout
+GET    /dashboard                   → DashboardController@index
+
+-- Company / Onboarding --
+GET    /company/create              → Onboarding\CompanyController@create
+POST   /company                     → Onboarding\CompanyController@store
+GET    /companies/switcher          → CompanySwitcherController@index
+POST   /companies                   → CompanySwitcherController@store
+GET    /companies/{company}/switch  → CompanySwitcherController@switch
+
+-- Products --
+GET    /products                    → ProductController@index
+POST   /products                    → ProductController@store
+PATCH  /products/{product}          → ProductController@update
+PATCH  /products/{product}/toggle-active
+
+-- Purchases (9 routes) --
+GET    /purchases                   → PurchaseController@index
+POST   /purchases                   → PurchaseController@store
+GET    /purchases/create            → PurchaseController@create
+GET    /purchases/{purchase}        → PurchaseController@show
+POST   /purchases/{purchase}/confirm
+POST   /purchases/{purchase}/receive
+POST   /purchases/{purchase}/undo-receipt       ← NEW
+POST   /purchases/{purchase}/cross-dock-transfer ← NEW
+POST   /purchases/{purchase}/cross-dock-dispatch ← NEW
+
+-- Sales --
+GET    /sales                       → SalesController@index
+POST   /sales                       → SalesController@store
+PUT    /sales/{sale}                → SalesController@update
+POST   /sales/{sale}/post           → SalesController@post
+
+-- Depot Stock --
+GET    /depot-stock                 → DepotStock\DepotStockController@index
+
+-- Settings --
+GET/PATCH  /settings/company
+GET/POST   /settings/depots
+PATCH      /settings/depots/{depot}
+PATCH      /settings/depots/{depot}/toggle-active
+GET/POST   /settings/suppliers
+PATCH      /settings/suppliers/{supplier}
+PATCH      /settings/suppliers/{supplier}/toggle-active
+GET/POST   /settings/transporters
+PATCH      /settings/transporters/{transporter}
+PATCH      /settings/transporters/{transporter}/toggle-active
+GET        /settings/inventory      → Settings\InventorySettingsController@index
+PATCH      /settings/inventory/costing
+
+-- Admin --
+GET/POST   /admin/roles
+PUT/DELETE /admin/roles/{role}
+POST       /admin/roles/{role}/permissions
+GET/POST   /admin/users
+PATCH      /admin/users/{user}
+DELETE/POST /admin/users/{user}/...
 ```
 
-## Development Setup
+---
 
-The app runs on **port 5000** via `php artisan serve --host=0.0.0.0 --port=5000`.
+## Key Source Files
 
-### Database
+| File | Purpose |
+|---|---|
+| `app/Services/InventoryLedger.php` | Core inventory engine — receipt, issue, weighted avg, FIFO |
+| `app/Services/PostingGate.php` | Blocks postings if period closed/paused |
+| `app/Services/PeriodResolver.php` | Resolves/auto-creates open inventory period |
+| `app/Models/InventoryPeriod.php` | Period model |
+| `app/Http/Controllers/PurchaseController.php` | All purchase actions (10 methods) |
+| `resources/views/purchases/show.blade.php` | Purchase detail + all action modals (748 lines) |
+| `resources/views/purchases/index.blade.php` | Purchase list + filter bar |
+| `resources/views/settings/inventory.blade.php` | Inventory settings (costing, periods) |
+| `resources/views/layouts/app.blade.php` | Master layout with sidebar nav |
+| `.env` | `ASSET_URL=/`, DB creds, `APP_URL` |
+| `config/app.php` | Has custom `asset_url` key — do not remove |
 
-PostgreSQL is configured via Replit's built-in database. Credentials are injected via environment secrets (PGHOST, PGPORT, etc.).
+---
 
-Migration filenames were normalized to consistent `YYYY_MM_DD` zero-padded format to fix sort-order issues.
+## What's Next (Roadmap)
 
-### Frontend Assets
+### Phase 2 remaining — Import Purchase Pipeline
+The `import` type currently has no operational pipeline. Needs:
+1. **Nomination** — associate vessel/shipment with a confirmed import batch
+2. **Offload tracking** — record discharge qty at port
+3. **Deliver to depot** — move offloaded stock into one or more depots (receipt movements)
+4. **Logistics costs** — freight, port fees, customs attached to the batch
 
-Built with Vite. In development the assets are pre-built. To rebuild:
+### Phase 3 — Transporter Ledgers
+- Trips logged against transporters
+- Freight costs posted to transporter ledger
+- Transporter balance / payable tracking
+
+### Phase 4 — Supplier Ledger
+- Purchase invoices posted against suppliers
+- Supplier balance / payable aging
+
+### Phase 5 — Client AR
+- Sales invoices against clients
+- AR aging / collections
+
+### Phase 6 — Petty Cash
+- Petty cash float per company
+- Cash advance / replenishment / reconciliation
+
+### Phase 7 — Banking & Reconciliation
+- Bank accounts per company
+- Bank statement import / manual entry
+- Match payments to supplier/client ledger entries
+
+### Phase 8 — Reporting
+- Stock position report (by depot, by product, by period)
+- P&L / margin report
+- Aging reports (AR, AP)
+- Transaction ledger exports
+
+### Phase 9 — Dashboard
+- Live KPIs: stock position, open purchases, outstanding AR/AP
+- Charts: fuel throughput, margin trends
+
+---
+
+## Environment & Dev Notes
+
 ```bash
+# Run app
+php artisan serve --host=0.0.0.0 --port=5000
+
+# Run migrations
+php artisan migrate
+
+# Clear compiled views (after Blade changes)
+php artisan view:clear
+
+# Rebuild frontend assets
 chmod +x node_modules/.bin/vite
 node_modules/.bin/vite build
+
+# List all routes
+php artisan route:list
 ```
 
-### Important Notes
-
-- `app/Http/Controllers/CompanySettingsController.php` — class name is `CompanyController` (PSR-4 mismatch, non-critical)
-- `app/Http/Middleware/RoleMiddleWare.php` — class name is `RoleMiddleware` (PSR-4 mismatch, non-critical)
-- Demo data is seeded via `DemoDataSeeder` and `RolePermissionSeeder`
-
-## Environment
-
-- `APP_ENV=local`, `APP_DEBUG=true`
-- `DB_CONNECTION=pgsql` pointing to Replit helium PostgreSQL
-- `SESSION_DRIVER=file`, `CACHE_DRIVER=file`
+- **GitHub remote**: `https://github.com/cabdixakim/twins-erp`
+- **Session driver**: file (`storage/framework/sessions/`) — gitignored
+- **`.local/` directory**: gitignored (Replit internal)
+- **`public/build/`**: gitignored (compiled Vite output)
