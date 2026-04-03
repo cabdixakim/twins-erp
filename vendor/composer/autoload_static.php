@@ -475,6 +475,7 @@ class ComposerStaticInitb7f319687ca411cb27abc14e37de7c1d
     );
 
     public static $classMap = array (
+        'App\\Console\\Commands\\BootstrapInventoryPeriods' => __DIR__ . '/../..' . '/app/Console/Commands/BootstrapInventoryPeriods.php',
         'App\\Console\\Kernel' => __DIR__ . '/../..' . '/app/Console/Kernel.php',
         'App\\Exceptions\\Handler' => __DIR__ . '/../..' . '/app/Exceptions/Handler.php',
         'App\\Http\\Controllers\\Admin\\RoleController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/RoleController.php',
@@ -491,6 +492,7 @@ class ComposerStaticInitb7f319687ca411cb27abc14e37de7c1d
         'App\\Http\\Controllers\\SalesController' => __DIR__ . '/../..' . '/app/Http/Controllers/SalesController.php',
         'App\\Http\\Controllers\\Settings\\CompanySettingsController' => __DIR__ . '/../..' . '/app/Http/Controllers/Settings/CompanySettingsController.php',
         'App\\Http\\Controllers\\Settings\\DepotController' => __DIR__ . '/../..' . '/app/Http/Controllers/Settings/DepotController.php',
+        'App\\Http\\Controllers\\Settings\\InventorySettingsController' => __DIR__ . '/../..' . '/app/Http/Controllers/Settings/InventorySettingsController.php',
         'App\\Http\\Controllers\\Settings\\SupplierController' => __DIR__ . '/../..' . '/app/Http/Controllers/Settings/SupplierController.php',
         'App\\Http\\Controllers\\Settings\\TransporterController' => __DIR__ . '/../..' . '/app/Http/Controllers/Settings/TransporterController.php',
         'App\\Http\\Controllers\\SupplierController' => __DIR__ . '/../..' . '/app/Http/Controllers/SupplierController.php',
@@ -509,6 +511,7 @@ class ComposerStaticInitb7f319687ca411cb27abc14e37de7c1d
         'App\\Models\\DepotStock' => __DIR__ . '/../..' . '/app/Models/DepotStock.php',
         'App\\Models\\InventoryConsumption' => __DIR__ . '/../..' . '/app/Models/InventoryConsumption.php',
         'App\\Models\\InventoryMovement' => __DIR__ . '/../..' . '/app/Models/InventoryMovement.php',
+        'App\\Models\\InventoryPeriod' => __DIR__ . '/../..' . '/app/Models/InventoryPeriod.php',
         'App\\Models\\Permission' => __DIR__ . '/../..' . '/app/Models/Permission.php',
         'App\\Models\\Product' => __DIR__ . '/../..' . '/app/Models/Product.php',
         'App\\Models\\Purchase' => __DIR__ . '/../..' . '/app/Models/Purchase.php',
@@ -520,6 +523,8 @@ class ComposerStaticInitb7f319687ca411cb27abc14e37de7c1d
         'App\\Providers\\RouteServiceProvider' => __DIR__ . '/../..' . '/app/Providers/RouteServiceProvider.php',
         'App\\Services\\Depots\\DepotService' => __DIR__ . '/../..' . '/app/Services/Depots/DepotService.php',
         'App\\Services\\InventoryLedger' => __DIR__ . '/../..' . '/app/Services/InventoryLedger.php',
+        'App\\Services\\PeriodResolver' => __DIR__ . '/../..' . '/app/Services/PeriodResolver.php',
+        'App\\Services\\PostingGate' => __DIR__ . '/../..' . '/app/Services/PostingGate.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
         'Brick\\Math\\BigInteger' => __DIR__ . '/..' . '/brick/math/src/BigInteger.php',
@@ -646,7 +651,6 @@ class ComposerStaticInitb7f319687ca411cb27abc14e37de7c1d
         'Database\\Factories\\TransporterFactory' => __DIR__ . '/../..' . '/database/factories/TransporterFactory.php',
         'Database\\Factories\\UserFactory' => __DIR__ . '/../..' . '/database/factories/UserFactory.php',
         'Database\\Seeders\\DatabaseSeeder' => __DIR__ . '/../..' . '/database/seeders/DatabaseSeeder.php',
-        'Database\\Seeders\\DemoDataSeeder' => __DIR__ . '/../..' . '/database/seeders/DemoDataSeeder.php',
         'Database\\Seeders\\RolePermissionSeeder' => __DIR__ . '/../..' . '/database/seeders/RolePermissionSeeder.php',
         'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
         'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',

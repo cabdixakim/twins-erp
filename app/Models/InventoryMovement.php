@@ -44,4 +44,9 @@ class InventoryMovement extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function period(): BelongsTo
+    {
+        return $this->belongsTo(InventoryPeriod::class, 'period_id');
+    }
 }

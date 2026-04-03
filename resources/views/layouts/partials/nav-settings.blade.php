@@ -134,6 +134,21 @@
             </a>
         @endif
 
+        {{-- Inventory Settings --}}
+        @if($userRole === 'owner')
+            <a href="{{ route('settings.inventory.index') }}"
+               class="{{ $linkBase }} {{ request()->routeIs('settings.inventory.*') ? $linkActive : '' }}">
+                <span class="h-7 w-7 rounded-2xl grid place-items-center
+                             bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
+                    <span aria-hidden="true">📊</span>
+                </span>
+                <span class="sidebar-label truncate">Inventory</span>
+                <span class="ml-auto text-[10px] {{ $muted }} sidebar-label">
+                    {{ request()->routeIs('settings.inventory.*') ? 'Active' : '' }}
+                </span>
+            </a>
+        @endif
+
         {{-- User settings sub-accordion --}}
         @if($userRole === 'owner')
             <button type="button"

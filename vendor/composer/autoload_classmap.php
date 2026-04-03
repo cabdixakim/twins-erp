@@ -6,6 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Console\\Commands\\BootstrapInventoryPeriods' => $baseDir . '/app/Console/Commands/BootstrapInventoryPeriods.php',
     'App\\Console\\Kernel' => $baseDir . '/app/Console/Kernel.php',
     'App\\Exceptions\\Handler' => $baseDir . '/app/Exceptions/Handler.php',
     'App\\Http\\Controllers\\Admin\\RoleController' => $baseDir . '/app/Http/Controllers/Admin/RoleController.php',
@@ -22,6 +23,7 @@ return array(
     'App\\Http\\Controllers\\SalesController' => $baseDir . '/app/Http/Controllers/SalesController.php',
     'App\\Http\\Controllers\\Settings\\CompanySettingsController' => $baseDir . '/app/Http/Controllers/Settings/CompanySettingsController.php',
     'App\\Http\\Controllers\\Settings\\DepotController' => $baseDir . '/app/Http/Controllers/Settings/DepotController.php',
+    'App\\Http\\Controllers\\Settings\\InventorySettingsController' => $baseDir . '/app/Http/Controllers/Settings/InventorySettingsController.php',
     'App\\Http\\Controllers\\Settings\\SupplierController' => $baseDir . '/app/Http/Controllers/Settings/SupplierController.php',
     'App\\Http\\Controllers\\Settings\\TransporterController' => $baseDir . '/app/Http/Controllers/Settings/TransporterController.php',
     'App\\Http\\Controllers\\SupplierController' => $baseDir . '/app/Http/Controllers/SupplierController.php',
@@ -40,6 +42,7 @@ return array(
     'App\\Models\\DepotStock' => $baseDir . '/app/Models/DepotStock.php',
     'App\\Models\\InventoryConsumption' => $baseDir . '/app/Models/InventoryConsumption.php',
     'App\\Models\\InventoryMovement' => $baseDir . '/app/Models/InventoryMovement.php',
+    'App\\Models\\InventoryPeriod' => $baseDir . '/app/Models/InventoryPeriod.php',
     'App\\Models\\Permission' => $baseDir . '/app/Models/Permission.php',
     'App\\Models\\Product' => $baseDir . '/app/Models/Product.php',
     'App\\Models\\Purchase' => $baseDir . '/app/Models/Purchase.php',
@@ -51,6 +54,8 @@ return array(
     'App\\Providers\\RouteServiceProvider' => $baseDir . '/app/Providers/RouteServiceProvider.php',
     'App\\Services\\Depots\\DepotService' => $baseDir . '/app/Services/Depots/DepotService.php',
     'App\\Services\\InventoryLedger' => $baseDir . '/app/Services/InventoryLedger.php',
+    'App\\Services\\PeriodResolver' => $baseDir . '/app/Services/PeriodResolver.php',
+    'App\\Services\\PostingGate' => $baseDir . '/app/Services/PostingGate.php',
     'Attribute' => $vendorDir . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
     'Brick\\Math\\BigDecimal' => $vendorDir . '/brick/math/src/BigDecimal.php',
     'Brick\\Math\\BigInteger' => $vendorDir . '/brick/math/src/BigInteger.php',
@@ -177,7 +182,6 @@ return array(
     'Database\\Factories\\TransporterFactory' => $baseDir . '/database/factories/TransporterFactory.php',
     'Database\\Factories\\UserFactory' => $baseDir . '/database/factories/UserFactory.php',
     'Database\\Seeders\\DatabaseSeeder' => $baseDir . '/database/seeders/DatabaseSeeder.php',
-    'Database\\Seeders\\DemoDataSeeder' => $baseDir . '/database/seeders/DemoDataSeeder.php',
     'Database\\Seeders\\RolePermissionSeeder' => $baseDir . '/database/seeders/RolePermissionSeeder.php',
     'DateError' => $vendorDir . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
     'DateException' => $vendorDir . '/symfony/polyfill-php83/Resources/stubs/DateException.php',

@@ -18,6 +18,16 @@ class Company extends Model
         'logo_path',
         'country',
         'timezone',
+        'costing_method',
+        'inventory_posting_paused',
+        'posting_paused_at',
+        'posting_paused_by',
+        'posting_paused_reason',
+    ];
+
+    protected $casts = [
+        'inventory_posting_paused' => 'boolean',
+        'posting_paused_at'        => 'datetime',
     ];
 
 
@@ -40,7 +50,26 @@ class Company extends Model
     {
         return $this->hasMany(Transporter::class);
     }
-    
+
+    public function inventoryPeriods()
+    {
+        return $this->hasMany(\App\Models\InventoryPeriod::class);
+    }
+
+    public function openPeriod()
+    {
+        return $this->hasOne(\App\Models\InventoryPeriod::class)->where('status', 'open');
+    }
+
+    public function hasInventoryMovements(): bool
+    {
+        return \App\Models\InventoryMovement::where('company_id', $this->id)->exists();
+    }
+
+    public function canChangeCosting(): bool
+    {
+        return !$this->hasInventoryMovements();
+    }
 }
 
 

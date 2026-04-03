@@ -119,6 +119,11 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
                 ->name('transporters.update');
             Route::patch('/transporters/{transporter}/toggle-active', [TransporterController::class, 'toggleActive'])
                 ->name('transporters.toggle-active');
+
+            Route::get('/inventory', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'index'])
+                ->name('inventory.index');
+            Route::patch('/inventory/costing', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'updateCosting'])
+                ->name('inventory.update-costing');
         });
 
         Route::post('/logout', [AuthController::class, 'logout'])
