@@ -1,0 +1,354 @@
+Here’s the full updated roadmap for this thread, with the foundation priorities corrected and locked.
+
+⸻
+
+TWINS ERP — Updated Roadmap
+
+PHASE 0 — Locked Architectural Decisions
+
+These are already decided:
+
+Inventory costing
+	•	Company supports:
+	•	weighted_average
+	•	specific_lot
+	•	weighted_average scope = depot + product
+	•	specific_lot = batch/lot-based
+
+Storage design
+	•	companies.costing_method = current preference
+	•	inventory_periods.costing_method = historical truth
+	•	inventory_movements.period_id required for posted movements
+	•	inventory_consumptions.period_id required for consumptions
+
+Period policy
+	•	Only one OPEN inventory period per company
+	•	Posting always goes into the current OPEN period
+	•	Closed periods are immutable
+	•	No backdating into closed periods
+	•	Corrections happen via current-period adjustments
+
+Costing change policy
+	•	If company has no inventory movements → costing method can be changed directly
+	•	If company has any inventory movements → costing method locked
+	•	Change then happens only via New Inventory Period Wizard
+
+Purchase policy
+	•	Purchases are postponed until this foundation is built
+	•	We already locked the future purchase workflow, but we are not building it yet
+
+⸻
+
+PHASE 1 — Database Foundations
+
+This is the first build block.
+
+1.1 Companies table changes
+
+Add:
+	•	costing_method
+	•	inventory_posting_paused
+	•	optional:
+	•	posting_paused_at
+	•	posting_paused_by
+	•	posting_paused_reason
+
+1.2 Inventory periods table
+
+Create inventory_periods with:
+	•	company_id
+	•	name
+	•	costing_method
+	•	starts_at
+	•	ends_at
+	•	status (open|closed)
+	•	created_by
+	•	closed_by
+	•	closed_at
+	•	timestamps
+
+Indexes:
+	•	(company_id, status)
+	•	(company_id, starts_at)
+
+1.3 Ledger table changes
+
+Add:
+	•	inventory_movements.period_id
+	•	inventory_consumptions.period_id
+
+Rollout:
+	•	nullable first for bootstrap
+	•	enforced by posting contract thereafter
+
+⸻
+
+PHASE 2 — Core Foundation Services
+
+This is the policy layer.
+
+2.1 PeriodResolver
+
+Responsibilities:
+	•	fetch current OPEN period
+	•	if none exists and safe:
+	•	auto-create Period 1 from companies.costing_method
+
+2.2 PostingGate
+
+Responsibilities:
+	•	block posting if company is paused
+	•	block posting if no valid open period exists
+	•	ensure posting never lands in a closed period
+
+2.3 InventoryPostingContext
+
+Standard context for posting:
+	•	company_id
+	•	period_id
+	•	costing_method
+	•	user_id
+	•	posting_key
+	•	posting_group_uuid
+
+⸻
+
+PHASE 3 — Make InventoryLedger Period-Aware
+
+This is where foundation becomes real.
+
+3.1 Update receipt posting
+
+Before posting:
+	•	run PostingGate
+	•	resolve open period
+	•	stamp period_id
+
+3.2 Update issue posting
+
+Before posting:
+	•	run PostingGate
+	•	resolve open period
+	•	stamp period_id on:
+	•	movement
+	•	consumptions
+
+3.3 No period = no posting
+
+This becomes hard rule.
+
+⸻
+
+PHASE 4 — Bootstrap / Migration Safety
+
+Needed so existing data doesn’t break.
+
+4.1 Existing companies with movements but no periods
+
+Bootstrap:
+	•	create Period 1
+	•	stamp all existing movements
+	•	stamp all existing consumptions
+
+4.2 Existing companies with no movements
+
+No special migration complexity:
+	•	costing method remains editable
+	•	first posting can auto-create Period 1
+
+⸻
+
+PHASE 5 — Settings UX
+
+This is the first user-facing part.
+
+5.1 Settings → Inventory
+
+Screen shows:
+	•	current costing method
+	•	current open period
+	•	closed periods list
+
+5.2 Costing method UX rules
+
+If no movements
+	•	dropdown enabled
+	•	user can save directly
+
+If movements exist
+	•	dropdown disabled
+	•	show lock message
+	•	show button:
+	•	Start New Inventory Period (Change Costing)
+
+⸻
+
+PHASE 6 — New Inventory Period Wizard
+
+This is the controlled cutover.
+
+6.1 Wizard flow
+	1.	Acquire company lock
+	2.	Pause posting
+	3.	Validate stable state
+	4.	Choose new costing method
+	5.	Choose effective timestamp
+	6.	Close current period
+	7.	Snapshot inventory
+	8.	Create new open period
+	9.	Post opening balances
+	10.	Resume posting
+	11.	Show audit result
+
+6.2 Snapshot source
+
+Use:
+	•	depot_stocks as authoritative current stock snapshot
+
+6.3 Opening balance rules
+
+Opening balance movements:
+	•	belong to new period
+	•	recreate same physical stock
+	•	preserve value continuity
+
+6.4 WA → Specific Lot
+
+If stock is commingled:
+	•	create synthetic Opening Lot batches
+
+⸻
+
+PHASE 7 — Reporting & Audit
+
+Needed for institutional quality.
+
+7.1 Inventory Periods screen
+	•	open period card
+	•	closed periods table
+	•	detail page for a period
+
+7.2 Minimum audit events
+	•	period_opened
+	•	period_closed
+	•	costing_changed_via_period
+	•	posting_paused
+	•	posting_resumed
+
+⸻
+
+PHASE 8 — Movement Posting Contract Upgrade
+
+This is the next deep foundation after periods are live.
+
+We still need to upgrade movements to institutional-grade posting.
+
+8.1 Add movement posting metadata
+
+Planned additions:
+	•	posted_at
+	•	posted_by
+	•	action
+	•	posting_key
+	•	posting_group_uuid
+	•	reversal_of_movement_id
+
+8.2 Why this matters
+
+Needed for:
+	•	idempotency
+	•	reversals
+	•	purchase undo flows
+	•	future sales audit integrity
+
+This phase comes after period foundation is stable.
+
+⸻
+
+PHASE 9 — Purchase Module Build
+
+Only after periods + posting foundation.
+
+9.1 Build cross_dock + local_depot workflows
+
+Including:
+	•	draft edit
+	•	draft cancel
+	•	confirm
+	•	receive
+	•	undo confirmation
+	•	undo receipt
+
+9.2 Purchase state machine already locked
+
+Cross Dock
+	•	draft → confirmed → reversed
+	•	draft → cancelled
+
+Local Depot
+	•	draft → confirmed → received
+	•	draft → cancelled
+	•	confirmed → reversed
+	•	received → confirmed via Undo Receipt
+
+9.3 User-facing wording already locked
+	•	“Undo Confirmation”
+	•	“Undo Receipt”
+	•	status label: “Reversed”
+
+⸻
+
+PHASE 10 — Sales Module Rebuild Under New Costing Rules
+
+Current sales logic uses FIFO and must later be corrected.
+
+10.1 Replace current issue costing logic
+
+Future issue logic must obey:
+	•	weighted_average → depot+product avg
+	•	specific_lot → explicit batch choice
+
+10.2 Sales UX
+	•	WA: user does not choose batch
+	•	Specific Lot: user must choose batch
+
+⸻
+
+Immediate Build Order
+
+This is the exact order from here:
+
+Now
+	1.	Add companies.costing_method
+	2.	Add companies.inventory_posting_paused
+	3.	Create inventory_periods
+	4.	Add period_id to movements + consumptions
+	5.	Build PeriodResolver
+	6.	Build PostingGate
+	7.	Make InventoryLedger period-aware
+
+Then
+	8.	Build Settings → Inventory page
+	9.	Build costing lock UI
+	10.	Build Inventory Periods listing screen
+
+Then
+	11.	Build New Inventory Period Wizard
+	12.	Build snapshot + opening balance flow
+	13.	Build audit trail for periods
+
+Then
+	14.	Upgrade movement posting metadata
+	15.	Build purchases properly on top of that
+
+⸻
+
+What is already locked so we don’t drift
+	•	Costing method belongs on companies
+	•	Historical truth belongs on inventory_periods
+	•	Periods come before purchases
+	•	No closed-period posting
+	•	No direct costing change after movements exist
+	•	New Period Wizard is the only safe post-go-live costing change path
+
+If you want, I’ll turn this into a developer execution checklist with file-by-file targets for Twins ERP.
