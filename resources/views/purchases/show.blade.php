@@ -916,6 +916,144 @@
   </div>
 @endif
 
+{{-- ========================= CANCEL MODAL ========================= --}}
+@if(in_array($purchase->status, ['draft', 'confirmed', 'nominated']))
+<div id="cancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+    <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
+      <div>
+        <div class="text-base font-semibold {{ $fg }}">Cancel purchase</div>
+        <div class="mt-1 text-xs {{ $muted }}">
+          @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
+            The cross-dock receipt will be automatically reversed.
+          @else
+            This purchase will be marked as cancelled. No inventory changes.
+          @endif
+        </div>
+      </div>
+      <button type="button" data-close="cancel-purchase"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
+                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ route('purchases.cancel', $purchase) }}" id="cancelForm">
+      @csrf
+      <div class="p-5 space-y-4">
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid gap-3 sm:grid-cols-2 text-sm">
+          <div>
+            <div class="text-[11px] {{ $muted }}">Reference</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ $ref }}</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Status</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ ucfirst((string)$purchase->status) }}</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Product</div>
+            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $productName }}</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Quantity</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason (optional)</label>
+          <input type="text" name="reason" placeholder="e.g. supplier withdrew, wrong product…"
+                 class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                        focus:outline-none focus:ring-2 focus:ring-rose-500/30" />
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+        <button type="button" data-close="cancel-purchase"
+                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+                       hover:bg-[color:var(--tw-surface-2)] transition">
+          Go back
+        </button>
+        <button type="submit"
+                class="h-10 px-4 rounded-xl border border-rose-500/40 bg-rose-600 text-sm font-semibold text-white
+                       hover:bg-rose-500 transition">
+          Yes, cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+@endif
+
+{{-- ========================= VOID MODAL ========================= --}}
+@if($purchase->type === 'local_depot' && $purchase->status === 'received')
+<div id="voidModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+    <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
+      <div>
+        <div class="text-base font-semibold {{ $fg }}">Return to seller</div>
+        <div class="mt-1 text-xs {{ $muted }}">
+          Reverses the depot receipt and marks this purchase as voided. Stock is removed from inventory.
+        </div>
+      </div>
+      <button type="button" data-close="void-purchase"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
+                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ route('purchases.void', $purchase) }}" id="voidForm">
+      @csrf
+      <div class="p-5 space-y-4">
+        <div class="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-xs text-rose-800 dark:text-rose-200">
+          This action is irreversible. The batch stock for {{ number_format($qty, 3) }} L will be removed from <strong>{{ $depotName }}</strong>.
+        </div>
+
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid gap-3 sm:grid-cols-2 text-sm">
+          <div>
+            <div class="text-[11px] {{ $muted }}">Product</div>
+            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $productName }}</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Depot</div>
+            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $depotName }}</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Quantity to reverse</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
+          </div>
+          <div>
+            <div class="text-[11px] {{ $muted }}">Batch</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">#{{ $purchase->batch_id ?? '—' }}</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason (optional)</label>
+          <input type="text" name="reason" placeholder="e.g. off-spec product, supplier recall…"
+                 class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
+                        focus:outline-none focus:ring-2 focus:ring-rose-700/30" />
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+        <button type="button" data-close="void-purchase"
+                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
+                       hover:bg-[color:var(--tw-surface-2)] transition">
+          Go back
+        </button>
+        <button type="submit"
+                class="h-10 px-4 rounded-xl border border-rose-700/50 bg-rose-700 text-sm font-semibold text-white
+                       hover:bg-rose-600 transition">
+          Yes, return to seller
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+@endif
+
 <script>
   (function () {
     const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
@@ -1089,143 +1227,5 @@
     });
   })();
 </script>
-
-{{-- ========================= CANCEL MODAL ========================= --}}
-@if(in_array($purchase->status, ['draft', 'confirmed', 'nominated']))
-<div id="cancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
-    <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
-      <div>
-        <div class="text-base font-semibold {{ $fg }}">Cancel purchase</div>
-        <div class="mt-1 text-xs {{ $muted }}">
-          @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
-            The cross-dock receipt will be automatically reversed.
-          @else
-            This purchase will be marked as cancelled. No inventory changes.
-          @endif
-        </div>
-      </div>
-      <button type="button" data-close="cancel-purchase"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <form method="POST" action="{{ route('purchases.cancel', $purchase) }}" id="cancelForm">
-      @csrf
-      <div class="p-5 space-y-4">
-        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid gap-3 sm:grid-cols-2 text-sm">
-          <div>
-            <div class="text-[11px] {{ $muted }}">Reference</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ $ref }}</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Status</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ ucfirst((string)$purchase->status) }}</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Product</div>
-            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $productName }}</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Quantity</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason (optional)</label>
-          <input type="text" name="reason" placeholder="e.g. supplier withdrew, wrong product…"
-                 class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
-                        focus:outline-none focus:ring-2 focus:ring-rose-500/30" />
-        </div>
-      </div>
-
-      <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
-        <button type="button" data-close="cancel-purchase"
-                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                       hover:bg-[color:var(--tw-surface-2)] transition">
-          Go back
-        </button>
-        <button type="submit"
-                class="h-10 px-4 rounded-xl border border-rose-500/40 bg-rose-600 text-sm font-semibold text-white
-                       hover:bg-rose-500 transition">
-          Yes, cancel
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-@endif
-
-{{-- ========================= VOID MODAL ========================= --}}
-@if($purchase->type === 'local_depot' && $purchase->status === 'received')
-<div id="voidModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
-    <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
-      <div>
-        <div class="text-base font-semibold {{ $fg }}">Return to seller</div>
-        <div class="mt-1 text-xs {{ $muted }}">
-          Reverses the depot receipt and marks this purchase as voided. Stock is removed from inventory.
-        </div>
-      </div>
-      <button type="button" data-close="void-purchase"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <form method="POST" action="{{ route('purchases.void', $purchase) }}" id="voidForm">
-      @csrf
-      <div class="p-5 space-y-4">
-        <div class="rounded-xl border border-rose-500/25 bg-rose-500/8 p-3 text-xs text-rose-800 dark:text-rose-200">
-          This action is irreversible. The batch stock for {{ number_format($qty, 3) }} L will be removed from <strong>{{ $depotName }}</strong>.
-        </div>
-
-        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid gap-3 sm:grid-cols-2 text-sm">
-          <div>
-            <div class="text-[11px] {{ $muted }}">Product</div>
-            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $productName }}</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Depot</div>
-            <div class="mt-0.5 font-semibold {{ $fg }} truncate">{{ $depotName }}</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Quantity to reverse</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
-          </div>
-          <div>
-            <div class="text-[11px] {{ $muted }}">Batch</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">#{{ $purchase->batch_id ?? '—' }}</div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason (optional)</label>
-          <input type="text" name="reason" placeholder="e.g. off-spec product, supplier recall…"
-                 class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
-                        focus:outline-none focus:ring-2 focus:ring-rose-700/30" />
-        </div>
-      </div>
-
-      <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
-        <button type="button" data-close="void-purchase"
-                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                       hover:bg-[color:var(--tw-surface-2)] transition">
-          Go back
-        </button>
-        <button type="submit"
-                class="h-10 px-4 rounded-xl border border-rose-700/50 bg-rose-700 text-sm font-semibold text-white
-                       hover:bg-rose-600 transition">
-          Yes, return to seller
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-@endif
 
 @endsection
