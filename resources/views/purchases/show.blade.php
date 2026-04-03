@@ -23,7 +23,8 @@
   $statusPill = match($purchase->status) {
     'draft'       => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
     'confirmed'   => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
-    'received'    => 'border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100',
+    'nominated'   => 'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100',
+    'received'    => 'border-emerald-500/30 bg-emerald-500/20 text-emerald-900 dark:text-emerald-100',
     'transferred' => 'border-blue-500/30 bg-blue-500/10 text-blue-900 dark:text-blue-100',
     'dispatched'  => 'border-purple-500/30 bg-purple-500/10 text-purple-900 dark:text-purple-100',
     'cancelled'   => 'border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100',
@@ -134,6 +135,30 @@
           </button>
         @endif
 
+        {{-- Import: Nominate Vessel (confirmed import only) --}}
+        @if($purchase->type === 'import' && $purchase->status === 'confirmed')
+          <button type="button"
+                  id="btnNominate"
+                  class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-amber-500/30
+                         bg-amber-500/10 text-amber-900 dark:text-amber-100
+                         text-sm font-semibold hover:bg-amber-500/20 transition">
+            Nominate vessel
+            <span class="opacity-80">⚓</span>
+          </button>
+        @endif
+
+        {{-- Import: Deliver to Depot (nominated import only) --}}
+        @if($purchase->type === 'import' && $purchase->status === 'nominated')
+          <button type="button"
+                  id="btnImportDeliver"
+                  class="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-emerald-500/30
+                         bg-[color:var(--tw-accent-soft)] text-emerald-900 dark:text-emerald-100
+                         text-sm font-semibold hover:bg-emerald-500/20 transition">
+            Deliver to depot
+            <span class="opacity-80">↓</span>
+          </button>
+        @endif
+
         {{-- Cross-dock actions (confirmed cross_dock only) --}}
         @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
           <button type="button"
@@ -233,8 +258,15 @@
     {{-- Workflow hint --}}
     <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
       @if($purchase->type === 'import')
-        <span class="{{ $muted }}">After confirmation:</span>
-        this purchase waits for nominations/offload to be received into a depot.
+        @if($purchase->status === 'draft')
+          <span class="{{ $muted }}">Next:</span> confirm to create a Batch, then nominate a vessel.
+        @elseif($purchase->status === 'confirmed')
+          <span class="{{ $muted }}">Next:</span> nominate a vessel (vessel name, BL#, ETA) to begin the offload workflow.
+        @elseif($purchase->status === 'nominated')
+          <span class="{{ $muted }}">Next:</span> deliver cargo to depot(s). Each delivery posts a receipt movement. The purchase closes automatically when fully delivered.
+        @else
+          <span class="{{ $muted }}">Status:</span> {{ ucfirst($purchase->status) }}. All deliveries posted.
+        @endif
       @elseif($purchase->type === 'local_depot')
         <span class="{{ $muted }}">After confirmation:</span>
         receive it into the selected depot from Depot Stock.
@@ -253,6 +285,110 @@
       </a>
     </div>
   </div>
+
+  {{-- ================================================================
+       IMPORT: Nomination details card (shown once nominated)
+       ================================================================ --}}
+  @if($purchase->type === 'import' && $purchase->vessel_name)
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
+      <div class="text-sm font-semibold {{ $fg }} mb-3">Vessel nomination</div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+          <div class="text-[11px] {{ $muted }}">Vessel</div>
+          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->vessel_name }}</div>
+        </div>
+        @if($purchase->voyage_no)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">Voyage</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->voyage_no }}</div>
+          </div>
+        @endif
+        @if($purchase->bl_number)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">BL number</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->bl_number }}</div>
+          </div>
+        @endif
+        @if($purchase->loading_port)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">Loading port</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->loading_port }}</div>
+          </div>
+        @endif
+        @if($purchase->discharge_port)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">Discharge port</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->discharge_port }}</div>
+          </div>
+        @endif
+        @if($purchase->bl_date)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">BL date</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->bl_date->format('Y-m-d') }}</div>
+          </div>
+        @endif
+        @if($purchase->eta_date)
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <div class="text-[11px] {{ $muted }}">ETA</div>
+            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->eta_date->format('Y-m-d') }}</div>
+          </div>
+        @endif
+      </div>
+    </div>
+  @endif
+
+  {{-- ================================================================
+       IMPORT: Delivery progress + history card
+       ================================================================ --}}
+  @if($purchase->type === 'import' && in_array($purchase->status, ['nominated', 'received']))
+    @php
+      $qtyDelivered = (float) ($purchase->qty_delivered ?? 0);
+      $pct = $qty > 0 ? min(100, round($qtyDelivered / $qty * 100)) : 0;
+    @endphp
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
+      <div class="flex items-center justify-between gap-4 mb-3">
+        <div class="text-sm font-semibold {{ $fg }}">Delivery progress</div>
+        <div class="text-xs {{ $muted }}">
+          {{ number_format($qtyDelivered, 3) }} / {{ number_format($qty, 3) }} L
+          <span class="ml-1 font-semibold {{ $fg }}">{{ $pct }}%</span>
+        </div>
+      </div>
+
+      {{-- Progress bar --}}
+      <div class="w-full bg-[color:var(--tw-surface-2)] rounded-full h-2 mb-4 border {{ $border }}">
+        <div class="bg-emerald-500 h-2 rounded-full transition-all"
+             style="width: {{ $pct }}%"></div>
+      </div>
+
+      {{-- Delivery rows --}}
+      @if($importMovements->isNotEmpty())
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="{{ $muted }} border-b {{ $border }}">
+                <th class="text-left py-1.5 pr-3 font-semibold">Movement</th>
+                <th class="text-left py-1.5 pr-3 font-semibold">Depot</th>
+                <th class="text-right py-1.5 pr-3 font-semibold">Qty (L)</th>
+                <th class="text-right py-1.5 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($importMovements as $mv)
+                <tr class="border-b {{ $border }} last:border-0">
+                  <td class="py-1.5 pr-3 {{ $fg }} font-mono">#{{ $mv->id }}</td>
+                  <td class="py-1.5 pr-3 {{ $fg }}">{{ $mv->toDepot?->name ?? '—' }}</td>
+                  <td class="py-1.5 pr-3 text-right {{ $fg }} font-semibold">{{ number_format($mv->qty, 3) }}</td>
+                  <td class="py-1.5 text-right {{ $muted }}">{{ $mv->created_at->format('Y-m-d H:i') }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      @else
+        <p class="text-xs {{ $muted }}">No deliveries posted yet.</p>
+      @endif
+    </div>
+  @endif
 
 </div>
 
@@ -503,6 +639,158 @@
   </div>
 @endif
 
+{{-- ================================================================
+     NOMINATE VESSEL MODAL (import + confirmed only)
+     ================================================================ --}}
+@if($purchase->type === 'import' && $purchase->status === 'confirmed')
+  <div id="nominateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-lg rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+      <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
+        <div class="min-w-0">
+          <div class="text-base font-semibold {{ $fg }}">Nominate vessel</div>
+          <div class="mt-1 text-xs {{ $muted }}">Record shipping details. Status will move to <strong>Nominated</strong>.</div>
+        </div>
+        <button type="button" data-close="nominate" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+      </div>
+
+      <form method="POST" action="{{ route('purchases.nominate', $purchase) }}" id="nominateForm">
+        @csrf
+        <div class="p-5 space-y-3">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Vessel name <span class="text-rose-500">*</span></label>
+              <input type="text" name="vessel_name" required placeholder="e.g. MV Atlantic Star"
+                     value="{{ old('vessel_name') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Voyage no.</label>
+              <input type="text" name="voyage_no" placeholder="e.g. V2024-01"
+                     value="{{ old('voyage_no') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">BL number</label>
+              <input type="text" name="bl_number" placeholder="e.g. BL-2024-0012"
+                     value="{{ old('bl_number') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Loading port</label>
+              <input type="text" name="loading_port" placeholder="e.g. Rotterdam"
+                     value="{{ old('loading_port') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Discharge port</label>
+              <input type="text" name="discharge_port" placeholder="e.g. Lagos"
+                     value="{{ old('discharge_port') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">BL date</label>
+              <input type="date" name="bl_date" value="{{ old('bl_date') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">ETA</label>
+              <input type="date" name="eta_date" value="{{ old('eta_date') }}"
+                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+          <button type="button" data-close="nominate"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-sm font-semibold text-amber-900 dark:text-amber-100 hover:bg-amber-500/20 transition">
+            Nominate ⚓
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endif
+
+{{-- ================================================================
+     IMPORT DELIVER MODAL (import + nominated only)
+     ================================================================ --}}
+@if($purchase->type === 'import' && $purchase->status === 'nominated')
+  <div id="importDeliverModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+      <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
+        <div class="min-w-0">
+          <div class="text-base font-semibold {{ $fg }}">Deliver to depot</div>
+          <div class="mt-1 text-xs {{ $muted }}">Post a receipt movement into the selected depot. Repeatable for partial deliveries.</div>
+        </div>
+        <button type="button" data-close="import-deliver" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+      </div>
+
+      <form method="POST" action="{{ route('purchases.import-deliver', $purchase) }}" id="importDeliverForm">
+        @csrf
+        <div class="p-5 space-y-3">
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Destination depot <span class="text-rose-500">*</span></label>
+            <select name="depot_id" required
+                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+              <option value="">— select depot —</option>
+              @foreach($depots as $d)
+                <option value="{{ $d->id }}">{{ $d->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Quantity delivered (L) <span class="text-rose-500">*</span></label>
+            @php $remaining = max(0, $qty - (float)($purchase->qty_delivered ?? 0)); @endphp
+            <input type="number" name="qty" step="0.001" min="0.001"
+                   value="{{ number_format($remaining, 3, '.', '') }}"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+            <div class="mt-1 text-[11px] {{ $muted }}">
+              Remaining: {{ number_format($remaining, 3) }} L of {{ number_format($qty, 3) }} L ordered
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Note (optional)</label>
+            <input type="text" name="note" placeholder="e.g. truck manifest, weigh-bridge ref…"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+          </div>
+
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
+            <div class="font-semibold">What will happen</div>
+            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
+              <li>Receipt movement posted into the selected depot</li>
+              <li>Batch stock (FIFO-ready) updated</li>
+              <li>Purchase auto-closes when fully delivered</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
+          <button type="button" data-close="import-deliver"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition">
+            Post delivery ↓
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endif
+
 {{-- CROSS-DOCK TRANSFER MODAL (cross_dock + confirmed only) --}}
 @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
   <div id="crossDockTransferModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -730,6 +1018,30 @@
       crossDockDispatchModal.querySelectorAll('[data-close="cross-dock-dispatch"]').forEach(el => on(el, 'click', closeCrossDockDispatch));
     }
 
+    // Nominate vessel modal
+    const btnNominate   = document.getElementById('btnNominate');
+    const nominateModal = document.getElementById('nominateModal');
+
+    function openNominate()  { if (!nominateModal) return; nominateModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeNominate() { if (!nominateModal) return; nominateModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
+
+    on(btnNominate, 'click', openNominate);
+    if (nominateModal) {
+      nominateModal.querySelectorAll('[data-close="nominate"]').forEach(el => on(el, 'click', closeNominate));
+    }
+
+    // Import deliver modal
+    const btnImportDeliver   = document.getElementById('btnImportDeliver');
+    const importDeliverModal = document.getElementById('importDeliverModal');
+
+    function openImportDeliver()  { if (!importDeliverModal) return; importDeliverModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeImportDeliver() { if (!importDeliverModal) return; importDeliverModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
+
+    on(btnImportDeliver, 'click', openImportDeliver);
+    if (importDeliverModal) {
+      importDeliverModal.querySelectorAll('[data-close="import-deliver"]').forEach(el => on(el, 'click', closeImportDeliver));
+    }
+
     // ESC closes any open modal
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
@@ -738,6 +1050,8 @@
       closeUndoReceipt();
       closeCrossDockTransfer();
       closeCrossDockDispatch();
+      closeNominate();
+      closeImportDeliver();
     });
   })();
 </script>

@@ -151,6 +151,10 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('purchases.cross-dock-transfer');
         Route::post('/purchases/{purchase}/cross-dock-dispatch', [PurchaseController::class, 'crossDockDispatch'])
             ->name('purchases.cross-dock-dispatch');
+        Route::post('/purchases/{purchase}/nominate', [PurchaseController::class, 'nominate'])
+            ->name('purchases.nominate');
+        Route::post('/purchases/{purchase}/import-deliver', [PurchaseController::class, 'importDeliver'])
+            ->name('purchases.import-deliver');
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);

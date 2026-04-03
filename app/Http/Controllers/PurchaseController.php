@@ -74,7 +74,7 @@ class PurchaseController extends Controller
         }
 
         // Status filter
-        if ($status !== '' && in_array($status, ['draft', 'confirmed', 'received', 'transferred', 'dispatched', 'cancelled'], true)) {
+        if ($status !== '' && in_array($status, ['draft', 'confirmed', 'nominated', 'received', 'transferred', 'dispatched', 'cancelled'], true)) {
             $purchasesQuery->where('status', $status);
         }
 
@@ -191,10 +191,11 @@ class PurchaseController extends Controller
 
         $purchase = DB::transaction(function () use ($cid, $u, $data) {
 
-            // Company-scoped sequence (locks rows for this company)
+            // Company-scoped sequence — lock the company row first (PostgreSQL forbids
+            // FOR UPDATE with aggregate functions), then compute max without a row lock.
+            DB::table('companies')->where('id', $cid)->lockForUpdate()->first();
             $nextSeq = (int) Purchase::query()
                 ->where('company_id', $cid)
-                ->lockForUpdate()
                 ->max('sequence_no');
 
             $nextSeq = $nextSeq + 1;
@@ -262,7 +263,21 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('purchases.show', compact('purchase', 'depots'));
+        // For import purchases: load partial delivery movements
+        $importMovements = collect();
+        if ($purchase->type === 'import' && $purchase->batch_id) {
+            $importMovements = \App\Models\InventoryMovement::query()
+                ->where('company_id', $cid)
+                ->where('type', 'receipt')
+                ->where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('reference', 'like', 'import-delivery:%')
+                ->with('toDepot')
+                ->orderBy('id')
+                ->get();
+        }
+
+        return view('purchases.show', compact('purchase', 'depots', 'importMovements'));
     }
 
 public function confirm(Purchase $purchase, InventoryLedger $ledger)
@@ -658,6 +673,124 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Cross-dock stock dispatched. Inventory issued from Cross Dock.');
+    }
+
+    /**
+     * Nominate a vessel for a confirmed import purchase.
+     * Records shipping details and moves status → nominated.
+     */
+    public function nominate(Purchase $purchase)
+    {
+        $u = auth()->user();
+
+        if ($purchase->type !== 'import') {
+            return back()->with('error', 'Only import purchases can be nominated.');
+        }
+
+        if ($purchase->status !== 'confirmed') {
+            return back()->with('error', 'Only confirmed purchases can be nominated.');
+        }
+
+        $data = request()->validate([
+            'vessel_name'    => 'required|string|max:255',
+            'voyage_no'      => 'nullable|string|max:100',
+            'loading_port'   => 'nullable|string|max:255',
+            'discharge_port' => 'nullable|string|max:255',
+            'bl_number'      => 'nullable|string|max:100',
+            'bl_date'        => 'nullable|date',
+            'eta_date'       => 'nullable|date',
+        ]);
+
+        $purchase->fill($data);
+        $purchase->status     = 'nominated';
+        $purchase->updated_by = $u?->id;
+        $purchase->save();
+
+        $eta = isset($data['eta_date']) ? ' · ETA ' . $data['eta_date'] : '';
+        return redirect()->route('purchases.show', $purchase)
+            ->with('status', "Vessel nominated: {$data['vessel_name']}{$eta}.\nNext: deliver cargo to depot(s).");
+    }
+
+    /**
+     * Deliver a partial or full import shipment into a physical depot.
+     * Creates a receipt movement; accumulates qty_delivered; auto-closes when fully delivered.
+     */
+    public function importDeliver(Purchase $purchase, InventoryLedger $ledger)
+    {
+        $u   = auth()->user();
+        $cid = (int) $purchase->company_id;
+
+        if ($purchase->type !== 'import') {
+            return back()->with('error', 'Only import purchases can be delivered.');
+        }
+
+        if ($purchase->status !== 'nominated') {
+            return back()->with('error', 'Only nominated purchases can be delivered to depot.');
+        }
+
+        $data = request()->validate([
+            'depot_id' => 'required|integer',
+            'qty'      => 'required|numeric|min:0.001',
+            'note'     => 'nullable|string|max:255',
+        ]);
+
+        $depotId = (int) $data['depot_id'];
+        $qty     = (float) $data['qty'];
+        $note    = trim((string) ($data['note'] ?? ''));
+
+        $depotOk = \App\Models\Depot::query()
+            ->where('company_id', $cid)
+            ->whereKey($depotId)
+            ->where('is_active', true)
+            ->where(function ($q) { $q->whereNull('is_system')->orWhere('is_system', 0); })
+            ->exists();
+
+        if (!$depotOk) {
+            return back()->withErrors(['depot_id' => 'Invalid or inactive depot.']);
+        }
+
+        DB::transaction(function () use ($purchase, $ledger, $u, $cid, $depotId, $qty, $note) {
+            $unit        = (float) $purchase->unit_price;
+            // Unique reference per delivery so idempotency won't block multiple partial deliveries
+            $deliveryRef = 'import-delivery:' . $purchase->id . ':' . now()->format('YmdHisu');
+
+            $ledger->receipt(
+                [
+                    'company_id'  => $cid,
+                    'product_id'  => (int) $purchase->product_id,
+                    'to_depot_id' => $depotId,
+                    'batch_id'    => (int) $purchase->batch_id,
+                    'qty'         => $qty,
+                    'unit_cost'   => $unit,
+                    'total_cost'  => round($qty * $unit, 2),
+                    'ref_type'    => 'purchase',
+                    'ref_id'      => (int) $purchase->id,
+                    'reference'   => $deliveryRef,
+                    'notes'       => 'Import delivery to depot' . ($note ? ': ' . $note : ''),
+                    'created_by'  => $u?->id,
+                    'updated_by'  => $u?->id,
+                ],
+                [] // No idempotency guard — multiple partial deliveries are intentional
+            );
+
+            $purchase->qty_delivered = round(((float) $purchase->qty_delivered) + $qty, 3);
+
+            if ($purchase->qty_delivered >= (float) $purchase->qty) {
+                $purchase->status = 'received';
+            }
+
+            $purchase->updated_by = $u?->id;
+            $purchase->save();
+        });
+
+        $delivered = number_format((float) $purchase->qty_delivered, 3);
+        $total     = number_format((float) $purchase->qty, 3);
+
+        $msg = $purchase->status === 'received'
+            ? "Delivery posted.\nPurchase fully received ({$delivered} L) — stock is now in depot."
+            : "Delivery posted (" . number_format($qty, 3) . " L).\n{$delivered} / {$total} L delivered so far.";
+
+        return redirect()->route('purchases.show', $purchase)->with('status', $msg);
     }
 
     // Get or create the CROSS DOCK depot for the given company. Returns the depot ID.
