@@ -5,38 +5,156 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sign in • Twins</title>
   @vite(['resources/css/app.css'])
+
+  {{-- Apply saved theme before first paint to avoid flash --}}
   <script>
     (function(){
-      var t=localStorage.getItem('tw-theme');
-      var dark=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if(dark) document.documentElement.classList.add('dark');
+      var t = localStorage.getItem('tw-theme');
+      var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
     })();
   </script>
-</head>
-<body class="h-full flex items-center justify-center px-4 relative" style="background:#0f172a">
-  {{-- Theme toggle — top-right corner --}}
-  <button type="button" id="loginThemeToggle"
-          class="fixed top-4 right-4 z-10 h-9 w-9 rounded-xl border border-slate-700 bg-slate-800/80 text-slate-300
-                 hover:bg-slate-700 hover:text-slate-100 flex items-center justify-center transition"
-          aria-label="Toggle theme">
-    {{-- Moon (light mode) --}}
-    <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
-    </svg>
-    {{-- Sun (dark mode) --}}
-    <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
-    </svg>
-  </button>
 
-  <div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-emerald-500/10 overflow-hidden">
+  <style>
+    /* ---- login page theming — scoped, overrides app.css body rule ---- */
+    .login-page {
+      background: #f0f2f5;
+      transition: background 0.2s;
+    }
+    html.dark .login-page {
+      background: #0f172a;
+    }
+
+    /* Card */
+    .login-card {
+      background: #ffffff;
+      border-color: #d1d5db;
+      box-shadow: 0 20px 60px rgba(0,0,0,.10);
+    }
+    html.dark .login-card {
+      background: rgba(15,23,42,.85);
+      border-color: #1e293b;
+      box-shadow: 0 20px 60px rgba(0,0,0,.50), 0 0 0 1px rgba(52,211,153,.06);
+    }
+
+    /* Right panel (form side) */
+    .login-right {
+      background: #ffffff;
+    }
+    html.dark .login-right {
+      background: transparent;
+    }
+
+    /* Labels */
+    .login-label {
+      color: #374151;
+    }
+    html.dark .login-label {
+      color: #cbd5e1;
+    }
+
+    /* Sub-text / muted */
+    .login-muted {
+      color: #6b7280;
+    }
+    html.dark .login-muted {
+      color: #64748b;
+    }
+
+    /* Headings on form side */
+    .login-heading {
+      color: #111827;
+    }
+    html.dark .login-heading {
+      color: #f8fafc;
+    }
+
+    /* Inputs */
+    .login-input {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+      color: #111827;
+      border-radius: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .login-input::placeholder { color: #9ca3af; }
+    .login-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+    }
+    html.dark .login-input {
+      background: #020617;
+      border-color: #334155;
+      color: #f1f5f9;
+    }
+    html.dark .login-input::placeholder { color: #475569; }
+    html.dark .login-input:focus {
+      border-color: #34d399;
+      box-shadow: 0 0 0 3px rgba(52,211,153,.18);
+    }
+
+    /* Divider between left/right on desktop */
+    .login-divider {
+      border-right: 1px solid #e5e7eb;
+    }
+    html.dark .login-divider {
+      border-right-color: #1e293b;
+    }
+
+    /* Remember label */
+    .login-remember {
+      color: #6b7280;
+    }
+    html.dark .login-remember {
+      color: #64748b;
+    }
+
+    /* Theme toggle button */
+    .login-theme-btn {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
+      border-radius: 0.5rem;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, color .15s;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .login-theme-btn:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    html.dark .login-theme-btn {
+      background: rgba(255,255,255,.06);
+      border-color: #334155;
+      color: #94a3b8;
+    }
+    html.dark .login-theme-btn:hover {
+      background: rgba(255,255,255,.10);
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="login-page h-full flex items-center justify-center px-4">
+
+  <div class="login-card w-full max-w-3xl rounded-3xl border overflow-hidden">
     <div class="grid grid-cols-1 md:grid-cols-5">
-      {{-- Left: brand / copy --}}
-      <div class="hidden md:flex md:col-span-2 flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950/90 px-6 py-6 border-r border-slate-800">
+
+      {{-- Left panel — always dark brand panel --}}
+      <div class="hidden md:flex md:col-span-2 login-divider flex-col justify-between
+                  bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 px-6 py-6">
         <div>
           <div class="inline-flex items-center gap-2 mb-6">
-            <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-bold text-sm">
+            <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
+                        flex items-center justify-center text-slate-950 font-bold text-sm">
               Tw
             </div>
             <div>
@@ -45,9 +163,7 @@
             </div>
           </div>
 
-          <h1 class="text-xl font-semibold text-slate-50 mb-2">
-            Sign in to Twins
-          </h1>
+          <h1 class="text-xl font-semibold text-slate-50 mb-2">Sign in to Twins</h1>
           <p class="text-xs leading-relaxed text-slate-400 mb-6">
             Access your fuel stock, depot positions, local &amp; international transport,
             and profitability in one clean workspace.
@@ -70,104 +186,140 @@
         </div>
 
         <p class="mt-6 text-[11px] text-slate-500">
-          Don’t have an account yet? Ask your Twins owner to add you.
+          Don't have an account yet? Ask your Twins owner to add you.
         </p>
       </div>
 
-      {{-- Right: form --}}
-      <div class="md:col-span-3 px-5 py-6 md:px-7 md:py-7">
+      {{-- Right panel — form --}}
+      <div class="login-right md:col-span-3 px-5 py-6 md:px-7 md:py-7">
+
+        {{-- Mobile brand header --}}
         <div class="md:hidden mb-4">
-          <div class="inline-flex items-center gap-2 mb-2">
-            <div class="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-bold text-xs">
-              Tw
+          <div class="flex items-center justify-between mb-3">
+            <div class="inline-flex items-center gap-2">
+              <div class="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
+                          flex items-center justify-center text-slate-950 font-bold text-xs">Tw</div>
+              <div>
+                <div class="text-sm font-semibold login-heading">Twins</div>
+                <div class="text-[11px] login-muted">Fuel &amp; Transport ERP</div>
+              </div>
             </div>
-            <div>
-              <div class="text-sm font-semibold text-slate-50">Twins</div>
-              <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
-            </div>
+            {{-- Theme toggle (mobile) --}}
+            <button type="button" id="loginThemeToggle" class="login-theme-btn" aria-label="Toggle theme">
+              <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+              </svg>
+              <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+              </svg>
+            </button>
           </div>
-          <h1 class="text-lg font-semibold text-slate-50">Sign in</h1>
-          <p class="text-xs text-slate-400">Use the email and password your owner gave you.</p>
+          <h1 class="text-lg font-semibold login-heading">Sign in</h1>
+          <p class="text-xs login-muted">Use the email and password your owner gave you.</p>
+        </div>
+
+        {{-- Desktop top row: heading + toggle --}}
+        <div class="hidden md:flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-base font-semibold login-heading">Welcome back</h2>
+            <p class="text-xs login-muted mt-0.5">Enter your credentials to continue</p>
+          </div>
+          <button type="button" id="loginThemeToggleDesktop" class="login-theme-btn" aria-label="Toggle theme">
+            <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+            </svg>
+            <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+            </svg>
+          </button>
         </div>
 
         <form method="post" action="{{ route('login.post') }}" class="space-y-4">
           @csrf
 
           @if($errors->any())
-            <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-100">
+            <div class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-300">
               {{ $errors->first() }}
             </div>
           @endif
 
-          <div class="space-y-2">
-            <label class="block text-xs text-slate-300">Email</label>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium login-label">Email</label>
             <input
-              name="email"
-              type="email"
+              name="email" type="email"
               value="{{ old('email') }}"
-              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
+              class="login-input"
               placeholder="you@example.com"
               required
             >
           </div>
 
-          <div class="space-y-2">
-            <label class="block text-xs text-slate-300">Password</label>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium login-label">Password</label>
             <input
-              name="password"
-              type="password"
-              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
+              name="password" type="password"
+              class="login-input"
               placeholder="Your password"
               required
             >
           </div>
 
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <div class="text-[11px] login-remember">
             <label class="inline-flex items-center gap-2 cursor-pointer">
               <input
-                type="checkbox"
-                name="remember"
-                class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-950 text-emerald-500 focus:ring-emerald-500/60"
+                type="checkbox" name="remember"
+                class="h-3.5 w-3.5 rounded accent-emerald-500"
               >
               <span>Keep me signed in on this device</span>
             </label>
           </div>
 
-          <div class="pt-2 space-y-2">
-            <button
-              class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm font-semibold text-slate-950 tracking-wide transition shadow-md shadow-emerald-500/20 active:scale-[0.99]"
-            >
+          <div class="pt-1 space-y-2">
+            <button type="submit"
+              class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400
+                     text-sm font-semibold text-slate-950 tracking-wide transition
+                     shadow-md shadow-emerald-500/20 active:scale-[0.99]">
               Login
             </button>
-            <p class="text-[11px] text-slate-500 text-center">
+            <p class="text-[11px] login-muted text-center">
               Having trouble? Confirm your email &amp; password with your Twins owner.
             </p>
           </div>
         </form>
       </div>
+
     </div>
   </div>
+
   <script>
     (function(){
       var THEME_KEY = 'tw-theme';
       var root = document.documentElement;
-      var btn  = document.getElementById('loginThemeToggle');
+      var btns = [
+        document.getElementById('loginThemeToggle'),
+        document.getElementById('loginThemeToggleDesktop')
+      ].filter(Boolean);
 
       function isDark() { return root.classList.contains('dark'); }
 
       function applyIcons() {
-        if (!btn) return;
-        btn.querySelector('[data-icon="moon"]').classList.toggle('hidden', isDark());
-        btn.querySelector('[data-icon="sun"]').classList.toggle('hidden', !isDark());
+        btns.forEach(function(btn) {
+          btn.querySelector('[data-icon="moon"]').classList.toggle('hidden', isDark());
+          btn.querySelector('[data-icon="sun"]').classList.toggle('hidden', !isDark());
+        });
       }
 
       applyIcons();
 
-      btn && btn.addEventListener('click', function(){
-        var dark = !isDark();
-        root.classList.toggle('dark', dark);
-        localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
-        applyIcons();
+      btns.forEach(function(btn) {
+        btn.addEventListener('click', function(){
+          var dark = !isDark();
+          root.classList.toggle('dark', dark);
+          localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+          applyIcons();
+        });
       });
     })();
   </script>
