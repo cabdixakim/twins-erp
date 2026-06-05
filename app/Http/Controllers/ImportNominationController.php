@@ -333,14 +333,16 @@ class ImportNominationController extends Controller
         }
 
         // ── Pass 2: insert only validated rows in a single transaction ───────
-        DB::transaction(function () use ($validRows, &$committed) {
+        $importedIds = [];
+        DB::transaction(function () use ($validRows, &$committed, &$importedIds) {
             foreach ($validRows as $data) {
-                ImportTruck::create($data);
+                $truck = ImportTruck::create($data);
+                $importedIds[] = $truck->id;
                 $committed++;
             }
         });
 
-        return response()->json(['committed' => $committed, 'skipped' => $skipped, 'errors' => $errors]);
+        return response()->json(['committed' => $committed, 'skipped' => $skipped, 'errors' => $errors, 'importedIds' => $importedIds]);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

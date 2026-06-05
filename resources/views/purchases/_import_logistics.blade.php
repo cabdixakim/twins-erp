@@ -132,7 +132,14 @@
 
     {{-- Truck table --}}
     @if($trucks->isNotEmpty())
-      <div class="overflow-x-auto">
+    @php
+      $justImportedIds = collect(
+        array_filter(
+          array_map('intval', explode(',', request()->query('imported', '')))
+        )
+      )->flip()->all();
+    @endphp
+      <div id="truck-table-section" class="overflow-x-auto">
         <table class="w-full text-xs">
           <thead>
             <tr class="{{ $muted }} border-b {{ $border }} bg-[color:var(--tw-surface-2)]">
@@ -153,11 +160,19 @@
                 $truckLabel   = $truck->statusLabel();
                 $truckColor   = $truck->statusColor();
               @endphp
-              <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+              @php $isJustImported = isset($justImportedIds[$truck->id]); @endphp
+              <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors {{ $isJustImported ? 'just-imported-row' : '' }}"
+                  @if($isJustImported) data-just-imported="{{ $truck->id }}" style="background:rgba(16,185,129,.06)" @endif>
                 <td class="py-2.5 pl-5 pr-3 {{ $fg }} font-mono font-semibold whitespace-nowrap">
                   {{ $truck->truck_reg ?: '—' }}
                   @if($truck->trailer_reg)
                     <span class="font-normal {{ $muted }}"> / {{ $truck->trailer_reg }}</span>
+                  @endif
+                  @if($isJustImported)
+                    <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                          style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)">
+                      Just imported
+                    </span>
                   @endif
                 </td>
                 <td class="py-2.5 pr-3 {{ $fg }} whitespace-nowrap">
@@ -925,6 +940,21 @@
   window.openTruckModal  = openTruckModal;
   window.closeTruckModal = closeTruckModal;
 
+  // ── Post-import highlight + auto-scroll ──────────────────────────────────
+  (function handleJustImported() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('imported')) return;
+
+    const section = document.getElementById('truck-table-section');
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Strip the ?imported= param from the URL without reloading
+    const clean = window.location.pathname + window.location.hash.replace('#truck-table-section', '');
+    history.replaceState(null, '', clean || window.location.pathname);
+  })();
+
   // Setup / Edit nomination buttons
   const btnSetup = document.getElementById('btnSetupNomination');
   const btnEdit  = document.getElementById('btnEditNomination');
@@ -1359,7 +1389,10 @@
         : '';
 
       goToStep(3);
-      setTimeout(() => { closeWizard(); window.location.reload(); }, 2000);
+      const importedParam = (result.importedIds && result.importedIds.length > 0)
+        ? '?imported=' + result.importedIds.join(',')
+        : '';
+      setTimeout(() => { closeWizard(); window.location.href = window.location.pathname + importedParam + '#truck-table-section'; }, 1800);
     } catch (err) {
       nextBtn.disabled = false;
       updateImportButton();
