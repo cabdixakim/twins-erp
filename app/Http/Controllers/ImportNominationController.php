@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\UniqueConstraintViolationException;
 use App\Models\Purchase;
 use App\Models\ImportNomination;
 use App\Models\ImportTruck;
@@ -93,12 +94,18 @@ class ImportNominationController extends Controller
             'notes'           => 'nullable|string|max:1000',
         ]);
 
-        ImportTruck::create(array_merge($data, [
-            'company_id'    => $cid,
-            'nomination_id' => $nomination->id,
-            'status'        => 'nominated',
-            'created_by'    => auth()->id(),
-        ]));
+        try {
+            ImportTruck::create(array_merge($data, [
+                'company_id'    => $cid,
+                'nomination_id' => $nomination->id,
+                'status'        => 'nominated',
+                'created_by'    => auth()->id(),
+            ]));
+        } catch (UniqueConstraintViolationException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['truck_reg' => "Truck registration '{$data['truck_reg']}' is already added to this nomination."]);
+        }
 
         return back()->with('status', "Truck {$data['truck_reg']} added.");
     }

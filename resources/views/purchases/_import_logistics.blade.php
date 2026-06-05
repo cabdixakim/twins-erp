@@ -457,47 +457,50 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
-            <input type="text" name="truck_reg" placeholder="e.g. KCA 123A" maxlength="40"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            <input type="text" name="truck_reg" value="{{ old('truck_reg') }}" placeholder="e.g. KCA 123A" maxlength="40"
+                   class="w-full h-10 rounded-xl border {{ $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            @error('truck_reg')
+              <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
+            @enderror
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
-            <input type="text" name="trailer_reg" placeholder="e.g. TRLR-001" maxlength="40"
+            <input type="text" name="trailer_reg" value="{{ old('trailer_reg') }}" placeholder="e.g. TRLR-001" maxlength="40"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Capacity (litres) <span class="text-rose-400">*</span></label>
-          <input type="number" name="capacity" step="0.001" min="1" required placeholder="e.g. 45000"
+          <input type="number" name="capacity" value="{{ old('capacity') }}" step="0.001" min="1" required placeholder="e.g. 45000"
                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver name</label>
-            <input type="text" name="driver_name" maxlength="150"
+            <input type="text" name="driver_name" value="{{ old('driver_name') }}" maxlength="150"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver phone</label>
-            <input type="text" name="driver_phone" maxlength="30"
+            <input type="text" name="driver_phone" value="{{ old('driver_phone') }}" maxlength="30"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Passport #</label>
-            <input type="text" name="driver_passport" maxlength="60"
+            <input type="text" name="driver_passport" value="{{ old('driver_passport') }}" maxlength="60"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">License #</label>
-            <input type="text" name="driver_license" maxlength="60"
+            <input type="text" name="driver_license" value="{{ old('driver_license') }}" maxlength="60"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes</label>
-          <input type="text" name="notes" maxlength="1000"
+          <input type="text" name="notes" value="{{ old('notes') }}" maxlength="1000"
                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
         </div>
       </div>
@@ -964,6 +967,11 @@
   // Add truck button
   const btnAdd = document.getElementById('btnAddTruck');
   if (btnAdd) btnAdd.addEventListener('click', () => openTruckModal('addTruckModal'));
+
+  // Auto-open add-truck modal if server returned a truck_reg validation error
+  @if ($errors->has('truck_reg'))
+  openTruckModal('addTruckModal');
+  @endif
 
   // ESC closes all truck modals
   document.addEventListener('keydown', (e) => {
