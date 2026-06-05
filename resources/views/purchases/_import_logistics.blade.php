@@ -899,6 +899,9 @@
       </div>
       <p class="text-lg font-semibold mb-1 {{ $fg }}" id="wiSuccessMsg"></p>
       <p class="text-sm" style="color:var(--tw-muted)" id="wiSkippedMsg"></p>
+      <div id="wiSkippedErrors" class="hidden mt-4 text-left w-full max-h-48 overflow-y-auto rounded-xl border" style="border-color:var(--tw-border);background:var(--tw-surface-2)">
+        <ul id="wiSkippedErrorList" class="divide-y text-xs" style="divide-color:var(--tw-border)"></ul>
+      </div>
       <p class="text-xs mt-3" style="color:var(--tw-muted)">Reloading page…</p>
     </div>
 
@@ -1393,8 +1396,35 @@
 
       if (successEl) successEl.textContent = result.committed + ' truck' + (result.committed !== 1 ? 's' : '') + ' imported successfully';
       if (skippedEl) skippedEl.textContent = result.skipped > 0
-        ? result.skipped + ' row' + (result.skipped !== 1 ? 's' : '') + ' skipped — missing required fields or duplicate truck reg'
+        ? result.skipped + ' row' + (result.skipped !== 1 ? 's' : '') + ' skipped'
         : '';
+
+      const errorsWrap = document.getElementById('wiSkippedErrors');
+      const errorsList = document.getElementById('wiSkippedErrorList');
+      if (errorsWrap && errorsList && result.errors && result.errors.length > 0) {
+        errorsList.innerHTML = '';
+        result.errors.forEach(e => {
+          const li = document.createElement('li');
+          li.className = 'px-3 py-2';
+
+          const rowLabel = document.createElement('span');
+          rowLabel.className = 'font-semibold';
+          rowLabel.style.color = 'var(--tw-fg)';
+          rowLabel.textContent = 'Row ' + (e.row ?? '?') + ': ';
+
+          const reasons = Array.isArray(e.messages) ? e.messages.join('; ') : String(e.messages ?? '');
+          const reasonSpan = document.createElement('span');
+          reasonSpan.style.color = 'var(--tw-muted)';
+          reasonSpan.textContent = reasons;
+
+          li.appendChild(rowLabel);
+          li.appendChild(reasonSpan);
+          errorsList.appendChild(li);
+        });
+        errorsWrap.classList.remove('hidden');
+      } else if (errorsWrap) {
+        errorsWrap.classList.add('hidden');
+      }
 
       goToStep(3);
       const importedParam = (result.importedIds && result.importedIds.length > 0)
