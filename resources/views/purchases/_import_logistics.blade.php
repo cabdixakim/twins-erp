@@ -874,6 +874,17 @@
         <button type="button" id="wiClearFile" class="shrink-0 text-xs hover:opacity-70 transition" style="color:var(--tw-muted)">✕</button>
       </div>
 
+      {{-- Multi-section picker — shown only when file contains multiple product blocks --}}
+      <div id="wiSectionPicker" class="hidden rounded-xl border p-3 space-y-2 text-xs" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+        <div class="flex items-center gap-1.5 font-semibold" style="color:var(--tw-fg)">
+          <svg class="w-3.5 h-3.5 shrink-0" style="color:#f59e0b" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Multiple product sections found — pick the one to import:
+        </div>
+        <div id="wiSectionList" class="space-y-1"></div>
+      </div>
+
       <div class="flex items-center justify-between">
         <a id="wiTemplateLink"
            href="{{ route('purchases.import-nomination.trucks.template', [$purchase, $nom]) }}"
@@ -1075,13 +1086,19 @@
   const overNomWarn     = document.getElementById('wiOverNomWarn');
   const overNomMsg      = document.getElementById('wiOverNomMsg');
 
-  const VOLUME_UNIT  = @json($volumeUnit ?? 'L');
-  const PO_QTY       = {{ (float) $qty }};
-  const CURRENT_NOM  = {{ (float) $totalCapacity }};
+  const VOLUME_UNIT   = @json($volumeUnit ?? 'L');
+  const PO_QTY        = {{ (float) $qty }};
+  const CURRENT_NOM   = {{ (float) $totalCapacity }};
+  const PRODUCT_CODE  = @json(strtolower($purchase->product->code ?? ''));
+  const PRODUCT_NAME  = @json(strtolower($purchase->product->name ?? ''));
 
-  let importRows  = [];
-  let currentStep = 1;
+  const sectionPicker = document.getElementById('wiSectionPicker');
+  const sectionList   = document.getElementById('wiSectionList');
+
+  let importRows    = [];
+  let currentStep   = 1;
   let convertFactor = null;
+  let parsedSections = [];  // [{label, rows}] when file has multiple sections
 
   // ── Open / close ──────────────────────────────────────────────────────────
   function openWizard() {
@@ -1144,13 +1161,16 @@
 
   // ── Reset ─────────────────────────────────────────────────────────────────
   function resetWizard() {
-    importRows = [];
-    if (fileBar)     fileBar.classList.add('hidden');
-    if (fileInput)   fileInput.value = '';
-    if (dropZone)    dropZone.style.background = '';
-    if (nextBtn)     { nextBtn.classList.remove('hidden'); nextBtn.disabled = true; nextBtn.textContent = 'Review rows →'; }
-    if (cancelBtn)   cancelBtn.textContent = 'Cancel';
-    if (reviewBody)  reviewBody.innerHTML = '';
+    importRows     = [];
+    parsedSections = [];
+    if (fileBar)        fileBar.classList.add('hidden');
+    if (fileInput)      fileInput.value = '';
+    if (dropZone)       dropZone.style.background = '';
+    if (nextBtn)        { nextBtn.classList.remove('hidden'); nextBtn.disabled = true; nextBtn.textContent = 'Review rows →'; }
+    if (cancelBtn)      cancelBtn.textContent = 'Cancel';
+    if (reviewBody)     reviewBody.innerHTML = '';
+    if (sectionPicker)  sectionPicker.classList.add('hidden');
+    if (sectionList)    sectionList.innerHTML = '';
     hideConvertBanner();
     goToStep(1);
   }
@@ -1230,6 +1250,96 @@
   });
 
   // ── Parse file via SheetJS ────────────────────────────────────────────────
+  const HEADER_KEYWORDS = ['truck', 'driver', 'capacity', 'trailer', 'passport', 'licence', 'license', 'phone'];
+
+  function isHeaderRow(row) {
+    const joined = row.join(' ').toLowerCase();
+    return HEADER_KEYWORDS.filter(k => joined.includes(k)).length >= 2;
+  }
+
+  // Look above a header row for a short non-empty label (product name / section title)
+  function getSectionLabel(raw, headerIdx) {
+    for (let i = headerIdx - 1; i >= Math.max(0, headerIdx - 6); i--) {
+      const text = raw[i].map(c => String(c).trim()).filter(Boolean).join(' ').trim();
+      if (text.length > 0 && text.length < 120) return text;
+    }
+    return 'Section ' + (headerIdx + 1);
+  }
+
+  // Does this label likely match the purchase product?
+  function labelMatchesProduct(label) {
+    const lbl = label.toLowerCase();
+    if (PRODUCT_CODE && lbl.includes(PRODUCT_CODE)) return true;
+    if (PRODUCT_NAME) {
+      const firstWord = PRODUCT_NAME.split(/\s+/)[0];
+      if (firstWord.length > 2 && lbl.includes(firstWord)) return true;
+    }
+    // Common fuel synonyms
+    const synonyms = { ago: ['diesel','ago','gasoil'], pms: ['petrol','pms','gasoline','mogas'] };
+    for (const [code, words] of Object.entries(synonyms)) {
+      if (PRODUCT_CODE === code && words.some(w => lbl.includes(w))) return true;
+    }
+    return false;
+  }
+
+  function extractRows(raw, headerIdx, endIdx, cmap) {
+    return raw.slice(headerIdx + 1, endIdx)
+      .filter(r => {
+        if (!r.some(c => String(c).trim() !== '')) return false;
+        if (cmap.truck_reg >= 0 && String(r[cmap.truck_reg] ?? '').trim() === '') return false;
+        return true;
+      })
+      .map(r => ({
+        truck_reg:       String(r[cmap.truck_reg]       ?? '').trim(),
+        trailer_reg:     String(r[cmap.trailer_reg]     ?? '').trim(),
+        driver_name:     String(r[cmap.driver_name]     ?? '').trim(),
+        driver_passport: String(r[cmap.driver_passport] ?? '').trim(),
+        driver_license:  String(r[cmap.driver_license]  ?? '').trim(),
+        driver_phone:    String(r[cmap.driver_phone]    ?? '').trim(),
+        capacity:        String(r[cmap.capacity]        ?? '').trim(),
+      }));
+  }
+
+  function applySection(section) {
+    importRows = section.rows;
+    if (fileRowEl) fileRowEl.textContent = importRows.length + ' row' + (importRows.length !== 1 ? 's' : '') + ' ready';
+    if (nextBtn)   nextBtn.disabled = importRows.length === 0;
+  }
+
+  function renderSectionPicker(sections, autoMatchIdx) {
+    if (!sectionList) return;
+    sectionList.innerHTML = '';
+    sections.forEach((sec, idx) => {
+      const matched = idx === autoMatchIdx;
+      const btn = document.createElement('label');
+      btn.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${matched ? 'rgba(16,185,129,.4)' : 'var(--tw-border)'};background:${matched ? 'rgba(16,185,129,.07)' : 'var(--tw-surface)'};transition:background .15s`;
+      btn.innerHTML = `
+        <input type="radio" name="wiSection" value="${idx}" ${matched ? 'checked' : ''} style="accent-color:var(--tw-accent);margin:0">
+        <span style="flex:1;min-width:0">
+          <span style="font-weight:600;color:var(--tw-fg)">${escHtml(sec.label)}</span>
+          ${matched ? '<span style="font-size:10px;color:#10b981;margin-left:6px">✓ matches purchase product</span>' : ''}
+          <span style="font-size:10px;color:var(--tw-muted);margin-left:6px">${sec.rows.length} truck${sec.rows.length !== 1 ? 's' : ''}</span>
+        </span>`;
+      const radio = btn.querySelector('input');
+      radio.addEventListener('change', () => {
+        // Update border highlights
+        sectionList.querySelectorAll('label').forEach((l, i) => {
+          l.style.borderColor = i === idx ? 'rgba(16,185,129,.4)' : 'var(--tw-border)';
+          l.style.background  = i === idx ? 'rgba(16,185,129,.07)' : 'var(--tw-surface)';
+        });
+        applySection(sections[idx]);
+      });
+      sectionList.appendChild(btn);
+    });
+    if (sectionPicker) sectionPicker.classList.remove('hidden');
+    // Apply the auto-matched or first section immediately
+    applySection(sections[autoMatchIdx ?? 0]);
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function parseFile(file) {
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -1243,41 +1353,43 @@
           return;
         }
 
-        // Auto-detect the header row: scan up to row 20 for the first row
-        // that contains at least 2 recognisable truck-column keywords.
-        const HEADER_KEYWORDS = ['truck', 'driver', 'capacity', 'trailer', 'passport', 'licence', 'license', 'phone'];
-        let headerIdx = 0;
-        for (let i = 0; i < Math.min(raw.length - 1, 20); i++) {
-          const joined = raw[i].join(' ').toLowerCase();
-          const hits   = HEADER_KEYWORDS.filter(k => joined.includes(k)).length;
-          if (hits >= 2) { headerIdx = i; break; }
+        // Find ALL header rows in the file
+        const headerIdxs = [];
+        for (let i = 0; i < raw.length - 1; i++) {
+          if (isHeaderRow(raw[i])) headerIdxs.push(i);
+        }
+        if (headerIdxs.length === 0) {
+          showFileError(file.name, 'Could not find a truck header row (need "Truck", "Driver", "Capacity" etc.).');
+          return;
         }
 
-        const hdr  = raw[headerIdx].map(h => String(h).toLowerCase().trim());
-        const cmap = mapColumns(hdr);
-
-        importRows = raw.slice(headerIdx + 1)
-          .filter(r => {
-            // Skip rows that are entirely empty
-            if (!r.some(c => String(c).trim() !== '')) return false;
-            // Skip footer/summary rows: truck_reg cell must contain something
-            if (cmap.truck_reg >= 0 && String(r[cmap.truck_reg] ?? '').trim() === '') return false;
-            return true;
-          })
-          .map(r => ({
-            truck_reg:       String(r[cmap.truck_reg]       ?? '').trim(),
-            trailer_reg:     String(r[cmap.trailer_reg]     ?? '').trim(),
-            driver_name:     String(r[cmap.driver_name]     ?? '').trim(),
-            driver_passport: String(r[cmap.driver_passport] ?? '').trim(),
-            driver_license:  String(r[cmap.driver_license]  ?? '').trim(),
-            driver_phone:    String(r[cmap.driver_phone]    ?? '').trim(),
-            capacity:        String(r[cmap.capacity]        ?? '').trim(),
-          }));
+        // Build sections: each header to the next (or end of file)
+        parsedSections = headerIdxs.map((hIdx, si) => {
+          const hdr  = raw[hIdx].map(h => String(h).toLowerCase().trim());
+          const cmap = mapColumns(hdr);
+          const end  = headerIdxs[si + 1] ?? raw.length;
+          return {
+            label: getSectionLabel(raw, hIdx),
+            rows:  extractRows(raw, hIdx, end, cmap),
+          };
+        });
 
         if (fileNameEl) fileNameEl.textContent = file.name;
-        if (fileRowEl)  fileRowEl.textContent  = importRows.length + ' row' + (importRows.length !== 1 ? 's' : '') + ' found';
         if (fileBar)    fileBar.classList.remove('hidden');
-        if (nextBtn)    nextBtn.disabled = importRows.length === 0;
+
+        if (parsedSections.length === 1) {
+          // Single section — load directly, hide picker
+          if (sectionPicker) sectionPicker.classList.add('hidden');
+          applySection(parsedSections[0]);
+        } else {
+          // Multiple sections — find best match and show picker
+          let autoMatchIdx = null;
+          parsedSections.forEach((sec, i) => {
+            if (autoMatchIdx === null && labelMatchesProduct(sec.label)) autoMatchIdx = i;
+          });
+          if (fileRowEl) fileRowEl.textContent = parsedSections.length + ' sections found';
+          renderSectionPicker(parsedSections, autoMatchIdx);
+        }
       } catch (err) {
         showFileError(file.name, 'Could not parse: ' + err.message);
       }
