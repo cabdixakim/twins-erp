@@ -49,6 +49,14 @@
                        hover:bg-[color:var(--tw-surface-2)] transition">
           Edit nomination
         </button>
+        <button type="button" id="btnImportTrucks"
+                class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }}
+                       hover:bg-[color:var(--tw-surface-2)] transition inline-flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Import
+        </button>
         <button type="button" id="btnAddTruck"
                 class="h-8 px-3 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10
                        text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
@@ -781,6 +789,122 @@
 @endforeach
 @endif
 
+{{-- ── Import trucks wizard modal ── --}}
+@if($nom)
+<div id="importTrucksModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+  <div class="w-full max-w-3xl rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col"
+       style="max-height:90vh;">
+
+    {{-- Header --}}
+    <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }} shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-base font-semibold {{ $fg }}">Import trucks</span>
+        <div class="flex items-center gap-1.5">
+          <span id="wiStepDot1" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center bg-[color:var(--tw-accent)] text-white">1</span>
+          <div class="w-5 h-px" style="background:var(--tw-border)"></div>
+          <span id="wiStepDot2" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center border {{ $border }}" style="background:var(--tw-surface-2);color:var(--tw-muted)">2</span>
+          <div class="w-5 h-px" style="background:var(--tw-border)"></div>
+          <span id="wiStepDot3" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center border {{ $border }}" style="background:var(--tw-surface-2);color:var(--tw-muted)">3</span>
+        </div>
+      </div>
+      <button type="button" id="btnCloseImportModal"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+    </div>
+
+    {{-- Step 1 — Upload --}}
+    <div id="wiStep1" class="p-5 space-y-4 shrink-0">
+      <div id="wiDropZone"
+           class="rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-colors select-none"
+           style="border-color:var(--tw-border)">
+        <svg class="w-10 h-10 mx-auto mb-3" style="color:var(--tw-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="text-sm font-semibold {{ $fg }}">Drop your file here</p>
+        <p class="text-xs mt-1" style="color:var(--tw-muted)">Excel (.xlsx / .xls) or CSV &nbsp;·&nbsp; <span style="color:var(--tw-accent)" class="font-semibold">browse files</span></p>
+        <input type="file" id="wiFileInput" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
+
+      <div id="wiFileBar" class="hidden rounded-xl px-3 py-2.5 flex items-center gap-2 text-sm border" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+        <svg class="w-4 h-4 shrink-0" style="color:var(--tw-accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+        </svg>
+        <span id="wiFileName" class="flex-1 truncate font-medium {{ $fg }}"></span>
+        <span id="wiFileRowCount" class="text-xs shrink-0" style="color:var(--tw-muted)"></span>
+        <button type="button" id="wiClearFile" class="shrink-0 text-xs hover:opacity-70 transition" style="color:var(--tw-muted)">✕</button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <a id="wiTemplateLink"
+           href="{{ route('purchases.import-nomination.trucks.template', [$purchase, $nom]) }}"
+           class="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline"
+           style="color:var(--tw-accent)">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+          </svg>
+          Download template
+        </a>
+        <span class="text-xs" style="color:var(--tw-muted)">Required: Truck Reg · Driver Name · Capacity (L)</span>
+      </div>
+    </div>
+
+    {{-- Step 2 — Review --}}
+    <div id="wiStep2" class="hidden flex flex-col overflow-hidden flex-1">
+      <div id="wiSummaryBar" class="px-5 py-2.5 shrink-0 flex items-center justify-between text-xs font-semibold border-b" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+        <span id="wiReadyCount" style="color:var(--tw-fg)"></span>
+        <span id="wiErrorCount" class="hidden" style="color:#f87171"></span>
+      </div>
+      <div class="overflow-auto flex-1">
+        <table class="w-full text-xs" style="min-width:680px">
+          <thead>
+            <tr class="border-b" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+              <th class="text-left py-2 pl-4 pr-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Truck Reg <span style="color:#f87171">*</span></th>
+              <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Trailer Reg</th>
+              <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Driver Name <span style="color:#f87171">*</span></th>
+              <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Passport</th>
+              <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">License</th>
+              <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Phone</th>
+              <th class="text-right py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Capacity (L) <span style="color:#f87171">*</span></th>
+              <th class="py-2 pr-3 w-8"></th>
+            </tr>
+          </thead>
+          <tbody id="wiReviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    {{-- Step 3 — Done --}}
+    <div id="wiStep3" class="hidden p-10 text-center shrink-0">
+      <div class="w-14 h-14 rounded-full border mx-auto mb-5 grid place-items-center" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3)">
+        <svg class="w-7 h-7" style="color:#10b981" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+        </svg>
+      </div>
+      <p class="text-lg font-semibold mb-1 {{ $fg }}" id="wiSuccessMsg"></p>
+      <p class="text-sm" style="color:var(--tw-muted)" id="wiSkippedMsg"></p>
+      <p class="text-xs mt-3" style="color:var(--tw-muted)">Reloading page…</p>
+    </div>
+
+    {{-- Footer --}}
+    <div class="px-5 py-4 border-t shrink-0 flex items-center justify-between gap-2" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+      <button type="button" id="wiBackBtn" class="hidden h-10 px-4 rounded-xl border text-sm font-semibold transition hover:opacity-80" style="background:var(--tw-surface);border-color:var(--tw-border);color:var(--tw-fg)">
+        ← Back
+      </button>
+      <div class="flex items-center gap-2 ml-auto">
+        <button type="button" id="wiCancelBtn" class="h-10 px-4 rounded-xl border text-sm font-semibold transition hover:opacity-80" style="background:var(--tw-surface);border-color:var(--tw-border);color:var(--tw-fg)">
+          Cancel
+        </button>
+        <button type="button" id="wiNextBtn" disabled
+                class="h-10 px-5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                style="background:var(--tw-accent);border:1px solid rgba(var(--tw-accent-rgb),.4)">
+          Review rows →
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+@endif
+
 {{-- ── JS for this section ── --}}
 <script>
 (function () {
@@ -814,9 +938,388 @@
   // ESC closes all truck modals
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], #addTruckModal, #nominationModal')
+    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], #addTruckModal, #nominationModal, #importTrucksModal')
       .forEach(el => el.classList.add('hidden'));
     document.documentElement.classList.remove('overflow-hidden');
   });
 })();
 </script>
+
+@push('scripts')
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const IMPORT_URL = @json($nom ? route('purchases.import-nomination.trucks.import', [$purchase, $nom]) : '');
+  const CSRF       = document.querySelector('meta[name="csrf-token"]')?.content
+                     || @json(csrf_token());
+
+  // ── Elements ──────────────────────────────────────────────────────────────
+  const modal     = document.getElementById('importTrucksModal');
+  if (!modal) return; // no nomination yet, modal not rendered
+
+  const dropZone  = document.getElementById('wiDropZone');
+  const fileInput = document.getElementById('wiFileInput');
+  const fileBar   = document.getElementById('wiFileBar');
+  const fileNameEl= document.getElementById('wiFileName');
+  const fileRowEl = document.getElementById('wiFileRowCount');
+  const clearBtn  = document.getElementById('wiClearFile');
+  const nextBtn   = document.getElementById('wiNextBtn');
+  const backBtn   = document.getElementById('wiBackBtn');
+  const cancelBtn = document.getElementById('wiCancelBtn');
+  const closeBtn  = document.getElementById('btnCloseImportModal');
+  const openBtn   = document.getElementById('btnImportTrucks');
+  const reviewBody= document.getElementById('wiReviewBody');
+  const summaryBar= document.getElementById('wiSummaryBar');
+  const readyEl   = document.getElementById('wiReadyCount');
+  const errorEl   = document.getElementById('wiErrorCount');
+  const successEl = document.getElementById('wiSuccessMsg');
+  const skippedEl = document.getElementById('wiSkippedMsg');
+  const dots      = [1,2,3].map(n => document.getElementById('wiStepDot' + n));
+  const steps     = [1,2,3].map(n => document.getElementById('wiStep' + n));
+
+  let importRows = [];
+  let currentStep = 1;
+
+  // ── Open / close ──────────────────────────────────────────────────────────
+  function openWizard() {
+    resetWizard();
+    modal.classList.remove('hidden');
+    document.documentElement.classList.add('overflow-hidden');
+  }
+  function closeWizard() {
+    modal.classList.add('hidden');
+    document.documentElement.classList.remove('overflow-hidden');
+  }
+
+  if (openBtn)   openBtn.addEventListener('click', openWizard);
+  if (closeBtn)  closeBtn.addEventListener('click', closeWizard);
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    if (currentStep === 3) { closeWizard(); window.location.reload(); }
+    else closeWizard();
+  });
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  function goToStep(n) {
+    currentStep = n;
+
+    steps.forEach((el, i) => {
+      if (el) el.classList.toggle('hidden', i + 1 !== n);
+    });
+
+    dots.forEach((dot, i) => {
+      if (!dot) return;
+      const num = i + 1;
+      if (num < n) {
+        dot.style.cssText = 'background:var(--tw-accent);color:#fff;border:none';
+        dot.textContent = '✓';
+      } else if (num === n) {
+        dot.style.cssText = 'background:var(--tw-accent);color:#fff;border:none';
+        dot.textContent = num;
+      } else {
+        dot.style.cssText = 'background:var(--tw-surface-2);color:var(--tw-muted);border:1px solid var(--tw-border)';
+        dot.textContent = num;
+      }
+    });
+
+    if (backBtn)   backBtn.classList.toggle('hidden', n !== 2);
+    if (cancelBtn) cancelBtn.textContent = n === 3 ? 'Close' : 'Cancel';
+
+    if (nextBtn) {
+      if (n === 3) {
+        nextBtn.classList.add('hidden');
+      } else {
+        nextBtn.classList.remove('hidden');
+        if (n === 1) {
+          nextBtn.textContent = 'Review rows →';
+          nextBtn.disabled = importRows.length === 0;
+        } else if (n === 2) {
+          updateImportButton();
+        }
+      }
+    }
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  function resetWizard() {
+    importRows = [];
+    if (fileBar)     fileBar.classList.add('hidden');
+    if (fileInput)   fileInput.value = '';
+    if (dropZone)    dropZone.style.background = '';
+    if (nextBtn)     { nextBtn.classList.remove('hidden'); nextBtn.disabled = true; nextBtn.textContent = 'Review rows →'; }
+    if (cancelBtn)   cancelBtn.textContent = 'Cancel';
+    if (reviewBody)  reviewBody.innerHTML = '';
+    goToStep(1);
+  }
+
+  // ── Drag & drop / file input ──────────────────────────────────────────────
+  if (dropZone) {
+    dropZone.addEventListener('click', () => fileInput && fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--tw-accent)';
+      dropZone.style.background  = 'rgba(var(--tw-accent-rgb),.06)';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = 'var(--tw-border)';
+      dropZone.style.background  = '';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--tw-border)';
+      dropZone.style.background  = '';
+      const f = e.dataTransfer.files[0];
+      if (f) parseFile(f);
+    });
+  }
+  if (fileInput) fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) parseFile(fileInput.files[0]);
+  });
+  if (clearBtn) clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    importRows = [];
+    if (fileBar) fileBar.classList.add('hidden');
+    if (fileInput) fileInput.value = '';
+    if (nextBtn) nextBtn.disabled = true;
+  });
+
+  // ── Parse file via SheetJS ────────────────────────────────────────────────
+  function parseFile(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb     = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const ws     = wb.Sheets[wb.SheetNames[0]];
+        const raw    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        if (raw.length < 2) {
+          showFileError(file.name, 'File has no data rows.');
+          return;
+        }
+
+        const hdr  = raw[0].map(h => String(h).toLowerCase().trim());
+        const cmap = mapColumns(hdr);
+
+        importRows = raw.slice(1)
+          .filter(r => r.some(c => String(c).trim() !== ''))
+          .map(r => ({
+            truck_reg:       String(r[cmap.truck_reg]       ?? '').trim(),
+            trailer_reg:     String(r[cmap.trailer_reg]     ?? '').trim(),
+            driver_name:     String(r[cmap.driver_name]     ?? '').trim(),
+            driver_passport: String(r[cmap.driver_passport] ?? '').trim(),
+            driver_license:  String(r[cmap.driver_license]  ?? '').trim(),
+            driver_phone:    String(r[cmap.driver_phone]    ?? '').trim(),
+            capacity:        String(r[cmap.capacity]        ?? '').trim(),
+          }));
+
+        if (fileNameEl) fileNameEl.textContent = file.name;
+        if (fileRowEl)  fileRowEl.textContent  = importRows.length + ' row' + (importRows.length !== 1 ? 's' : '') + ' found';
+        if (fileBar)    fileBar.classList.remove('hidden');
+        if (nextBtn)    nextBtn.disabled = importRows.length === 0;
+      } catch (err) {
+        showFileError(file.name, 'Could not parse: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function mapColumns(hdr) {
+    const find = (...names) => {
+      for (const n of names) {
+        const i = hdr.findIndex(h => h.includes(n));
+        if (i >= 0) return i;
+      }
+      return -1;
+    };
+    return {
+      truck_reg:       find('truck reg', 'truck_reg', 'truck'),
+      trailer_reg:     find('trailer reg', 'trailer_reg', 'trailer'),
+      driver_name:     find('driver name', 'driver_name', 'driver'),
+      driver_passport: find('passport'),
+      driver_license:  find('license', 'licence'),
+      driver_phone:    find('phone'),
+      capacity:        find('capacity', 'cap'),
+    };
+  }
+
+  function showFileError(name, msg) {
+    if (fileNameEl) fileNameEl.textContent = '⚠ ' + msg;
+    if (fileRowEl)  fileRowEl.textContent  = '';
+    if (fileBar)    fileBar.classList.remove('hidden');
+    if (nextBtn)    nextBtn.disabled = true;
+    importRows = [];
+  }
+
+  // ── Review table ──────────────────────────────────────────────────────────
+  const FIELDS   = ['truck_reg','trailer_reg','driver_name','driver_passport','driver_license','driver_phone','capacity'];
+  const REQUIRED = new Set(['truck_reg','driver_name','capacity']);
+  const COL_WIDTHS = { truck_reg:90, trailer_reg:80, driver_name:120, driver_passport:85, driver_license:80, driver_phone:95, capacity:80 };
+
+  function renderReviewTable() {
+    if (!reviewBody) return;
+    reviewBody.innerHTML = '';
+    importRows.forEach((row, i) => buildRow(row, i));
+  }
+
+  function buildRow(row, i) {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--tw-border)';
+
+    FIELDS.forEach(field => {
+      const td  = document.createElement('td');
+      td.className = 'py-1 px-1';
+
+      const inp = document.createElement('input');
+      inp.type  = field === 'capacity' ? 'number' : 'text';
+      inp.value = row[field];
+      inp.style.cssText = [
+        'height:28px',
+        'padding:0 8px',
+        'border-radius:8px',
+        'border:1px solid var(--tw-border)',
+        'background:var(--tw-surface-2)',
+        'color:var(--tw-fg)',
+        'font-size:11px',
+        'outline:none',
+        'width:100%',
+        'min-width:' + (COL_WIDTHS[field] || 80) + 'px',
+        'box-sizing:border-box',
+      ].join(';');
+      if (field === 'capacity') { inp.step = '0.001'; inp.min = '0'; }
+
+      validateCell(inp, field);
+
+      inp.addEventListener('input', () => {
+        importRows[i][field] = inp.value;
+        validateCell(inp, field);
+        updateSummaryBar();
+        updateImportButton();
+      });
+      inp.addEventListener('focus', () => {
+        inp.style.boxShadow = '0 0 0 2px rgba(var(--tw-accent-rgb),.35)';
+      });
+      inp.addEventListener('blur', () => {
+        inp.style.boxShadow = '';
+      });
+
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+
+    // Delete row
+    const tdDel = document.createElement('td');
+    tdDel.className = 'py-1 pr-3 text-right';
+    tdDel.style.width = '32px';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    del.style.cssText = 'width:24px;height:24px;border-radius:6px;border:1px solid var(--tw-border);background:var(--tw-surface);color:var(--tw-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
+    del.addEventListener('click', () => {
+      importRows.splice(i, 1);
+      renderReviewTable();
+      updateSummaryBar();
+      updateImportButton();
+    });
+    tdDel.appendChild(del);
+    tr.appendChild(tdDel);
+
+    reviewBody.appendChild(tr);
+  }
+
+  function validateCell(inp, field) {
+    const val  = inp.value.trim();
+    const bad  = REQUIRED.has(field) && (field === 'capacity' ? (val === '' || parseFloat(val) <= 0) : val === '');
+    inp.style.borderColor = bad ? '#f87171' : 'var(--tw-border)';
+    inp.style.background  = bad ? 'rgba(239,68,68,.09)' : 'var(--tw-surface-2)';
+  }
+
+  function countReady() {
+    return importRows.filter(r =>
+      r.truck_reg.trim() && r.driver_name.trim() && parseFloat(r.capacity) > 0
+    ).length;
+  }
+
+  function updateSummaryBar() {
+    const ready  = countReady();
+    const errors = importRows.length - ready;
+    if (readyEl)  readyEl.textContent = ready + ' row' + (ready !== 1 ? 's' : '') + ' ready';
+    if (errorEl) {
+      if (errors > 0) {
+        errorEl.textContent = '· ' + errors + ' with missing required fields';
+        errorEl.classList.remove('hidden');
+      } else {
+        errorEl.classList.add('hidden');
+      }
+    }
+  }
+
+  function updateImportButton() {
+    if (!nextBtn || currentStep !== 2) return;
+    const n = countReady();
+    nextBtn.textContent = 'Import ' + n + ' truck' + (n !== 1 ? 's' : '') + ' →';
+    nextBtn.disabled    = n === 0;
+  }
+
+  // ── Next / Back ───────────────────────────────────────────────────────────
+  if (nextBtn) nextBtn.addEventListener('click', async () => {
+    if (currentStep === 1) {
+      renderReviewTable();
+      goToStep(2);
+      updateSummaryBar();
+      updateImportButton();
+    } else if (currentStep === 2) {
+      await submitImport();
+    }
+  });
+  if (backBtn) backBtn.addEventListener('click', () => {
+    if (currentStep === 2) goToStep(1);
+  });
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  async function submitImport() {
+    nextBtn.disabled   = true;
+    nextBtn.textContent = 'Importing…';
+
+    const ready = importRows
+      .filter(r => r.truck_reg.trim() && r.driver_name.trim() && parseFloat(r.capacity) > 0)
+      .map(r => ({
+        truck_reg:       r.truck_reg.trim(),
+        trailer_reg:     r.trailer_reg.trim(),
+        driver_name:     r.driver_name.trim(),
+        driver_passport: r.driver_passport.trim(),
+        driver_license:  r.driver_license.trim(),
+        driver_phone:    r.driver_phone.trim(),
+        capacity:        parseFloat(r.capacity),
+      }));
+
+    try {
+      const resp   = await fetch(IMPORT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':       'application/json',
+          'X-CSRF-TOKEN': CSRF,
+        },
+        body: JSON.stringify({ rows: ready }),
+      });
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error || 'Server error ' + resp.status);
+
+      if (successEl) successEl.textContent = result.committed + ' truck' + (result.committed !== 1 ? 's' : '') + ' imported successfully';
+      if (skippedEl) skippedEl.textContent = result.skipped > 0
+        ? result.skipped + ' row' + (result.skipped !== 1 ? 's' : '') + ' skipped — missing required fields'
+        : '';
+
+      goToStep(3);
+      setTimeout(() => { closeWizard(); window.location.reload(); }, 2000);
+    } catch (err) {
+      nextBtn.disabled = false;
+      updateImportButton();
+      alert('Import failed: ' + err.message);
+    }
+  }
+
+})();
+</script>
+@endpush

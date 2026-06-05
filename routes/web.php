@@ -208,6 +208,14 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             [ImportNominationController::class, 'recordDelivery'])
             ->name('purchases.import-nomination.trucks.record-delivery');
 
+        Route::get('/purchases/{purchase}/import-nomination/{nomination}/truck-template',
+            [ImportNominationController::class, 'truckTemplate'])
+            ->name('purchases.import-nomination.trucks.template');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/import-trucks',
+            [ImportNominationController::class, 'importTrucks'])
+            ->name('purchases.import-nomination.trucks.import');
+
         // Clients moved to settings group above
 
         // Sales (company-scoped)

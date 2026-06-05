@@ -241,6 +241,75 @@ class ImportNominationController extends Controller
         return back()->with('status', $msg);
     }
 
+    // ── Download truck CSV template ──────────────────────────────────────────
+
+    public function truckTemplate(Purchase $purchase, ImportNomination $nomination)
+    {
+        $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+
+        return response()->streamDownload(function () {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Truck Reg', 'Trailer Reg', 'Driver Name', 'Driver Passport', 'Driver License', 'Driver Phone', 'Capacity (L)']);
+            fputcsv($out, ['ABC-001', 'TRL-001', 'John Doe',  'AB123456', 'DL-001', '+26377000001', '40000']);
+            fputcsv($out, ['ABC-002', 'TRL-002', 'Jane Smith','CD789012', 'DL-002', '+26377000002', '38000']);
+            fclose($out);
+        }, 'trucks-template.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    // ── Bulk import trucks from JSON rows ─────────────────────────────────────
+
+    public function importTrucks(Request $request, Purchase $purchase, ImportNomination $nomination)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+
+        $rows = $request->input('rows', []);
+        if (!is_array($rows) || count($rows) === 0) {
+            return response()->json(['error' => 'No rows provided.'], 422);
+        }
+
+        $committed = 0;
+        $skipped   = 0;
+        $errors    = [];
+
+        DB::transaction(function () use ($rows, $cid, $nomination, &$committed, &$skipped, &$errors) {
+            foreach ($rows as $i => $row) {
+                $truckReg   = trim((string) ($row['truck_reg']   ?? ''));
+                $driverName = trim((string) ($row['driver_name'] ?? ''));
+                $capacity   = is_numeric($row['capacity'] ?? '') ? (float) $row['capacity'] : 0;
+
+                $rowErrors = [];
+                if ($truckReg === '')  $rowErrors[] = 'Truck Reg required';
+                if ($driverName === '') $rowErrors[] = 'Driver Name required';
+                if ($capacity <= 0)    $rowErrors[] = 'Capacity must be > 0';
+
+                if (!empty($rowErrors)) {
+                    $skipped++;
+                    $errors[] = ['row' => $i + 2, 'messages' => $rowErrors];
+                    continue;
+                }
+
+                ImportTruck::create([
+                    'company_id'      => $cid,
+                    'nomination_id'   => $nomination->id,
+                    'truck_reg'       => $truckReg,
+                    'trailer_reg'     => trim((string) ($row['trailer_reg']     ?? '')) ?: null,
+                    'driver_name'     => $driverName,
+                    'driver_passport' => trim((string) ($row['driver_passport'] ?? '')) ?: null,
+                    'driver_license'  => trim((string) ($row['driver_license']  ?? '')) ?: null,
+                    'driver_phone'    => trim((string) ($row['driver_phone']    ?? '')) ?: null,
+                    'capacity'        => $capacity,
+                    'status'          => 'nominated',
+                    'created_by'      => auth()->id(),
+                ]);
+                $committed++;
+            }
+        });
+
+        return response()->json(['committed' => $committed, 'skipped' => $skipped, 'errors' => $errors]);
+    }
+
     // ── Private helpers ──────────────────────────────────────────────────────
 
     /**
