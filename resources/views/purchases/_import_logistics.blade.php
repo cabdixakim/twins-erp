@@ -114,10 +114,16 @@
 
     {{-- Summary metrics --}}
     <div class="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b {{ $border }}">
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+      @php $overNominated = $totalCapacity > $qty; @endphp
+      <div class="rounded-xl border {{ $overNominated ? 'border-amber-400/50' : $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Nominated capacity</div>
-        <div class="mt-1 text-base font-bold {{ $fg }}">{{ number_format($totalCapacity, 0) }}</div>
-        <div class="text-[10px] {{ $muted }}">{{ $unitLabel }}</div>
+        <div class="mt-1 text-base font-bold {{ $overNominated ? 's-amber' : $fg }}">{{ number_format($totalCapacity, 0) }}</div>
+        <div class="text-[10px] {{ $muted }}">
+          {{ $unitLabel }}
+          @if($overNominated)
+            <span class="ml-1 text-amber-500 font-semibold">+{{ number_format($totalCapacity - $qty, 0) }} over PO qty</span>
+          @endif
+        </div>
       </div>
       <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Qty loaded</div>
@@ -883,7 +889,13 @@
     <div id="wiStep2" class="hidden flex flex-col overflow-hidden flex-1">
       <div id="wiSummaryBar" class="px-5 py-2.5 shrink-0 flex items-center justify-between text-xs font-semibold border-b" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
         <span id="wiReadyCount" style="color:var(--tw-fg)"></span>
-        <span id="wiErrorCount" class="hidden" style="color:#f87171"></span>
+        <div class="flex items-center gap-3">
+          <span id="wiOverNomWarn" class="hidden items-center gap-1" style="color:#f59e0b">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="wiOverNomMsg"></span>
+          </span>
+          <span id="wiErrorCount" class="hidden" style="color:#f87171"></span>
+        </div>
       </div>
       {{-- Unit conversion banner — shown when file unit looks different from system unit --}}
       <div id="wiConvertBanner" class="hidden px-5 py-2.5 shrink-0 flex items-center justify-between gap-3 text-xs border-b" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)">
@@ -1057,8 +1069,12 @@
   const convertMsgEl    = document.getElementById('wiConvertMsg');
   const convertBtn      = document.getElementById('wiConvertBtn');
   const dismissConvertBtn = document.getElementById('wiDismissConvert');
+  const overNomWarn     = document.getElementById('wiOverNomWarn');
+  const overNomMsg      = document.getElementById('wiOverNomMsg');
 
-  const VOLUME_UNIT = @json($volumeUnit ?? 'L');
+  const VOLUME_UNIT  = @json($volumeUnit ?? 'L');
+  const PO_QTY       = {{ (float) $qty }};
+  const CURRENT_NOM  = {{ (float) $totalCapacity }};
 
   let importRows  = [];
   let currentStep = 1;
@@ -1423,6 +1439,22 @@
         errorEl.classList.remove('hidden');
       } else {
         errorEl.classList.add('hidden');
+      }
+    }
+    // Over-nomination warning
+    if (overNomWarn && overNomMsg) {
+      const newCap = importRows.reduce((sum, r) => {
+        const n = parseFloat(r.capacity); return sum + (isNaN(n) ? 0 : n);
+      }, 0);
+      const projectedTotal = CURRENT_NOM + newCap;
+      if (projectedTotal > PO_QTY) {
+        const over = Math.round(projectedTotal - PO_QTY).toLocaleString();
+        overNomMsg.textContent = 'Adds ' + over + ' ' + VOLUME_UNIT + ' over PO qty — OK if supplier will top up';
+        overNomWarn.classList.remove('hidden');
+        overNomWarn.style.display = 'inline-flex';
+      } else {
+        overNomWarn.classList.add('hidden');
+        overNomWarn.style.display = '';
       }
     }
   }
