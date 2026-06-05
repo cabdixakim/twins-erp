@@ -51,11 +51,11 @@
             </button>
 
             {{-- Title --}}
-            <div class="min-w-0 hidden md:block">
-                <div class="text-[15px] font-semibold tracking-tight truncate">
+            <div class="min-w-0">
+                <div class="text-[14px] md:text-[15px] font-semibold tracking-tight truncate">
                     {{ $title }}
                 </div>
-                <div class="text-[11px] tw-muted truncate">
+                <div class="text-[11px] tw-muted truncate hidden md:block">
                     @yield('subtitle')
                 </div>
             </div>
@@ -64,10 +64,10 @@
         {{-- RIGHT --}}
         <div class="flex items-center gap-1.5 md:gap-2">
 
-            {{-- Company pill --}}
+            {{-- Company pill — desktop only (mobile: use sidebar) --}}
             <button type="button"
                     data-popover-btn="company"
-                    class="{{ $pillBtn }}"
+                    class="hidden md:flex {{ $pillBtn }}"
                     aria-label="Company menu">
                 <span class="h-6 w-6 rounded-xl grid place-items-center bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
                     <span class="h-2 w-2 rounded-full bg-[color:var(--tw-accent)]"></span>
@@ -82,10 +82,10 @@
                 </svg>
             </button>
 
-            {{-- Theme toggle --}}
+            {{-- Theme toggle — desktop only (mobile: sidebar has it) --}}
             <button type="button"
                     data-theme-toggle
-                    class="{{ $iconBtn }}"
+                    class="hidden md:grid {{ $iconBtn }}"
                     aria-label="Toggle theme">
 
                 {{-- Moon (show in LIGHT) --}}
@@ -105,7 +105,7 @@
                 </svg>
             </button>
 
-            <button type="button" data-popover-btn="quick" class="{{ $iconBtn }}" aria-label="Quick create">
+            <button type="button" data-popover-btn="quick" class="hidden md:grid {{ $iconBtn }}" aria-label="Quick create">
                 <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                 </svg>

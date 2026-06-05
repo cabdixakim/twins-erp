@@ -34,32 +34,53 @@
     </nav>
 
     {{-- Footer --}}
-    <form method="post"
-          action="{{ route('logout') }}"
-          class="px-3 py-3 border-t"
-          style="border-color: var(--tw-border);">
-        @csrf
+    <div class="px-3 pb-2 pt-3 border-t space-y-2" style="border-color: var(--tw-border);">
 
-        <button
-            class="w-full flex items-center gap-3 px-3 py-2 rounded-xl border text-[12px] font-medium transition
-                   hover:bg-rose-600 hover:text-white"
-            style="background: var(--tw-btn); border-color: var(--tw-border);">
+        {{-- Company switcher row --}}
+        <a href="{{ route('companies.switcher') }}"
+           class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[12px] font-medium transition"
+           style="background: var(--tw-surface-2);">
+            <span class="h-6 w-6 rounded-lg grid place-items-center" style="background: var(--tw-btn); border: 1px solid var(--tw-border);">
+                <span class="h-2 w-2 rounded-full" style="background: var(--tw-accent);"></span>
+            </span>
+            <span class="flex-1 truncate">{{ $activeCompanyName ?? ($company->name ?? 'Company') }}</span>
+            <svg class="w-4 h-4 tw-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
 
-            <span class="h-9 w-9 grid place-items-center rounded-lg"
-                  style="background: var(--tw-surface-2);">
-                <svg class="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="M17 16l4-4m0 0l-4-4m4 4H7"/>
-                    <path d="M3 21V3a2 2 0 012-2h6"/>
+        {{-- Theme toggle row --}}
+        <button type="button"
+                data-theme-toggle
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[12px] font-medium transition"
+                style="background: var(--tw-surface-2);">
+            <span class="h-6 w-6 rounded-lg grid place-items-center" style="background: var(--tw-btn); border: 1px solid var(--tw-border);">
+                <svg data-icon="moon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+                </svg>
+                <svg data-icon="sun" class="w-3.5 h-3.5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
                 </svg>
             </span>
-
-            <span>Logout</span>
+            <span class="flex-1 text-left">Toggle theme</span>
         </button>
-    </form>
+
+        {{-- Logout --}}
+        <form method="post" action="{{ route('logout') }}">
+            @csrf
+            <button
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-xl border text-[12px] font-medium transition
+                       hover:bg-rose-600 hover:text-white"
+                style="background: var(--tw-btn); border-color: var(--tw-border);">
+                <span class="h-6 w-6 grid place-items-center rounded-lg" style="background: var(--tw-surface-2);">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 16l4-4m0 0l-4-4m4 4H7"/>
+                        <path d="M3 21V3a2 2 0 012-2h6"/>
+                    </svg>
+                </span>
+                <span>Logout</span>
+            </button>
+        </form>
+    </div>
 </aside>
