@@ -885,6 +885,17 @@
         <div id="wiSectionList" class="space-y-1"></div>
       </div>
 
+      {{-- Column picker — shown when the file has separate capacity columns per product (e.g. "Petrol Capacity | Diesel Capacity") --}}
+      <div id="wiColumnPicker" class="hidden rounded-xl border p-3 space-y-2 text-xs" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
+        <div class="flex items-center gap-1.5 font-semibold" style="color:var(--tw-fg)">
+          <svg class="w-3.5 h-3.5 shrink-0" style="color:#f59e0b" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/>
+          </svg>
+          Multiple capacity columns found — which one should we use?
+        </div>
+        <div id="wiColumnList" class="space-y-1"></div>
+      </div>
+
       <div class="flex items-center justify-between">
         <a id="wiTemplateLink"
            href="{{ route('purchases.import-nomination.trucks.template', [$purchase, $nom]) }}"
@@ -1101,11 +1112,14 @@
 
   const sectionPicker = document.getElementById('wiSectionPicker');
   const sectionList   = document.getElementById('wiSectionList');
+  const columnPicker  = document.getElementById('wiColumnPicker');
+  const columnList    = document.getElementById('wiColumnList');
 
-  let importRows    = [];
-  let currentStep   = 1;
-  let convertFactor = null;
-  let parsedSections = [];  // [{label, rows}] when file has multiple sections
+  let importRows     = [];
+  let currentStep    = 1;
+  let convertFactor  = null;
+  let parsedSections = [];  // [{label, rows}] when file has multiple product sections
+  let columnSets     = [];  // [{label, rows}] when file has multiple capacity columns
 
   // ── Open / close ──────────────────────────────────────────────────────────
   function openWizard() {
@@ -1170,6 +1184,7 @@
   function resetWizard() {
     importRows     = [];
     parsedSections = [];
+    columnSets     = [];
     if (fileBar)        fileBar.classList.add('hidden');
     if (fileInput)      fileInput.value = '';
     if (dropZone)       dropZone.style.background = '';
@@ -1178,6 +1193,8 @@
     if (reviewBody)     reviewBody.innerHTML = '';
     if (sectionPicker)  sectionPicker.classList.add('hidden');
     if (sectionList)    sectionList.innerHTML = '';
+    if (columnPicker)   columnPicker.classList.add('hidden');
+    if (columnList)     columnList.innerHTML = '';
     hideConvertBanner();
     goToStep(1);
   }
@@ -1303,7 +1320,8 @@
         driver_passport: String(r[cmap.driver_passport] ?? '').trim(),
         driver_license:  String(r[cmap.driver_license]  ?? '').trim(),
         driver_phone:    String(r[cmap.driver_phone]    ?? '').trim(),
-        capacity:        String(r[cmap.capacity]        ?? '').trim(),
+        // Strip spaces/commas used as thousands separators (e.g. "42 000" → "42000")
+        capacity:        String(r[cmap.capacity]        ?? '').trim().replace(/[\s\u00a0,]/g, ''),
       }));
   }
 
@@ -1311,6 +1329,72 @@
     importRows = section.rows;
     if (fileRowEl) fileRowEl.textContent = importRows.length + ' row' + (importRows.length !== 1 ? 's' : '') + ' ready';
     if (nextBtn)   nextBtn.disabled = importRows.length === 0;
+  }
+
+  // ── Multi-capacity-column support ─────────────────────────────────────────
+  // Returns all column indices whose header looks like a capacity/volume field.
+  function findCapacityColumns(hdr) {
+    const capKeywords = ['capacity', 'cap (l)', 'cap (m', 'volume', 'litres', 'liters'];
+    const results = [];
+    hdr.forEach((h, i) => {
+      if (capKeywords.some(k => h.includes(k))) results.push({ label: h, colIdx: i });
+    });
+    return results;
+  }
+
+  // Returns true if a capacity column label (e.g. "diesel capacity") matches
+  // the current purchase product via code, name, or fuel-type synonym.
+  function matchCapacityToProduct(label) {
+    const lbl = label.toLowerCase();
+    if (PRODUCT_CODE && lbl.includes(PRODUCT_CODE)) return true;
+    if (PRODUCT_NAME) {
+      const fw = PRODUCT_NAME.split(/\s+/)[0];
+      if (fw.length > 2 && lbl.includes(fw)) return true;
+    }
+    const synonyms = {
+      ago: ['diesel', 'gasoil', 'gas oil', 'ago'],
+      pms: ['petrol', 'gasoline', 'mogas', 'motor spirit', 'pms'],
+      jet: ['jet', 'avjet', 'kerosene', 'kero'],
+    };
+    for (const [code, words] of Object.entries(synonyms)) {
+      const codeMatch = PRODUCT_CODE === code || PRODUCT_NAME.startsWith(code);
+      if (codeMatch && words.some(w => lbl.includes(w))) return true;
+    }
+    return false;
+  }
+
+  function applyColumnSet(idx) {
+    if (!columnSets[idx]) return;
+    importRows = columnSets[idx].rows;
+    if (fileRowEl) fileRowEl.textContent = importRows.length + ' row' + (importRows.length !== 1 ? 's' : '') + ' ready';
+    if (nextBtn)   nextBtn.disabled = importRows.length === 0;
+  }
+
+  function renderColumnPicker(sets, autoMatchIdx) {
+    if (!columnList) return;
+    columnList.innerHTML = '';
+    sets.forEach((cs, idx) => {
+      const matched = idx === autoMatchIdx;
+      const lbl = document.createElement('label');
+      lbl.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid ${matched ? 'rgba(16,185,129,.4)' : 'var(--tw-border)'};background:${matched ? 'rgba(16,185,129,.07)' : 'var(--tw-surface)'};transition:background .15s`;
+      lbl.innerHTML = `
+        <input type="radio" name="wiColumn" value="${idx}" ${matched ? 'checked' : ''} style="accent-color:var(--tw-accent);margin:0">
+        <span style="flex:1;min-width:0">
+          <span style="font-weight:600;color:var(--tw-fg)">${escHtml(cs.label)}</span>
+          ${matched ? '<span style="font-size:10px;color:#10b981;margin-left:6px">✓ matches purchase product</span>' : ''}
+        </span>`;
+      const radio = lbl.querySelector('input');
+      radio.addEventListener('change', () => {
+        columnList.querySelectorAll('label').forEach((l, i) => {
+          l.style.borderColor = i === idx ? 'rgba(16,185,129,.4)' : 'var(--tw-border)';
+          l.style.background  = i === idx ? 'rgba(16,185,129,.07)' : 'var(--tw-surface)';
+        });
+        applyColumnSet(idx);
+      });
+      columnList.appendChild(lbl);
+    });
+    if (columnPicker) columnPicker.classList.remove('hidden');
+    applyColumnSet(autoMatchIdx ?? 0);
   }
 
   function renderSectionPicker(sections, autoMatchIdx) {
@@ -1385,9 +1469,28 @@
         if (fileBar)    fileBar.classList.remove('hidden');
 
         if (parsedSections.length === 1) {
-          // Single section — load directly, hide picker
+          // Single section — check for multiple capacity columns
           if (sectionPicker) sectionPicker.classList.add('hidden');
-          applySection(parsedSections[0]);
+          const hIdx0   = headerIdxs[0];
+          const hdr0    = raw[hIdx0].map(h => String(h).toLowerCase().trim());
+          const allCaps = findCapacityColumns(hdr0);
+
+          if (allCaps.length > 1) {
+            // Build one row-set per capacity column and show the picker
+            const baseCmap = mapColumns(hdr0);
+            columnSets = allCaps.map(({ label, colIdx }) => ({
+              label,
+              rows: extractRows(raw, hIdx0, raw.length, { ...baseCmap, capacity: colIdx }),
+            }));
+            let autoCapIdx = columnSets.findIndex(cs => matchCapacityToProduct(cs.label));
+            if (autoCapIdx < 0) autoCapIdx = 0;
+            if (fileRowEl) fileRowEl.textContent = columnSets[autoCapIdx].rows.length + ' row' + (columnSets[autoCapIdx].rows.length !== 1 ? 's' : '') + ' ready';
+            renderColumnPicker(columnSets, autoCapIdx);
+          } else {
+            // Single capacity column — load directly, hide column picker
+            if (columnPicker) columnPicker.classList.add('hidden');
+            applySection(parsedSections[0]);
+          }
         } else {
           // Multiple sections — find best match and show picker
           let autoMatchIdx = null;
@@ -1420,7 +1523,7 @@
       driver_name:     find('driver name', 'driver_name', 'driver'),
       driver_passport: find('passport'),
       driver_license:  find('driving licence', 'driving license', 'licence no', 'license no', 'licence', 'license'),
-      driver_phone:    find('driver phone', 'phone', 'mobile', 'tel'),
+      driver_phone:    find('driver phone', 'phone', 'mobile', 'tel', 'contact no', 'contact'),
       capacity:        find('capacity', 'cap (l)', 'cap'),
     };
   }
