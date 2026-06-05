@@ -168,6 +168,35 @@
                 </div>
             </div>
 
+            {{-- Volume unit --}}
+            <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
+                <div class="mb-3">
+                    <div class="text-sm font-semibold {{ $fg }}">Volume base unit</div>
+                    <div class="mt-0.5 text-[11px] {{ $muted }}">
+                        Sets how truck capacities and fuel quantities are recorded and displayed throughout the system.
+                        When importing trucks from a spreadsheet the wizard will detect the file's unit and offer to convert.
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    @php $vu = old('volume_unit', $company->volume_unit ?? 'L'); @endphp
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="volume_unit" value="L"
+                               {{ $vu === 'L' ? 'checked' : '' }}
+                               class="accent-emerald-500">
+                        <span class="text-sm {{ $fg }}">Litres <span class="{{ $muted }} text-[11px]">(L)</span></span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="volume_unit" value="M3"
+                               {{ $vu === 'M3' ? 'checked' : '' }}
+                               class="accent-emerald-500">
+                        <span class="text-sm {{ $fg }}">Cubic metres <span class="{{ $muted }} text-[11px]">(M³)</span></span>
+                    </label>
+                </div>
+                @error('volume_unit')
+                    <div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>
+                @enderror
+            </div>
+
             {{-- LOGO --}}
             <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
                 <div class="flex items-center justify-between gap-3">

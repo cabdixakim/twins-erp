@@ -29,6 +29,7 @@ class CompanySettingsController extends Controller
             'name'          => ['required', 'string', 'max:255'],
             'code'          => ['required', 'string', 'alpha_num', 'min:2', 'max:10', 'unique:companies,code,' . $company->id],
             'base_currency' => ['nullable', 'string', 'max:10'],
+            'volume_unit'   => ['nullable', 'in:L,M3'],
             'country'       => ['nullable', 'string', 'max:255'],
             'timezone'      => ['nullable', 'string', 'max:255'],
 

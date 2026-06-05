@@ -6,9 +6,12 @@
 @php
   $nom  = $importNomination;   // shorthand
   $trucks = $nom ? $nom->trucks : collect();
+  $unitLabel  = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
+  $rateLabel  = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/1000L';
 
-  // Summary totals
-  $totalCapacity  = $trucks->sum('capacity');
+  // Summary totals — loading_failed trucks excluded from nominated capacity
+  $failedCount    = $trucks->where('status', 'loading_failed')->count();
+  $totalCapacity  = $trucks->whereNotIn('status', ['loading_failed'])->sum('capacity');
   $loadedTrucks   = $trucks->whereNotIn('status', ['nominated', 'loading_failed']);
   $qtyLoaded      = $loadedTrucks->sum('qty_loaded');
   $deliveredTrucks= $trucks->where('status', 'delivered');
@@ -88,7 +91,7 @@
     <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div>
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Rate</div>
-        <div class="text-sm font-semibold {{ $fg }}">{{ $nom->currency }} {{ number_format($nom->rate_per_1000l, 2) }}<span class="text-xs font-normal {{ $muted }}"> /1000L</span></div>
+        <div class="text-sm font-semibold {{ $fg }}">{{ $nom->currency }} {{ number_format($nom->rate_per_1000l, 2) }}<span class="text-xs font-normal {{ $muted }}"> {{ $rateLabel }}</span></div>
       </div>
       <div>
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Allowed loss</div>
@@ -96,11 +99,16 @@
       </div>
       <div>
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Short charge</div>
-        <div class="text-sm font-semibold {{ $fg }}">{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}<span class="text-xs font-normal {{ $muted }}"> /1000L</span></div>
+        <div class="text-sm font-semibold {{ $fg }}">{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}<span class="text-xs font-normal {{ $muted }}"> {{ $rateLabel }}</span></div>
       </div>
       <div>
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Trucks</div>
-        <div class="text-sm font-semibold {{ $fg }}">{{ $trucks->count() }}</div>
+        <div class="text-sm font-semibold {{ $fg }}">
+          {{ $trucks->whereNotIn('status', ['loading_failed'])->count() }}
+          @if($failedCount > 0)
+            <span class="text-xs font-normal text-rose-400 ml-1">({{ $failedCount }} failed)</span>
+          @endif
+        </div>
       </div>
     </div>
 
@@ -109,24 +117,24 @@
       <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Nominated capacity</div>
         <div class="mt-1 text-base font-bold {{ $fg }}">{{ number_format($totalCapacity, 0) }}</div>
-        <div class="text-[10px] {{ $muted }}">L</div>
+        <div class="text-[10px] {{ $muted }}">{{ $unitLabel }}</div>
       </div>
       <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Qty loaded</div>
         <div class="mt-1 text-base font-bold {{ $fg }}">{{ number_format($qtyLoaded, 0) }}</div>
-        <div class="text-[10px] {{ $muted }}">L</div>
+        <div class="text-[10px] {{ $muted }}">{{ $unitLabel }}</div>
       </div>
       <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Qty delivered</div>
         <div class="mt-1 text-base font-bold s-green">{{ number_format($qtyDelivered, 0) }}</div>
-        <div class="text-[10px] {{ $muted }}">L</div>
+        <div class="text-[10px] {{ $muted }}">{{ $unitLabel }}</div>
       </div>
       <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide">Remaining at shipper</div>
         <div class="mt-1 text-base font-bold {{ $remainingAtShipper > 0 ? 's-amber' : $fg }}">
           {{ number_format($remainingAtShipper, 0) }}
         </div>
-        <div class="text-[10px] {{ $muted }}">L</div>
+        <div class="text-[10px] {{ $muted }}">{{ $unitLabel }}</div>
       </div>
     </div>
 
@@ -364,7 +372,7 @@
           </div>
           {{-- Rate per 1000L --}}
           <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Transport rate <span class="{{ $muted }}">/1000L</span></label>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Transport rate <span class="{{ $muted }}">{{ $rateLabel }}</span></label>
             <input type="number" name="rate_per_1000l" step="0.01" min="0" required
                    value="{{ $nom ? $nom->rate_per_1000l : '' }}"
                    placeholder="0.00"
@@ -394,7 +402,7 @@
 
         {{-- Short charge rate --}}
         <div>
-          <label class="block text-xs font-semibold {{ $fg }} mb-1">Short charge rate <span class="{{ $muted }}">/1000L of excess loss</span></label>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">Short charge rate <span class="{{ $muted }}">{{ $rateLabel }} of excess loss</span></label>
           <input type="number" name="short_charge_rate" step="0.01" min="0" required
                  value="{{ $nom ? $nom->short_charge_rate : '' }}"
                  placeholder="0.00"
@@ -861,7 +869,7 @@
           </svg>
           Download template
         </a>
-        <span class="text-xs" style="color:var(--tw-muted)">Required: Truck Reg · Driver Name · Capacity (L)</span>
+        <span class="text-xs" style="color:var(--tw-muted)">Required: Truck Reg · Driver Name · Capacity ({{ $unitLabel }})</span>
       </div>
     </div>
 
@@ -870,6 +878,21 @@
       <div id="wiSummaryBar" class="px-5 py-2.5 shrink-0 flex items-center justify-between text-xs font-semibold border-b" style="background:var(--tw-surface-2);border-color:var(--tw-border)">
         <span id="wiReadyCount" style="color:var(--tw-fg)"></span>
         <span id="wiErrorCount" class="hidden" style="color:#f87171"></span>
+      </div>
+      {{-- Unit conversion banner — shown when file unit looks different from system unit --}}
+      <div id="wiConvertBanner" class="hidden px-5 py-2.5 shrink-0 flex items-center justify-between gap-3 text-xs border-b" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3)">
+        <div class="flex items-center gap-2 min-w-0">
+          <svg class="w-3.5 h-3.5 shrink-0" style="color:#f59e0b" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span id="wiConvertMsg" class="truncate" style="color:var(--tw-fg)"></span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" id="wiConvertBtn" class="h-7 px-3 rounded-lg text-[11px] font-semibold transition whitespace-nowrap"
+                  style="background:rgba(245,158,11,.18);color:#d97706;border:1px solid rgba(245,158,11,.35)">Convert all</button>
+          <button type="button" id="wiDismissConvert" class="h-7 px-2 rounded-lg text-[11px] transition opacity-60 hover:opacity-100 whitespace-nowrap"
+                  style="color:var(--tw-muted)">Keep as-is</button>
+        </div>
       </div>
       <div class="overflow-auto flex-1">
         <table class="w-full text-xs" style="min-width:680px">
@@ -881,7 +904,7 @@
               <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Passport</th>
               <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">License</th>
               <th class="text-left py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Phone</th>
-              <th class="text-right py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Capacity (L) <span style="color:#f87171">*</span></th>
+              <th class="text-right py-2 px-1 font-semibold whitespace-nowrap" style="color:var(--tw-muted)">Capacity ({{ $unitLabel }}) <span style="color:#f87171">*</span></th>
               <th class="py-2 pr-3 w-8"></th>
             </tr>
           </thead>
@@ -1011,17 +1034,24 @@
   const cancelBtn = document.getElementById('wiCancelBtn');
   const closeBtn  = document.getElementById('btnCloseImportModal');
   const openBtn   = document.getElementById('btnImportTrucks');
-  const reviewBody= document.getElementById('wiReviewBody');
-  const summaryBar= document.getElementById('wiSummaryBar');
-  const readyEl   = document.getElementById('wiReadyCount');
-  const errorEl   = document.getElementById('wiErrorCount');
-  const successEl = document.getElementById('wiSuccessMsg');
-  const skippedEl = document.getElementById('wiSkippedMsg');
-  const dots      = [1,2,3].map(n => document.getElementById('wiStepDot' + n));
-  const steps     = [1,2,3].map(n => document.getElementById('wiStep' + n));
+  const reviewBody      = document.getElementById('wiReviewBody');
+  const summaryBar      = document.getElementById('wiSummaryBar');
+  const readyEl         = document.getElementById('wiReadyCount');
+  const errorEl         = document.getElementById('wiErrorCount');
+  const successEl       = document.getElementById('wiSuccessMsg');
+  const skippedEl       = document.getElementById('wiSkippedMsg');
+  const dots            = [1,2,3].map(n => document.getElementById('wiStepDot' + n));
+  const steps           = [1,2,3].map(n => document.getElementById('wiStep' + n));
+  const convertBanner   = document.getElementById('wiConvertBanner');
+  const convertMsgEl    = document.getElementById('wiConvertMsg');
+  const convertBtn      = document.getElementById('wiConvertBtn');
+  const dismissConvertBtn = document.getElementById('wiDismissConvert');
 
-  let importRows = [];
+  const VOLUME_UNIT = @json($volumeUnit ?? 'L');
+
+  let importRows  = [];
   let currentStep = 1;
+  let convertFactor = null;
 
   // ── Open / close ──────────────────────────────────────────────────────────
   function openWizard() {
@@ -1091,8 +1121,52 @@
     if (nextBtn)     { nextBtn.classList.remove('hidden'); nextBtn.disabled = true; nextBtn.textContent = 'Review rows →'; }
     if (cancelBtn)   cancelBtn.textContent = 'Cancel';
     if (reviewBody)  reviewBody.innerHTML = '';
+    hideConvertBanner();
     goToStep(1);
   }
+
+  // ── Unit conversion detection ──────────────────────────────────────────────
+  function detectUnitMismatch() {
+    hideConvertBanner();
+    if (!convertBanner || importRows.length === 0) return;
+    const nums = importRows.map(r => parseFloat(r.capacity)).filter(n => !isNaN(n) && n > 0);
+    if (nums.length === 0) return;
+    const sorted = [...nums].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    if (VOLUME_UNIT === 'L' && median < 200) {
+      convertFactor = 1000;
+      convertMsgEl.textContent =
+        `These capacities look like M³ (e.g. ${median.toLocaleString()} M³). Your system uses Litres — multiply by 1,000?`;
+      convertBanner.classList.remove('hidden');
+    } else if (VOLUME_UNIT === 'M3' && median > 1000) {
+      convertFactor = 0.001;
+      convertMsgEl.textContent =
+        `These capacities look like Litres (e.g. ${median.toLocaleString()} L). Your system uses M³ — divide by 1,000?`;
+      convertBanner.classList.remove('hidden');
+    }
+  }
+  function hideConvertBanner() {
+    convertFactor = null;
+    if (convertBanner) convertBanner.classList.add('hidden');
+  }
+  function applyConversion() {
+    if (!convertFactor) return;
+    const factor = convertFactor;
+    importRows.forEach(row => {
+      const n = parseFloat(row.capacity);
+      if (!isNaN(n) && n > 0) {
+        row.capacity = (factor >= 1)
+          ? String(Math.round(n * factor))
+          : String(parseFloat((n * factor).toFixed(3)));
+      }
+    });
+    hideConvertBanner();
+    renderReviewTable();
+    updateSummaryBar();
+    updateImportButton();
+  }
+  if (convertBtn)        convertBtn.addEventListener('click', applyConversion);
+  if (dismissConvertBtn) dismissConvertBtn.addEventListener('click', hideConvertBanner);
 
   // ── Drag & drop / file input ──────────────────────────────────────────────
   if (dropZone) {
@@ -1354,6 +1428,7 @@
     if (currentStep === 1) {
       renderReviewTable();
       goToStep(2);
+      detectUnitMismatch();
       updateSummaryBar();
       updateImportButton();
     } else if (currentStep === 2) {

@@ -334,6 +334,7 @@
       'depots'            => $depots,
       'qty'               => $qty,
       'currency'          => $currency,
+      'volumeUnit'        => $volumeUnit ?? 'L',
     ])
   @endif
 

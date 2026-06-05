@@ -15,6 +15,7 @@ class Company extends Model
         'code',
         'slug',
         'base_currency',
+        'volume_unit',
         'logo_path',
         'country',
         'timezone',

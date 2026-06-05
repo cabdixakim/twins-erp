@@ -297,9 +297,11 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
+        $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
+
         return view('purchases.show', compact(
             'purchase', 'depots', 'importMovements', 'clients',
-            'importNomination', 'transporters'
+            'importNomination', 'transporters', 'volumeUnit'
         ));
     }
 
