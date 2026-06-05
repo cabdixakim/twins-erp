@@ -8,7 +8,7 @@
 
 <aside id="mobileSidebar"
        class="fixed top-0 left-0 z-50 h-full w-64 md:hidden flex flex-col
-              -translate-x-full transition-transform duration-300 ease-out
+              -translate-x-full transition-transform duration-200 ease-out
               tw-surface
               [html.tw-mobile-open_&]:translate-x-0">
 
