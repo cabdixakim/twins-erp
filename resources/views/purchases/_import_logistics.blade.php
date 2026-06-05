@@ -554,8 +554,11 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
-              <input type="text" name="truck_reg" value="{{ $truck->truck_reg }}" maxlength="40"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+              <input type="text" name="truck_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('truck_reg', $truck->truck_reg) : $truck->truck_reg }}" maxlength="40"
+                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+              @if(session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg'))
+                <p class="mt-1 text-xs text-rose-400">{{ $errors->first('truck_reg') }}</p>
+              @endif
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
