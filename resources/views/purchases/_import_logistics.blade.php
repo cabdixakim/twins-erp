@@ -974,7 +974,7 @@
                 style="background:var(--tw-accent)">
           Done
         </button>
-        <p class="text-xs" style="color:var(--tw-muted)">Page will reload automatically…</p>
+        <p class="text-xs" id="wiCountdownMsg" style="color:var(--tw-muted)">Page will reload automatically…</p>
       </div>
     </div>
 
@@ -1794,12 +1794,23 @@
         : '';
       const reloadUrl = window.location.pathname + importedParam + '#truck-table-section';
       const doneBtn = document.getElementById('wiDoneBtn');
+      const countdownEl = document.getElementById('wiCountdownMsg');
       let reloadTimer;
-      if (doneBtn) {
-        doneBtn.addEventListener('click', () => { clearTimeout(reloadTimer); closeWizard(); window.location.href = reloadUrl; });
-      }
       const reloadDelay = (result.errors && result.errors.length > 0) ? 6000 : 1800;
-      reloadTimer = setTimeout(() => { closeWizard(); window.location.href = reloadUrl; }, reloadDelay);
+      let secondsLeft = Math.round(reloadDelay / 1000);
+      if (countdownEl) countdownEl.textContent = 'Closing in ' + secondsLeft + ' s\u2026';
+      const countdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(countdownInterval);
+        } else if (countdownEl) {
+          countdownEl.textContent = 'Closing in ' + secondsLeft + ' s\u2026';
+        }
+      }, 1000);
+      if (doneBtn) {
+        doneBtn.addEventListener('click', () => { clearTimeout(reloadTimer); clearInterval(countdownInterval); closeWizard(); window.location.href = reloadUrl; });
+      }
+      reloadTimer = setTimeout(() => { clearInterval(countdownInterval); closeWizard(); window.location.href = reloadUrl; }, reloadDelay);
     } catch (err) {
       nextBtn.disabled = false;
       updateImportButton();
