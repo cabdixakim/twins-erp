@@ -1,10 +1,10 @@
-{{-- Overlay — shown/hidden via JS (topbar script) --}}
+{{-- Overlay — above topbar (z-50) so it dims the full screen --}}
 <div id="mobileSidebarOverlay"
-     class="hidden fixed inset-0 z-40 bg-black/50 md:hidden">
+     class="hidden fixed inset-0 z-[55] bg-black/50 md:hidden">
 </div>
 
 <aside id="mobileSidebar"
-       class="fixed top-0 left-0 z-50 h-full w-72 md:hidden flex flex-col
+       class="fixed top-0 left-0 z-[60] h-full w-72 md:hidden flex flex-col
               -translate-x-full transition-transform duration-200 ease-out
               tw-surface">
 
