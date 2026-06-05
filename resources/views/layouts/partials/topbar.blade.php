@@ -64,28 +64,28 @@
         {{-- RIGHT --}}
         <div class="flex items-center gap-1.5 md:gap-2">
 
-            {{-- Company pill — desktop only (mobile: use sidebar) --}}
+            {{-- Company pill — icon-only on mobile, full pill on desktop --}}
             <button type="button"
                     data-popover-btn="company"
-                    class="hidden md:flex {{ $pillBtn }}"
+                    class="{{ $pillBtn }}"
                     aria-label="Company menu">
                 <span class="h-6 w-6 rounded-xl grid place-items-center bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
                     <span class="h-2 w-2 rounded-full bg-[color:var(--tw-accent)]"></span>
                 </span>
 
-                <span class="text-[12px] font-semibold truncate max-w-[120px] md:max-w-[240px]">
+                <span class="hidden md:inline text-[12px] font-semibold truncate max-w-[240px]">
                     {{ $activeCompanyName }}
                 </span>
 
-                <svg class="w-4 h-4 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="hidden md:block w-4 h-4 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>
                 </svg>
             </button>
 
-            {{-- Theme toggle — desktop only (mobile: sidebar has it) --}}
+            {{-- Theme toggle --}}
             <button type="button"
                     data-theme-toggle
-                    class="hidden md:grid {{ $iconBtn }}"
+                    class="{{ $iconBtn }}"
                     aria-label="Toggle theme">
 
                 {{-- Moon (show in LIGHT) --}}
