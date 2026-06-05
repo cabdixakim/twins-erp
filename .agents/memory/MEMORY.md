@@ -1,0 +1,1 @@
+- [Post-merge script](post-merge.md) — php artisan migrate --force + view:clear; configured at scripts/post-merge.sh, 60s timeout.
