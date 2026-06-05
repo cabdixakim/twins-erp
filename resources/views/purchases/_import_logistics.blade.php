@@ -1160,6 +1160,7 @@
     if (!reviewBody) return;
     reviewBody.innerHTML = '';
     importRows.forEach((row, i) => buildRow(row, i));
+    revalidateDuplicateRegs();
   }
 
   function buildRow(row, i) {
@@ -1173,6 +1174,7 @@
       const inp = document.createElement('input');
       inp.type  = field === 'capacity' ? 'number' : 'text';
       inp.value = row[field];
+      inp.dataset.field = field;
       inp.style.cssText = [
         'height:28px',
         'padding:0 8px',
@@ -1193,6 +1195,7 @@
       inp.addEventListener('input', () => {
         importRows[i][field] = inp.value;
         validateCell(inp, field);
+        if (field === 'truck_reg') revalidateDuplicateRegs();
         updateSummaryBar();
         updateImportButton();
       });
@@ -1232,6 +1235,32 @@
     const bad  = REQUIRED.has(field) && (field === 'capacity' ? (val === '' || parseFloat(val) <= 0) : val === '');
     inp.style.borderColor = bad ? '#f87171' : 'var(--tw-border)';
     inp.style.background  = bad ? 'rgba(239,68,68,.09)' : 'var(--tw-surface-2)';
+  }
+
+  function revalidateDuplicateRegs() {
+    if (!reviewBody) return;
+    const inputs = Array.from(reviewBody.querySelectorAll('[data-field="truck_reg"]'));
+    // Count occurrences (case-insensitive)
+    const counts = {};
+    inputs.forEach(inp => {
+      const key = inp.value.trim().toLowerCase();
+      if (key) counts[key] = (counts[key] || 0) + 1;
+    });
+    // Apply highlight: amber for duplicates (only if cell is otherwise valid)
+    inputs.forEach(inp => {
+      const key = inp.value.trim().toLowerCase();
+      const isDup = key && counts[key] > 1;
+      if (isDup) {
+        inp.style.borderColor = '#f59e0b';
+        inp.style.background  = 'rgba(245,158,11,.09)';
+        inp.title = 'Duplicate truck reg — this row will be skipped';
+      } else if (inp.value.trim() !== '') {
+        // restore valid state (validateCell handles empty)
+        inp.style.borderColor = 'var(--tw-border)';
+        inp.style.background  = 'var(--tw-surface-2)';
+        inp.title = '';
+      }
+    });
   }
 
   function countReady() {
@@ -1308,7 +1337,7 @@
 
       if (successEl) successEl.textContent = result.committed + ' truck' + (result.committed !== 1 ? 's' : '') + ' imported successfully';
       if (skippedEl) skippedEl.textContent = result.skipped > 0
-        ? result.skipped + ' row' + (result.skipped !== 1 ? 's' : '') + ' skipped — missing required fields'
+        ? result.skipped + ' row' + (result.skipped !== 1 ? 's' : '') + ' skipped — missing required fields or duplicate truck reg'
         : '';
 
       goToStep(3);

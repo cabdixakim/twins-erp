@@ -274,6 +274,15 @@ class ImportNominationController extends Controller
         $errors    = [];
         $validRows = [];
 
+        // Pre-load truck_regs already saved for this nomination (case-insensitive)
+        $existingRegs = ImportTruck::where('nomination_id', $nomination->id)
+            ->pluck('truck_reg')
+            ->map(fn($r) => strtolower(trim($r)))
+            ->flip()
+            ->all();
+
+        $seenInBatch = []; // track regs encountered within this upload
+
         // ── Pass 1: validate every row, collect valid ones ──────────────────
         foreach ($rows as $i => $row) {
             $truckReg   = substr(trim((string) ($row['truck_reg']   ?? '')), 0, 40);
@@ -291,6 +300,22 @@ class ImportNominationController extends Controller
                 $errors[] = ['row' => $i + 2, 'messages' => $rowErrors];
                 continue;
             }
+
+            $regKey = strtolower($truckReg);
+
+            if (isset($existingRegs[$regKey])) {
+                $skipped++;
+                $errors[] = ['row' => $i + 2, 'messages' => ["Truck Reg '{$truckReg}' already exists in this nomination"]];
+                continue;
+            }
+
+            if (isset($seenInBatch[$regKey])) {
+                $skipped++;
+                $errors[] = ['row' => $i + 2, 'messages' => ["Truck Reg '{$truckReg}' is duplicated in this upload"]];
+                continue;
+            }
+
+            $seenInBatch[$regKey] = true;
 
             $validRows[] = [
                 'company_id'      => $cid,
