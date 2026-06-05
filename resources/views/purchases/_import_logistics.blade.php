@@ -1089,20 +1089,36 @@
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb     = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
-        const ws     = wb.Sheets[wb.SheetNames[0]];
-        const raw    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const wb  = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
         if (raw.length < 2) {
-          showFileError(file.name, 'File has no data rows.');
+          showFileError(file.name, 'File appears to be empty.');
           return;
         }
 
-        const hdr  = raw[0].map(h => String(h).toLowerCase().trim());
+        // Auto-detect the header row: scan up to row 20 for the first row
+        // that contains at least 2 recognisable truck-column keywords.
+        const HEADER_KEYWORDS = ['truck', 'driver', 'capacity', 'trailer', 'passport', 'licence', 'license', 'phone'];
+        let headerIdx = 0;
+        for (let i = 0; i < Math.min(raw.length - 1, 20); i++) {
+          const joined = raw[i].join(' ').toLowerCase();
+          const hits   = HEADER_KEYWORDS.filter(k => joined.includes(k)).length;
+          if (hits >= 2) { headerIdx = i; break; }
+        }
+
+        const hdr  = raw[headerIdx].map(h => String(h).toLowerCase().trim());
         const cmap = mapColumns(hdr);
 
-        importRows = raw.slice(1)
-          .filter(r => r.some(c => String(c).trim() !== ''))
+        importRows = raw.slice(headerIdx + 1)
+          .filter(r => {
+            // Skip rows that are entirely empty
+            if (!r.some(c => String(c).trim() !== '')) return false;
+            // Skip footer/summary rows: truck_reg cell must contain something
+            if (cmap.truck_reg >= 0 && String(r[cmap.truck_reg] ?? '').trim() === '') return false;
+            return true;
+          })
           .map(r => ({
             truck_reg:       String(r[cmap.truck_reg]       ?? '').trim(),
             trailer_reg:     String(r[cmap.trailer_reg]     ?? '').trim(),
@@ -1125,6 +1141,8 @@
   }
 
   function mapColumns(hdr) {
+    // Each entry: preferred matches listed most-specific first so a precise
+    // match wins over a broad one.
     const find = (...names) => {
       for (const n of names) {
         const i = hdr.findIndex(h => h.includes(n));
@@ -1133,13 +1151,13 @@
       return -1;
     };
     return {
-      truck_reg:       find('truck reg', 'truck_reg', 'truck'),
-      trailer_reg:     find('trailer reg', 'trailer_reg', 'trailer'),
+      truck_reg:       find('truck no', 'truck reg', 'truck_reg', 'truck'),
+      trailer_reg:     find('trailer no', 'trailer reg', 'trailer_reg', 'trailer'),
       driver_name:     find('driver name', 'driver_name', 'driver'),
       driver_passport: find('passport'),
-      driver_license:  find('license', 'licence'),
-      driver_phone:    find('phone'),
-      capacity:        find('capacity', 'cap'),
+      driver_license:  find('driving licence', 'driving license', 'licence no', 'license no', 'licence', 'license'),
+      driver_phone:    find('driver phone', 'phone', 'mobile', 'tel'),
+      capacity:        find('capacity', 'cap (l)', 'cap'),
     };
   }
 
