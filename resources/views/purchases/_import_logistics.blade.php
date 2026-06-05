@@ -957,7 +957,14 @@
       <div id="wiSkippedErrors" class="hidden mt-4 text-left w-full max-h-48 overflow-y-auto rounded-xl border" style="border-color:var(--tw-border);background:var(--tw-surface-2)">
         <ul id="wiSkippedErrorList" class="divide-y text-xs" style="divide-color:var(--tw-border)"></ul>
       </div>
-      <p class="text-xs mt-3" style="color:var(--tw-muted)">Reloading page…</p>
+      <div class="mt-5 flex flex-col items-center gap-3">
+        <button type="button" id="wiDoneBtn"
+                class="h-10 px-6 rounded-xl text-sm font-semibold text-white transition hover:opacity-90"
+                style="background:var(--tw-accent)">
+          Done
+        </button>
+        <p class="text-xs" style="color:var(--tw-muted)">Page will reload automatically…</p>
+      </div>
     </div>
 
     {{-- Footer --}}
@@ -1682,8 +1689,14 @@
       const importedParam = (result.importedIds && result.importedIds.length > 0)
         ? '?imported=' + result.importedIds.join(',')
         : '';
+      const reloadUrl = window.location.pathname + importedParam + '#truck-table-section';
+      const doneBtn = document.getElementById('wiDoneBtn');
+      let reloadTimer;
+      if (doneBtn) {
+        doneBtn.addEventListener('click', () => { clearTimeout(reloadTimer); closeWizard(); window.location.href = reloadUrl; });
+      }
       const reloadDelay = (result.errors && result.errors.length > 0) ? 6000 : 1800;
-      setTimeout(() => { closeWizard(); window.location.href = window.location.pathname + importedParam + '#truck-table-section'; }, reloadDelay);
+      reloadTimer = setTimeout(() => { closeWizard(); window.location.href = reloadUrl; }, reloadDelay);
     } catch (err) {
       nextBtn.disabled = false;
       updateImportButton();
