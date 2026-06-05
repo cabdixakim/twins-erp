@@ -1358,7 +1358,7 @@
       inp.addEventListener('input', () => {
         importRows[i][field] = inp.value;
         validateCell(inp, field);
-        if (field === 'truck_reg') revalidateDuplicateRegs();
+        if (field === 'truck_reg' || field === 'trailer_reg') revalidateDuplicateRegs();
         updateSummaryBar();
         updateImportButton();
       });
@@ -1402,28 +1402,47 @@
 
   function revalidateDuplicateRegs() {
     if (!reviewBody) return;
-    const inputs = Array.from(reviewBody.querySelectorAll('[data-field="truck_reg"]'));
-    // Count occurrences (case-insensitive)
-    const counts = {};
-    inputs.forEach(inp => {
-      const key = inp.value.trim().toLowerCase();
-      if (key) counts[key] = (counts[key] || 0) + 1;
-    });
-    // Apply highlight: amber for duplicates (only if cell is otherwise valid)
-    inputs.forEach(inp => {
-      const key = inp.value.trim().toLowerCase();
-      const isDup = key && counts[key] > 1;
-      if (isDup) {
-        inp.style.borderColor = '#f59e0b';
-        inp.style.background  = 'rgba(245,158,11,.09)';
-        inp.title = 'Duplicate truck reg — this row will be skipped';
-      } else if (inp.value.trim() !== '') {
-        // restore valid state (validateCell handles empty)
-        inp.style.borderColor = 'var(--tw-border)';
-        inp.style.background  = 'var(--tw-surface-2)';
-        inp.title = '';
-      }
-    });
+
+    // Helper: highlight a single field group for duplicates
+    function highlightDups(fieldName, dupMsg) {
+      const inputs = Array.from(reviewBody.querySelectorAll('[data-field="' + fieldName + '"]'));
+      const counts = {};
+      inputs.forEach(inp => {
+        const key = inp.value.trim().toLowerCase();
+        if (key) counts[key] = (counts[key] || 0) + 1;
+      });
+      inputs.forEach(inp => {
+        const key = inp.value.trim().toLowerCase();
+        const isDup = key && counts[key] > 1;
+        if (isDup) {
+          inp.style.borderColor = '#f59e0b';
+          inp.style.background  = 'rgba(245,158,11,.09)';
+          inp.title = dupMsg;
+        } else if (inp.value.trim() !== '') {
+          // restore valid state (validateCell handles empty)
+          inp.style.borderColor = 'var(--tw-border)';
+          inp.style.background  = 'var(--tw-surface-2)';
+          inp.title = '';
+        }
+      });
+    }
+
+    highlightDups('truck_reg',   'Duplicate truck reg — this row will be skipped');
+    highlightDups('trailer_reg', 'Duplicate trailer reg — this row will be skipped');
+  }
+
+  function hasDuplicateRegs() {
+    if (!reviewBody) return false;
+    for (const fieldName of ['truck_reg', 'trailer_reg']) {
+      const inputs = Array.from(reviewBody.querySelectorAll('[data-field="' + fieldName + '"]'));
+      const counts = {};
+      inputs.forEach(inp => {
+        const key = inp.value.trim().toLowerCase();
+        if (key) counts[key] = (counts[key] || 0) + 1;
+      });
+      if (inputs.some(inp => { const k = inp.value.trim().toLowerCase(); return k && counts[k] > 1; })) return true;
+    }
+    return false;
   }
 
   function countReady() {
@@ -1466,7 +1485,7 @@
     if (!nextBtn || currentStep !== 2) return;
     const n = countReady();
     nextBtn.textContent = 'Import ' + n + ' truck' + (n !== 1 ? 's' : '') + ' →';
-    nextBtn.disabled    = n === 0;
+    nextBtn.disabled    = n === 0 || hasDuplicateRegs();
   }
 
   // ── Next / Back ───────────────────────────────────────────────────────────
