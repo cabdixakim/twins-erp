@@ -232,7 +232,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="tw-table-wrap">
       <table class="min-w-full text-sm" id="purchasesTable">
         <thead class="{{ $surface2 }}">
           <tr class="text-left text-xs {{ $muted }}">

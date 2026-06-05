@@ -1,16 +1,12 @@
-{{-- Overlay --}}
+{{-- Overlay — shown/hidden via JS (topbar script) --}}
 <div id="mobileSidebarOverlay"
-     class="fixed inset-0 z-40 bg-black/40 opacity-0 pointer-events-none transition
-            md:hidden
-            [html.tw-mobile-open_&]:opacity-100
-            [html.tw-mobile-open_&]:pointer-events-auto">
+     class="hidden fixed inset-0 z-40 bg-black/50 md:hidden">
 </div>
 
 <aside id="mobileSidebar"
-       class="fixed top-0 left-0 z-50 h-full w-64 md:hidden flex flex-col
+       class="fixed top-0 left-0 z-50 h-full w-72 md:hidden flex flex-col
               -translate-x-full transition-transform duration-200 ease-out
-              tw-surface
-              [html.tw-mobile-open_&]:translate-x-0">
+              tw-surface">
 
     {{-- Header --}}
     <div class="px-4 py-4 flex items-center justify-between border-b"
@@ -20,7 +16,7 @@
 
         <button
             type="button"
-            data-mobile-close
+            data-mobile-menu-close
             class="tw-icon-btn h-9 w-9 grid place-items-center rounded-xl"
             aria-label="Close menu">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"

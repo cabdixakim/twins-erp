@@ -400,9 +400,9 @@
     {{-- Backdrop --}}
     <div class="absolute inset-0 bg-black/60" data-close="confirm"></div>
 
-    {{-- Center wrapper --}}
-    <div class="relative h-full w-full flex items-center justify-center p-4">
-      <div class="w-full max-w-xl rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="tw-modal-wrap">
+      <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
+        <div class="tw-modal-handle"></div>
         {{-- Header --}}
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
@@ -509,9 +509,9 @@
     {{-- Backdrop --}}
     <div class="absolute inset-0 bg-black/60" data-close="receive"></div>
 
-    {{-- Center wrapper --}}
-    <div class="relative h-full w-full flex items-center justify-center p-4">
-      <div class="w-full max-w-xl rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="tw-modal-wrap">
+      <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
+        <div class="tw-modal-handle"></div>
         {{-- Header --}}
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
@@ -597,8 +597,11 @@
 
 {{-- UNDO RECEIPT MODAL (local_depot + received only) --}}
 @if($purchase->type === 'local_depot' && $purchase->status === 'received')
-  <div id="undoReceiptModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+  <div id="undoReceiptModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="tw-modal-wrap">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+      <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Undo depot receipt</div>
         <button type="button" data-close="undo-receipt" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
@@ -633,6 +636,7 @@
         </div>
       </form>
     </div>
+    </div>
   </div>
 @endif
 
@@ -640,8 +644,11 @@
      NOMINATE VESSEL MODAL (import + confirmed only)
      ================================================================ --}}
 @if($purchase->type === 'import' && $purchase->status === 'confirmed')
-  <div id="nominateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-lg rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+  <div id="nominateModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="tw-modal-wrap">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-lg overflow-hidden">
+      <div class="tw-modal-handle"></div>
       <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
         <div class="min-w-0">
           <div class="text-base font-semibold {{ $fg }}">Nominate vessel</div>
@@ -715,6 +722,7 @@
         </div>
       </form>
     </div>
+    </div>
   </div>
 @endif
 
@@ -722,8 +730,11 @@
      IMPORT DELIVER MODAL (import + nominated only)
      ================================================================ --}}
 @if($purchase->type === 'import' && $purchase->status === 'nominated')
-  <div id="importDeliverModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+  <div id="importDeliverModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="tw-modal-wrap">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+      <div class="tw-modal-handle"></div>
       <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
         <div class="min-w-0">
           <div class="text-base font-semibold {{ $fg }}">Deliver to depot</div>
@@ -785,13 +796,17 @@
         </div>
       </form>
     </div>
+    </div>
   </div>
 @endif
 
 {{-- CROSS-DOCK TRANSFER MODAL (cross_dock + confirmed only) --}}
 @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
-  <div id="crossDockTransferModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+  <div id="crossDockTransferModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="tw-modal-wrap">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+      <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Transfer to depot</div>
         <button type="button" data-close="cross-dock-transfer" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
@@ -851,11 +866,15 @@
         </div>
       </form>
     </div>
+    </div>
   </div>
 
   {{-- CROSS-DOCK DISPATCH MODAL --}}
-  <div id="crossDockDispatchModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+  <div id="crossDockDispatchModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="tw-modal-wrap">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+      <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Dispatch straight out</div>
         <button type="button" data-close="cross-dock-dispatch" class="text-lg {{ $muted }} hover:{{ $fg }}">✕</button>
@@ -918,13 +937,17 @@
         </div>
       </form>
     </div>
+    </div>
   </div>
 @endif
 
 {{-- ========================= CANCEL MODAL ========================= --}}
 @if(in_array($purchase->status, ['draft', 'confirmed', 'nominated']))
-<div id="cancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+<div id="cancelModal" class="hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/60"></div>
+  <div class="tw-modal-wrap">
+  <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-handle"></div>
     <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
       <div>
         <div class="text-base font-semibold {{ $fg }}">Cancel purchase</div>
@@ -987,13 +1010,17 @@
       </div>
     </form>
   </div>
+  </div>
 </div>
 @endif
 
 {{-- ========================= VOID MODAL ========================= --}}
 @if($purchase->type === 'local_depot' && $purchase->status === 'received')
-<div id="voidModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col overflow-hidden">
+<div id="voidModal" class="hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/60"></div>
+  <div class="tw-modal-wrap">
+  <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-handle"></div>
     <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
       <div>
         <div class="text-base font-semibold {{ $fg }}">Return to seller</div>
@@ -1055,6 +1082,7 @@
         </button>
       </div>
     </form>
+  </div>
   </div>
 </div>
 @endif

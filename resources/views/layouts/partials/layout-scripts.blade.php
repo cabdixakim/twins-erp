@@ -2,41 +2,6 @@
 
 (() => {
   /* -------------------------------
-     MOBILE SIDEBAR (open/close)
-  --------------------------------*/
-  const openMenu = document.getElementById('openMenu');
-  const mobileSidebar = document.getElementById('mobileSidebar');
-  const mobileOverlay = document.getElementById('mobileSidebarOverlay');
-
-  const closeMobile = () => {
-    mobileSidebar?.classList.add('-translate-x-full');
-    mobileOverlay?.classList.add('hidden'); // safe if you use it
-  };
-
-  const openMobile = () => {
-    mobileSidebar?.classList.remove('-translate-x-full');
-    mobileOverlay?.classList.remove('hidden'); // safe if you use it
-  };
-
-  openMenu?.addEventListener('click', (e) => {
-    e.preventDefault();
-    openMobile();
-  });
-
-  // Your close button is: <button data-mobile-close ...>
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-mobile-close]')) {
-      e.preventDefault();
-      closeMobile();
-    }
-
-    // Optional: click overlay to close (only if overlay exists)
-    if (mobileOverlay && e.target === mobileOverlay) {
-      closeMobile();
-    }
-  });
-
-  /* -------------------------------
      DESKTOP SIDEBAR COLLAPSE (persist)
   --------------------------------*/
   const desktopSidebar = document.getElementById('desktopSidebar');

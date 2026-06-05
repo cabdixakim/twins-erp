@@ -450,6 +450,14 @@
         }
     }, true);
 
+    // Touchstart on overlay — faster close on mobile (no 300ms click delay)
+    mobileOverlay?.addEventListener('touchstart', (e) => {
+        if (e.target === mobileOverlay) {
+            e.preventDefault();
+            mobileClose();
+        }
+    }, { passive: false });
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             hideAll();
