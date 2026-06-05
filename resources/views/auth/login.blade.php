@@ -5,8 +5,31 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sign in • Twins</title>
   @vite(['resources/css/app.css'])
+  <script>
+    (function(){
+      var t=localStorage.getItem('tw-theme');
+      var dark=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if(dark) document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
-<body class="h-full bg-slate-950 flex items-center justify-center px-4">
+<body class="h-full flex items-center justify-center px-4 relative" style="background:#0f172a">
+  {{-- Theme toggle — top-right corner --}}
+  <button type="button" id="loginThemeToggle"
+          class="fixed top-4 right-4 z-10 h-9 w-9 rounded-xl border border-slate-700 bg-slate-800/80 text-slate-300
+                 hover:bg-slate-700 hover:text-slate-100 flex items-center justify-center transition"
+          aria-label="Toggle theme">
+    {{-- Moon (light mode) --}}
+    <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+    </svg>
+    {{-- Sun (dark mode) --}}
+    <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+    </svg>
+  </button>
+
   <div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-emerald-500/10 overflow-hidden">
     <div class="grid grid-cols-1 md:grid-cols-5">
       {{-- Left: brand / copy --}}
@@ -124,5 +147,29 @@
       </div>
     </div>
   </div>
+  <script>
+    (function(){
+      var THEME_KEY = 'tw-theme';
+      var root = document.documentElement;
+      var btn  = document.getElementById('loginThemeToggle');
+
+      function isDark() { return root.classList.contains('dark'); }
+
+      function applyIcons() {
+        if (!btn) return;
+        btn.querySelector('[data-icon="moon"]').classList.toggle('hidden', isDark());
+        btn.querySelector('[data-icon="sun"]').classList.toggle('hidden', !isDark());
+      }
+
+      applyIcons();
+
+      btn && btn.addEventListener('click', function(){
+        var dark = !isDark();
+        root.classList.toggle('dark', dark);
+        localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+        applyIcons();
+      });
+    })();
+  </script>
 </body>
 </html>
