@@ -102,6 +102,11 @@ class ImportNominationController extends Controller
                 'created_by'    => auth()->id(),
             ]));
         } catch (UniqueConstraintViolationException $e) {
+            if (str_contains($e->getMessage(), 'trailer_reg')) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['trailer_reg' => "Trailer registration '{$data['trailer_reg']}' is already added to this nomination."]);
+            }
             return back()
                 ->withInput()
                 ->withErrors(['truck_reg' => "Truck registration '{$data['truck_reg']}' is already added to this nomination."]);
@@ -130,7 +135,21 @@ class ImportNominationController extends Controller
             'notes'           => 'nullable|string|max:1000',
         ]);
 
-        $truck->update($data);
+        try {
+            $truck->update($data);
+        } catch (UniqueConstraintViolationException $e) {
+            if (str_contains($e->getMessage(), 'trailer_reg')) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['trailer_reg' => "Trailer registration '{$data['trailer_reg']}' is already used by another truck in this nomination."])
+                    ->with('edit_error_truck_id', $truck->id);
+            }
+            return back()
+                ->withInput()
+                ->withErrors(['truck_reg' => "Truck registration '{$data['truck_reg']}' is already used by another truck in this nomination."])
+                ->with('edit_error_truck_id', $truck->id);
+        }
+
         return back()->with('status', 'Truck updated.');
     }
 
@@ -288,7 +307,17 @@ class ImportNominationController extends Controller
             ->flip()
             ->all();
 
-        $seenInBatch = []; // track regs encountered within this upload
+        // Pre-load trailer_regs already saved for this nomination (non-null, case-insensitive)
+        $existingTrailerRegs = ImportTruck::where('nomination_id', $nomination->id)
+            ->whereNotNull('trailer_reg')
+            ->where('trailer_reg', '!=', '')
+            ->pluck('trailer_reg')
+            ->map(fn($r) => strtolower(trim($r)))
+            ->flip()
+            ->all();
+
+        $seenInBatch        = []; // track truck_regs encountered within this upload
+        $seenTrailersInBatch = []; // track trailer_regs encountered within this upload
 
         // ── Pass 1: validate every row, collect valid ones ──────────────────
         foreach ($rows as $i => $row) {
@@ -324,11 +353,32 @@ class ImportNominationController extends Controller
 
             $seenInBatch[$regKey] = true;
 
+            $trailerReg    = substr(trim((string) ($row['trailer_reg'] ?? '')), 0, 40) ?: null;
+            $trailerRegKey = $trailerReg !== null ? strtolower($trailerReg) : null;
+
+            if ($trailerRegKey !== null) {
+                if (isset($existingTrailerRegs[$trailerRegKey])) {
+                    $skipped++;
+                    $errors[] = ['row' => $i + 2, 'messages' => ["Trailer Reg '{$trailerReg}' already exists in this nomination"]];
+                    unset($seenInBatch[$regKey]);
+                    continue;
+                }
+
+                if (isset($seenTrailersInBatch[$trailerRegKey])) {
+                    $skipped++;
+                    $errors[] = ['row' => $i + 2, 'messages' => ["Trailer Reg '{$trailerReg}' is duplicated in this upload"]];
+                    unset($seenInBatch[$regKey]);
+                    continue;
+                }
+
+                $seenTrailersInBatch[$trailerRegKey] = true;
+            }
+
             $validRows[] = [
                 'company_id'      => $cid,
                 'nomination_id'   => $nomination->id,
                 'truck_reg'       => $truckReg,
-                'trailer_reg'     => substr(trim((string) ($row['trailer_reg']     ?? '')), 0, 40)  ?: null,
+                'trailer_reg'     => $trailerReg,
                 'driver_name'     => $driverName,
                 'driver_passport' => substr(trim((string) ($row['driver_passport'] ?? '')), 0, 60)  ?: null,
                 'driver_license'  => substr(trim((string) ($row['driver_license']  ?? '')), 0, 60)  ?: null,

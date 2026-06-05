@@ -1,0 +1,24 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('import_trucks', function (Blueprint $table) {
+            // PostgreSQL treats each NULL as distinct, so only non-null
+            // trailer_reg values are checked for uniqueness within a nomination.
+            $table->unique(['nomination_id', 'trailer_reg'], 'import_trucks_nomination_trailer_reg_unique');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('import_trucks', function (Blueprint $table) {
+            $table->dropUnique('import_trucks_nomination_trailer_reg_unique');
+        });
+    }
+};

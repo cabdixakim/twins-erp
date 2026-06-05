@@ -474,7 +474,10 @@
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
             <input type="text" name="trailer_reg" value="{{ old('trailer_reg') }}" placeholder="e.g. TRLR-001" maxlength="40"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                   class="w-full h-10 rounded-xl border {{ $errors->has('trailer_reg') && !session('edit_error_truck_id') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            @if($errors->has('trailer_reg') && !session('edit_error_truck_id'))
+              <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
+            @endif
           </div>
         </div>
         <div>
@@ -550,8 +553,11 @@
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
-              <input type="text" name="trailer_reg" value="{{ $truck->trailer_reg }}" maxlength="40"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+              <input type="text" name="trailer_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('trailer_reg', $truck->trailer_reg) : $truck->trailer_reg }}" maxlength="40"
+                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+              @if(session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg'))
+                <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
+              @endif
             </div>
           </div>
           <div>
@@ -994,9 +1000,14 @@
   const btnAdd = document.getElementById('btnAddTruck');
   if (btnAdd) btnAdd.addEventListener('click', () => openTruckModal('addTruckModal'));
 
-  // Auto-open add-truck modal if server returned a truck_reg validation error
-  @if ($errors->has('truck_reg'))
+  // Auto-open add-truck modal if server returned a truck_reg or trailer_reg validation error (add form only)
+  @if (($errors->has('truck_reg') || $errors->has('trailer_reg')) && !session('edit_error_truck_id'))
   openTruckModal('addTruckModal');
+  @endif
+
+  // Auto-open the correct edit-truck modal on a trailer_reg / truck_reg validation error from updateTruck
+  @if (session('edit_error_truck_id'))
+  openTruckModal('editTruckModal-{{ session('edit_error_truck_id') }}');
   @endif
 
   // ESC closes all truck modals
