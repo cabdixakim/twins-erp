@@ -1551,7 +1551,8 @@
       const importedParam = (result.importedIds && result.importedIds.length > 0)
         ? '?imported=' + result.importedIds.join(',')
         : '';
-      setTimeout(() => { closeWizard(); window.location.href = window.location.pathname + importedParam + '#truck-table-section'; }, 1800);
+      const reloadDelay = (result.errors && result.errors.length > 0) ? 6000 : 1800;
+      setTimeout(() => { closeWizard(); window.location.href = window.location.pathname + importedParam + '#truck-table-section'; }, reloadDelay);
     } catch (err) {
       nextBtn.disabled = false;
       updateImportButton();
