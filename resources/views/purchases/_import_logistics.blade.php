@@ -1281,17 +1281,17 @@
     nextBtn.disabled   = true;
     nextBtn.textContent = 'Importing…';
 
-    const ready = importRows
-      .filter(r => r.truck_reg.trim() && r.driver_name.trim() && parseFloat(r.capacity) > 0)
-      .map(r => ({
-        truck_reg:       r.truck_reg.trim(),
-        trailer_reg:     r.trailer_reg.trim(),
-        driver_name:     r.driver_name.trim(),
-        driver_passport: r.driver_passport.trim(),
-        driver_license:  r.driver_license.trim(),
-        driver_phone:    r.driver_phone.trim(),
-        capacity:        parseFloat(r.capacity),
-      }));
+    // Send every row to the server — it validates and classifies each one,
+    // returning the true committed/skipped split.
+    const allRows = importRows.map(r => ({
+      truck_reg:       r.truck_reg.trim(),
+      trailer_reg:     r.trailer_reg.trim(),
+      driver_name:     r.driver_name.trim(),
+      driver_passport: r.driver_passport.trim(),
+      driver_license:  r.driver_license.trim(),
+      driver_phone:    r.driver_phone.trim(),
+      capacity:        r.capacity.trim() === '' ? null : parseFloat(r.capacity),
+    }));
 
     try {
       const resp   = await fetch(IMPORT_URL, {
@@ -1301,7 +1301,7 @@
           'Accept':       'application/json',
           'X-CSRF-TOKEN': CSRF,
         },
-        body: JSON.stringify({ rows: ready }),
+        body: JSON.stringify({ rows: allRows }),
       });
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error || 'Server error ' + resp.status);

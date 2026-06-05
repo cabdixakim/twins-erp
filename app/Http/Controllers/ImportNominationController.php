@@ -272,37 +272,45 @@ class ImportNominationController extends Controller
         $committed = 0;
         $skipped   = 0;
         $errors    = [];
+        $validRows = [];
 
-        DB::transaction(function () use ($rows, $cid, $nomination, &$committed, &$skipped, &$errors) {
-            foreach ($rows as $i => $row) {
-                $truckReg   = trim((string) ($row['truck_reg']   ?? ''));
-                $driverName = trim((string) ($row['driver_name'] ?? ''));
-                $capacity   = is_numeric($row['capacity'] ?? '') ? (float) $row['capacity'] : 0;
+        // ── Pass 1: validate every row, collect valid ones ──────────────────
+        foreach ($rows as $i => $row) {
+            $truckReg   = substr(trim((string) ($row['truck_reg']   ?? '')), 0, 40);
+            $driverName = substr(trim((string) ($row['driver_name'] ?? '')), 0, 150);
+            $rawCap     = $row['capacity'] ?? '';
+            $capacity   = is_numeric($rawCap) ? (float) $rawCap : 0;
 
-                $rowErrors = [];
-                if ($truckReg === '')  $rowErrors[] = 'Truck Reg required';
-                if ($driverName === '') $rowErrors[] = 'Driver Name required';
-                if ($capacity <= 0)    $rowErrors[] = 'Capacity must be > 0';
+            $rowErrors = [];
+            if ($truckReg === '')   $rowErrors[] = 'Truck Reg required';
+            if ($driverName === '') $rowErrors[] = 'Driver Name required';
+            if ($capacity <= 0)    $rowErrors[] = 'Capacity must be > 0';
 
-                if (!empty($rowErrors)) {
-                    $skipped++;
-                    $errors[] = ['row' => $i + 2, 'messages' => $rowErrors];
-                    continue;
-                }
+            if (!empty($rowErrors)) {
+                $skipped++;
+                $errors[] = ['row' => $i + 2, 'messages' => $rowErrors];
+                continue;
+            }
 
-                ImportTruck::create([
-                    'company_id'      => $cid,
-                    'nomination_id'   => $nomination->id,
-                    'truck_reg'       => $truckReg,
-                    'trailer_reg'     => trim((string) ($row['trailer_reg']     ?? '')) ?: null,
-                    'driver_name'     => $driverName,
-                    'driver_passport' => trim((string) ($row['driver_passport'] ?? '')) ?: null,
-                    'driver_license'  => trim((string) ($row['driver_license']  ?? '')) ?: null,
-                    'driver_phone'    => trim((string) ($row['driver_phone']    ?? '')) ?: null,
-                    'capacity'        => $capacity,
-                    'status'          => 'nominated',
-                    'created_by'      => auth()->id(),
-                ]);
+            $validRows[] = [
+                'company_id'      => $cid,
+                'nomination_id'   => $nomination->id,
+                'truck_reg'       => $truckReg,
+                'trailer_reg'     => substr(trim((string) ($row['trailer_reg']     ?? '')), 0, 40)  ?: null,
+                'driver_name'     => $driverName,
+                'driver_passport' => substr(trim((string) ($row['driver_passport'] ?? '')), 0, 60)  ?: null,
+                'driver_license'  => substr(trim((string) ($row['driver_license']  ?? '')), 0, 60)  ?: null,
+                'driver_phone'    => substr(trim((string) ($row['driver_phone']    ?? '')), 0, 30)  ?: null,
+                'capacity'        => $capacity,
+                'status'          => 'nominated',
+                'created_by'      => auth()->id(),
+            ];
+        }
+
+        // ── Pass 2: insert only validated rows in a single transaction ───────
+        DB::transaction(function () use ($validRows, &$committed) {
+            foreach ($validRows as $data) {
+                ImportTruck::create($data);
                 $committed++;
             }
         });
