@@ -125,24 +125,74 @@ State machine: `draft → confirmed → nominated → received`
 
 ---
 
-## Database Tables (key ones)
+## Database Tables (complete map)
 
+> Full schema detail: `docs/schema-roadmap.md`
+
+### Core
 | Table | Purpose |
 |---|---|
-| `companies` | Multi-tenant anchor; has `costing_method`, `weighted_avg_cost` |
+| `companies` | Multi-tenant anchor; `costing_method`, `accounting_enabled`, `inventory_periods_enabled` |
 | `users` | Auth; `active_company_id` FK |
-| `products` | Fuel products per company |
-| `depots` | Physical depots + CROSS DOCK system depot |
-| `depot_stock` | Running stock by (company, depot, product, batch) |
-| `batches` | Shipment/lot tracking; `qty_ordered`, `qty_received`, `qty_remaining` |
-| `purchases` | 3 types: `local_depot`, `cross_dock`, `import`; statuses: draft/confirmed/received/transferred/dispatched/cancelled |
-| `sales` | Sales orders |
+| `company_user` | M2M users ↔ companies |
+
+### Inventory
+| Table | Purpose |
+|---|---|
+| `products` | Fuel products per company; `allowed_loss_pct` for import shortfall default |
+| `depots` | Physical depots + CROSS DOCK system depot (`is_system=true`) |
+| `depot_stocks` | Running stock by (company, depot, product, batch) |
+| `batches` | Shipment/lot tracking; `qty_purchased`, `qty_received`, `qty_remaining` |
 | `inventory_periods` | Accounting periods with costing method + status (open/closed/paused) |
-| `inventory_movements` | All stock in/out; `type`: receipt/issue/adjustment/transfer; `ref_type`/`ref_id` for source linking |
+| `inventory_movements` | All stock in/out; `type`: receipt/issue/adjustment/transfer |
 | `inventory_consumptions` | COGS breakdown per issue movement (FIFO lots) |
+
+### Purchases
+| Table | Purpose |
+|---|---|
+| `purchases` | 3 types: `local_depot`, `cross_dock`, `import`; 8 statuses |
+| `import_nominations` | Transporter + rate setup per import purchase |
+| `import_trucks` | Truck-level tracking with full milestone timestamps |
+| `batch_costs` | Landed costs (freight, duty, border charges) per batch |
+
+### Sales & Clients
+| Table | Purpose |
+|---|---|
+| `sales` | Sales orders; `client_id` FK + `batch_id` FK for specific_lot costing |
+| `clients` | Client master per company |
+
+### Suppliers & Transporters
+| Table | Purpose |
+|---|---|
 | `suppliers` | Supplier master per company |
 | `transporters` | Transporter master per company |
-| `roles`, `permissions`, `role_permissions`, `user_roles` | RBAC |
+| `transporter_ledger_entries` | All financial transactions against a transporter (advances, charges, payments) |
+
+### Petty Cash
+| Table | Purpose |
+|---|---|
+| `petty_cash_accounts` | Float accounts per company |
+| `petty_cash_transactions` | All movements in/out of a petty cash account |
+
+### Bulk Import Framework
+| Table | Purpose |
+|---|---|
+| `import_jobs` | Staging table for any bulk upload (Excel/CSV) |
+| `import_job_rows` | Per-row validation state with jsonb raw/mapped data |
+
+### Accounting (schema-only — inert until `companies.accounting_enabled = true`)
+| Table | Purpose |
+|---|---|
+| `chart_of_accounts` | G/L account hierarchy (asset/liability/equity/revenue/expense) |
+| `journals` | Journal definitions (general/purchase/sale/cash/bank) |
+| `journal_entries` | Double-entry journal entries; ties to inventory_periods |
+| `journal_entry_lines` | Debit/credit lines per entry |
+| `bank_accounts` | Bank accounts with optional G/L link |
+
+### RBAC
+| Table | Purpose |
+|---|---|
+| `roles`, `permissions`, `role_permission`, `user_roles` | Role-based access control |
 
 ---
 

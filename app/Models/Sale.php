@@ -42,4 +42,14 @@ class Sale extends Model
     {
         return $this->belongsTo(InventoryMovement::class, 'inventory_movement_id');
     }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
+    }
 }

@@ -19,6 +19,9 @@ class Company extends Model
         'country',
         'timezone',
         'costing_method',
+        'weighted_avg_cost',
+        'accounting_enabled',
+        'inventory_periods_enabled',
         'inventory_posting_paused',
         'posting_paused_at',
         'posting_paused_by',
@@ -26,8 +29,11 @@ class Company extends Model
     ];
 
     protected $casts = [
-        'inventory_posting_paused' => 'boolean',
-        'posting_paused_at'        => 'datetime',
+        'inventory_posting_paused'  => 'boolean',
+        'posting_paused_at'         => 'datetime',
+        'weighted_avg_cost'         => 'float',
+        'accounting_enabled'        => 'boolean',
+        'inventory_periods_enabled' => 'boolean',
     ];
 
 
