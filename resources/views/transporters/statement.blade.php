@@ -170,31 +170,11 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
         Export CSV
     </a>
-    <button type="button" id="printBtn" class="btn btn-dark">
+    <button type="button" onclick="window.print()" class="btn btn-dark">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
-        <span id="printBtnLabel">Print / Save as PDF</span>
+        Print / Save as PDF
     </button>
 </div>
-
-<script>
-(function(){
-    var btn = document.getElementById('printBtn');
-    var lbl = document.getElementById('printBtnLabel');
-    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    if (isMobile && navigator.share) {
-        lbl.textContent = 'Share / Save as PDF';
-        btn.addEventListener('click', function(){
-            navigator.share({
-                title: document.title,
-                url: window.location.href
-            }).catch(function(){ window.print(); });
-        });
-    } else {
-        btn.addEventListener('click', function(){ window.print(); });
-    }
-})();
-</script>
 
 <div class="page">
 
