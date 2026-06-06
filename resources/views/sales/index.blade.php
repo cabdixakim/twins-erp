@@ -50,10 +50,19 @@
         <div class="mt-1 text-xs {{ $muted }}">Select a sale to view details.</div>
       </div>
 
-      <button type="button" id="btnNewSale"
-        class="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 hover:border-emerald-700 transition">
-        + New
-      </button>
+      <div class="flex items-center gap-2">
+        <a href="{{ route('sales.export') }}"
+           class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          Export
+        </a>
+        <button type="button" id="btnNewSale"
+          class="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 hover:border-emerald-700 transition">
+          + New
+        </button>
+      </div>
     </div>
 
     <div class="mt-4 space-y-2">

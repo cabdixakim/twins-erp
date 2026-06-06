@@ -87,6 +87,8 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
         Route::get('/depot-stock', [DepotStockController::class, 'index'])
             ->name('depot-stock.index');
+        Route::get('/depot-stock/export', [DepotStockController::class, 'exportCsv'])
+            ->name('depot-stock.export');
 
         Route::prefix('settings')->name('settings.')->group(function () {
 
@@ -129,6 +131,7 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
                 ->name('inventory.update-costing');
 
             Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+            Route::get('/clients/export', [ClientController::class, 'exportCsv'])->name('clients.export');
             Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
             Route::patch('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::patch('/clients/{client}/toggle-active', [ClientController::class, 'toggleActive'])->name('clients.toggle-active');
@@ -147,6 +150,7 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
         // Purchases (was ago-purchases)
         Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('/purchases/export', [PurchaseController::class, 'exportCsv'])->name('purchases.export');
         Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
         Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
@@ -219,15 +223,20 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
         // Clients moved to settings group above
 
-        // Transporter ledger (balance, entries, payments)
+        // Transporter ledger (balance, entries, payments, statement, export)
         Route::get('/transporters', [TransporterLedgerController::class, 'index'])
             ->name('transporters.index');
+        Route::get('/transporters/{transporter}/statement', [TransporterLedgerController::class, 'statement'])
+            ->name('transporters.statement');
+        Route::get('/transporters/{transporter}/export', [TransporterLedgerController::class, 'exportCsv'])
+            ->name('transporters.export');
         Route::get('/transporters/{transporter}', [TransporterLedgerController::class, 'show'])
             ->name('transporters.show');
         Route::post('/transporters/{transporter}/payments', [TransporterLedgerController::class, 'recordPayment'])
             ->name('transporters.payments.store');
 
         // Sales (company-scoped)
+        Route::get('/sales/export', [SalesController::class, 'exportCsv'])->name('sales.export');
         Route::resource('sales', SalesController::class)->only(['index','store','update']);
         Route::post('sales/{sale}/post', [SalesController::class, 'post'])->name('sales.post');
     

@@ -29,10 +29,18 @@
         <div class="mt-0.5 text-xs {{ $muted }}">Pick a depot to view stock</div>
       </div>
 
-      {{-- optional button slot --}}
-      <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface2 }} {{ $muted }}">
-        {{ $depots->count() }} total
-      </span>
+      <div class="flex items-center gap-1.5">
+        <a href="{{ route('depot-stock.export') }}"
+           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border {{ $border }} {{ $surface2 }} text-[10px] font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition">
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          CSV
+        </a>
+        <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface2 }} {{ $muted }}">
+          {{ $depots->count() }} total
+        </span>
+      </div>
     </div>
 
     @if($depots->isEmpty())

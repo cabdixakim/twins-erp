@@ -8,6 +8,7 @@ use App\Models\Transporter;
 use App\Models\TransporterLedgerEntry;
 use App\Models\ImportTruck;
 use App\Models\ImportNomination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransporterLedgerController extends Controller
 {
@@ -134,6 +135,74 @@ class TransporterLedgerController extends Controller
         $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
             ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
+    }
+
+    public function statement(Transporter $transporter)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $transporter->company_id !== $cid, 403);
+
+        $company = DB::table('companies')->where('id', $cid)->first();
+
+        $entries = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get();
+
+        // Attach running balance
+        $running = 0;
+        foreach ($entries as $e) {
+            $running += (float) $e->amount;
+            $e->running_balance = $running;
+        }
+
+        $freightTotal     = (float) $entries->where('type', 'freight_charge')->sum('amount');
+        $advanceTotal     = abs((float) $entries->where('type', 'advance')->sum('amount'));
+        $shortChargeTotal = abs((float) $entries->where('type', 'short_charge')->sum('amount'));
+        $paymentTotal     = abs((float) $entries->where('type', 'payment')->sum('amount'));
+        $netPayable       = (float) $entries->sum('amount');
+        $currency         = $transporter->default_currency ?: 'USD';
+
+        return view('transporters.statement', compact(
+            'transporter', 'company', 'entries',
+            'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
+            'netPayable', 'currency'
+        ));
+    }
+
+    public function exportCsv(Transporter $transporter)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $transporter->company_id !== $cid, 403);
+
+        $entries = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get();
+
+        $running  = 0;
+        $filename = 'transporter-' . preg_replace('/[^a-z0-9]+/', '-', strtolower($transporter->name)) . '-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($entries, &$running) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Type', 'Description', 'Debit', 'Credit', 'Running Balance', 'Currency']);
+            foreach ($entries as $e) {
+                $running += (float) $e->amount;
+                $isDebit  = $e->amount > 0;
+                fputcsv($out, [
+                    $e->entry_date->format('Y-m-d'),
+                    $e->type,
+                    $e->description,
+                    $isDebit  ? number_format((float) $e->amount,        2, '.', '') : '',
+                    !$isDebit ? number_format(abs((float) $e->amount), 2, '.', '') : '',
+                    number_format($running, 2, '.', ''),
+                    $e->currency,
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     /**

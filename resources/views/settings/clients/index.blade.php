@@ -45,11 +45,20 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 flex flex-col gap-3">
         <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold {{ $fg }}">Clients</h2>
-            <button type="button"
-                    onclick="openClientCreateModal()"
-                    class="{{ $btnPrimary }} px-3 py-1.5 text-xs">
-                + New client
-            </button>
+            <div class="flex items-center gap-1.5">
+                <a href="{{ route('settings.clients.export') }}"
+                   class="inline-flex items-center gap-1 h-8 px-2.5 rounded-xl border {{ $border }} {{ $surface2 }} text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    CSV
+                </a>
+                <button type="button"
+                        onclick="openClientCreateModal()"
+                        class="{{ $btnPrimary }} px-3 py-1.5 text-xs">
+                    + New client
+                </button>
+            </div>
         </div>
 
         {{-- Quick search --}}

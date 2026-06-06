@@ -65,6 +65,41 @@ class SalesController extends Controller
         return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'prefill'));
     }
 
+    public function exportCsv()
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
+
+        $rows     = Sale::where('company_id', $cid)
+            ->with(['product', 'depot', 'transporter'])
+            ->latest('id')
+            ->get();
+
+        $filename = 'sales-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['ID', 'Reference', 'Sale Date', 'Status', 'Client', 'Product', 'Depot', 'Qty', 'Unit Price', 'Total', 'COGS', 'Transporter']);
+            foreach ($rows as $s) {
+                fputcsv($out, [
+                    $s->id,
+                    $s->reference ?? '',
+                    $s->sale_date ?? '',
+                    $s->status,
+                    $s->client_name ?? '',
+                    optional($s->product)->name ?? '',
+                    optional($s->depot)->name ?? '',
+                    number_format((float) $s->qty, 3, '.', ''),
+                    number_format((float) $s->unit_price, 6, '.', ''),
+                    number_format((float) $s->total, 2, '.', ''),
+                    number_format((float) $s->cogs_total, 2, '.', ''),
+                    optional($s->transporter)->name ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function store(Request $request)
     {
         $u   = auth()->user();

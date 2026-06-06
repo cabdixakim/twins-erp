@@ -87,6 +87,71 @@ class PurchaseController extends Controller
         return view('purchases.index', compact('purchases', 'supplierOptions'));
     }
 
+    public function exportCsv(Request $request)
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
+
+        $q        = trim((string) $request->query('q', ''));
+        $supplier = trim((string) $request->query('supplier', ''));
+        $type     = trim((string) $request->query('type', ''));
+        $status   = trim((string) $request->query('status', ''));
+
+        $query = Purchase::query()
+            ->where('company_id', $cid)
+            ->with(['supplier', 'product', 'depot']);
+
+        if ($q !== '') {
+            $query->where(function ($qq) use ($q) {
+                if (ctype_digit($q)) {
+                    $qq->orWhere('id', (int) $q)->orWhere('batch_id', (int) $q);
+                }
+                $qq->orWhere('id', 'like', '%' . $q . '%')
+                   ->orWhereHas('supplier', fn($s) => $s->where('name', 'like', '%' . $q . '%'));
+            });
+        }
+        if ($supplier !== '') {
+            $query->where(function ($qq) use ($supplier) {
+                if (ctype_digit($supplier)) {
+                    $qq->where('supplier_id', (int) $supplier);
+                } else {
+                    $qq->whereHas('supplier', fn($s) => $s->where('name', $supplier));
+                }
+            });
+        }
+        if ($type !== '' && in_array($type, ['import', 'local_depot', 'cross_dock'], true)) {
+            $query->where('type', $type);
+        }
+        if ($status !== '' && in_array($status, ['draft','confirmed','nominated','received','transferred','dispatched','cancelled','voided'], true)) {
+            $query->where('status', $status);
+        }
+
+        $rows     = $query->latest('id')->get();
+        $filename = 'purchases-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['ID', 'Reference', 'Date', 'Type', 'Status', 'Supplier', 'Product', 'Depot', 'Qty', 'Unit Cost', 'Est. Total', 'Currency']);
+            foreach ($rows as $p) {
+                fputcsv($out, [
+                    $p->id,
+                    $p->reference ?? '',
+                    optional($p->created_at)->format('Y-m-d') ?? '',
+                    $p->type,
+                    $p->status,
+                    optional($p->supplier)->name ?? '',
+                    optional($p->product)->name ?? '',
+                    optional($p->depot)->name ?? '',
+                    number_format((float) $p->qty, 3, '.', ''),
+                    number_format((float) $p->unit_cost, 6, '.', ''),
+                    number_format((float) $p->qty * (float) $p->unit_cost, 2, '.', ''),
+                    $p->currency ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function create()
     {
         $u = auth()->user();

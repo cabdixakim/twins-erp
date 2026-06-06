@@ -398,37 +398,9 @@
   });
 
   function exportCsv() {
-    const table = document.getElementById('purchasesTable');
-    if (!table) return;
-
-    const rows = Array.from(table.querySelectorAll('tbody tr[data-export-row="1"]'));
-    if (!rows.length) return;
-
-    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.innerText.trim());
-    headers.pop(); // remove Action
-
-    const csvEscape = (v) => {
-      const s = String(v ?? '').replace(/\r?\n|\r/g, ' ').trim();
-      if (/[",]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-
-    const data = rows.map(tr => {
-      const tds = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim());
-      tds.pop(); // remove Action
-      return tds.map(csvEscape).join(',');
-    });
-
-    const csv = [headers.map(csvEscape).join(','), ...data].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `purchases_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 500);
+    // Server-side export — respects current filters and exports ALL matching rows
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = '{{ route("purchases.export") }}?' + params.toString();
   }
 
   [

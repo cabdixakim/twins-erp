@@ -76,4 +76,36 @@ class DepotStockController extends Controller
             'recentMovements'
         ));
     }
+
+    public function exportCsv()
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
+
+        $rows = DepotStock::where('company_id', $cid)
+            ->with(['depot:id,name', 'product:id,name', 'batch:id,code,unit_cost,purchased_at'])
+            ->orderBy('depot_id')
+            ->orderByDesc('qty_on_hand')
+            ->get();
+
+        $filename = 'depot-stock-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Depot', 'Product', 'Batch Code', 'Batch Date', 'Qty On Hand', 'Qty Reserved', 'Unit Cost', 'Total Value']);
+            foreach ($rows as $r) {
+                fputcsv($out, [
+                    optional($r->depot)->name ?? '',
+                    optional($r->product)->name ?? '',
+                    optional($r->batch)->code ?? '',
+                    optional($r->batch)->purchased_at ?? '',
+                    number_format((float) $r->qty_on_hand, 3, '.', ''),
+                    number_format((float) $r->qty_reserved, 3, '.', ''),
+                    number_format((float) $r->unit_cost, 6, '.', ''),
+                    number_format((float) $r->qty_on_hand * (float) $r->unit_cost, 2, '.', ''),
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
 }

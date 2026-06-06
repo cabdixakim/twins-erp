@@ -51,6 +51,37 @@ class ClientController extends Controller
         return view('settings.clients.index', compact('clients', 'currentClient', 'q', 'status', 'type'));
     }
 
+    public function exportCsv()
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
+
+        $rows     = Client::where('company_id', $cid)->orderBy('name')->get();
+        $filename = 'clients-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Name', 'Code', 'Type', 'Country', 'City', 'Contact Person', 'Phone', 'Email', 'Currency', 'Credit Limit', 'Status', 'Notes']);
+            foreach ($rows as $c) {
+                fputcsv($out, [
+                    $c->name,
+                    $c->code ?? '',
+                    $c->type ?? '',
+                    $c->country ?? '',
+                    $c->city ?? '',
+                    $c->contact_person ?? '',
+                    $c->phone ?? '',
+                    $c->email ?? '',
+                    $c->currency ?? '',
+                    $c->credit_limit ? number_format((float) $c->credit_limit, 2, '.', '') : '',
+                    $c->is_active ? 'Active' : 'Inactive',
+                    $c->notes ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function store(Request $request)
     {
         $u   = auth()->user();
