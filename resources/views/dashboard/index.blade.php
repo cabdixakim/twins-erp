@@ -9,6 +9,90 @@
     <p class="text-sm text-slate-400">Here's a quick snapshot of what needs your attention today.</p>
   </div>
 
+  {{-- KPI row: Open Purchases + Stock on Hand --}}
+  <div>
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">At a Glance</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+      {{-- Open Purchases card --}}
+      <a href="{{ route('purchases.index') }}"
+         class="group block bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow shadow-emerald-500/5 hover:border-emerald-500/40 hover:shadow-emerald-500/10 transition-all">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              {{-- shopping bag / purchase icon --}}
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs text-slate-400 mb-1">Open Purchases</p>
+              <p class="text-2xl font-bold text-emerald-400">{{ number_format($openPurchasesCount) }}</p>
+            </div>
+          </div>
+          <svg class="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition-colors flex-shrink-0 ml-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+          </svg>
+        </div>
+        @if($openByStatus->isNotEmpty())
+          <div class="mt-4 border-t border-slate-800 pt-4 flex flex-wrap gap-x-4 gap-y-1">
+            @foreach(['draft' => 'slate', 'confirmed' => 'emerald', 'nominated' => 'amber'] as $st => $color)
+              @if($openByStatus->has($st))
+                <div class="flex items-center gap-1.5 text-sm">
+                  <span class="w-2 h-2 rounded-full bg-{{ $color }}-400 flex-shrink-0"></span>
+                  <span class="text-slate-400 capitalize">{{ $st }}</span>
+                  <span class="font-semibold text-slate-200">{{ $openByStatus[$st] }}</span>
+                </div>
+              @endif
+            @endforeach
+          </div>
+        @else
+          <p class="mt-3 text-xs text-slate-500">No open purchases — all orders are finalised.</p>
+        @endif
+      </a>
+
+      {{-- Stock on Hand card --}}
+      <a href="{{ route('depot-stock.index') }}"
+         class="group block bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow shadow-sky-500/5 hover:border-sky-500/40 hover:shadow-sky-500/10 transition-all">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
+              {{-- cylinder / tank icon --}}
+              <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs text-slate-400 mb-1">Stock on Hand</p>
+              <p class="text-2xl font-bold text-sky-400">{{ number_format($totalStockOnHand, 0) }} <span class="text-sm font-semibold text-sky-400/70">L</span></p>
+            </div>
+          </div>
+          <svg class="w-4 h-4 text-slate-600 group-hover:text-sky-400 transition-colors flex-shrink-0 ml-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+          </svg>
+        </div>
+        @if($depotStockRows->isNotEmpty())
+          <div class="mt-4 border-t border-slate-800 pt-4 space-y-2">
+            @foreach($depotStockRows as $row)
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-300 truncate max-w-[60%]">{{ $row->depot_name }}</span>
+                <span class="font-semibold text-sky-300">
+                  {{ number_format($row->total_qty, 0) }}
+                  <span class="text-xs font-medium text-sky-400/70 ml-0.5">L</span>
+                </span>
+              </div>
+            @endforeach
+          </div>
+        @else
+          <p class="mt-3 text-xs text-slate-500">No stock on hand — depots are empty.</p>
+        @endif
+      </a>
+
+    </div>
+  </div>
+
   {{-- Outstanding Freight Payables --}}
   <div>
     <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Freight Payables</h2>

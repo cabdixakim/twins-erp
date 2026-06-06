@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use App\Models\TransporterLedgerEntry;
 use App\Models\Transporter;
+use App\Models\Purchase;
+use App\Models\DepotStock;
+use App\Models\Depot;
 
 class DashboardController extends Controller {
     public function index() {
@@ -39,6 +42,35 @@ class DashboardController extends Controller {
             ])->values();
         }
 
-        return view('dashboard.index', compact('byCurrency', 'topTransporters'));
+        // Open purchases: draft + confirmed
+        $openPurchasesCount = Purchase::where('company_id', $cid)
+            ->whereIn('status', ['draft', 'confirmed', 'nominated'])
+            ->count();
+
+        $openByStatus = Purchase::where('company_id', $cid)
+            ->whereIn('status', ['draft', 'confirmed', 'nominated'])
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
+
+        // Stock on hand by depot (exclude system depots like CROSS DOCK)
+        $depotStockRows = DepotStock::where('depot_stocks.company_id', $cid)
+            ->join('depots', 'depots.id', '=', 'depot_stocks.depot_id')
+            ->where('depots.is_system', false)
+            ->selectRaw('depots.id as depot_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as total_qty')
+            ->groupBy('depots.id', 'depots.name')
+            ->orderBy('depots.name')
+            ->get();
+
+        $totalStockOnHand = $depotStockRows->sum('total_qty');
+
+        return view('dashboard.index', compact(
+            'byCurrency',
+            'topTransporters',
+            'openPurchasesCount',
+            'openByStatus',
+            'depotStockRows',
+            'totalStockOnHand'
+        ));
     }
 }
