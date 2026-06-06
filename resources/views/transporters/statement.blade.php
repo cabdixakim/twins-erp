@@ -174,7 +174,8 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
             <div class="ib-sub">
                 {{ $transporter->type === 'intl' ? 'International' : 'Local' }} transporter
                 @if($transporter->country) &middot; {{ $transporter->country }}@endif
-                @if($transporter->contact_person)<br>{{ $transporter->contact_person }}@if($transporter->phone) &middot; {{ $transporter->phone }}@endif@endif
+                @if($transporter->contact_person)<br>{{ $transporter->contact_person }}@if($transporter->phone) &middot; {{ $transporter->phone }}@endif
+                @endif
             </div>
         </div>
         <div class="info-block">
