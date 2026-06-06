@@ -260,13 +260,17 @@ class ImportNominationController extends Controller
             return back()->with('error', 'Invalid depot selected.');
         }
 
+        // Rate divisor depends on company volume unit: L → per 1000 units; M3 → per 1 unit
+        $volumeUnit  = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+        $rateDivisor = ($volumeUnit === 'M3') ? 1 : 1000;
+
         $qtyLoaded       = (float) $truck->qty_loaded;
         $qtyDelivered    = (float) $data['qty_delivered'];
         $lossPct         = (float) $nomination->allowed_loss_pct / 100;
         $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
         $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
         $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
-        $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / 1000), 2);
+        $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
 
         $truck->update(array_merge($data, [
             'status'           => 'delivered',
@@ -283,7 +287,7 @@ class ImportNominationController extends Controller
                 ->where('id', $nomination->transporter_id)
                 ->value('default_currency') ?? 'USD';
 
-            $freightAmt = round($qtyDelivered * ((float) $nomination->rate_per_1000l / 1000), 2);
+            $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
 
             if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)
                     ->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
@@ -293,7 +297,7 @@ class ImportNominationController extends Controller
                     'type'           => 'freight_charge',
                     'amount'         => $freightAmt,
                     'currency'       => $ledgerCurrency,
-                    'description'    => "Freight for truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
+                    'description'    => "Freight for truck {$truck->truck_reg} — {$qtyLoaded} {$volumeUnit} loaded",
                     'entry_date'     => $data['delivery_date'],
                     'ref_type'       => ImportTruck::class,
                     'ref_id'         => $truck->id,

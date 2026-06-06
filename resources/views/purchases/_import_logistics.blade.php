@@ -6,8 +6,9 @@
 @php
   $nom  = $importNomination;   // shorthand
   $trucks = $nom ? $nom->trucks : collect();
-  $unitLabel  = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
-  $rateLabel  = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/1000L';
+  $unitLabel   = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
+  $rateLabel   = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/1000L';
+  $rateDivisor = ($volumeUnit ?? 'L') === 'M3' ? 1 : 1000;
 
   // Summary totals — loading_failed trucks excluded from nominated capacity
   $failedCount    = $trucks->where('status', 'loading_failed')->count();
@@ -18,8 +19,8 @@
   $qtyDelivered   = $deliveredTrucks->sum('qty_delivered');
   $remainingAtShipper = max(0, $qty - $qtyLoaded);
 
-  // Financial
-  $grossPayable        = $nom ? ($qtyLoaded * (float)$nom->rate_per_1000l / 1000) : 0;
+  // Financial — gross uses qty loaded (transporter is paid on loaded; shortfall handled separately)
+  $grossPayable        = $nom ? ($qtyLoaded * (float)$nom->rate_per_1000l / $rateDivisor) : 0;
   $totalShortCharge    = $deliveredTrucks->sum('shortfall_charge');
   $netPayable          = $grossPayable - (float)($nom->advances ?? 0) - $totalShortCharge;
 
@@ -809,7 +810,7 @@
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-green-500/40" />
           </div>
           <div class="alert-warn rounded-xl p-3 text-xs">
-            Shortfall beyond {{ $nom->allowed_loss_pct }}% will be charged at {{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} / 1000 L.
+            Shortfall beyond {{ $nom->allowed_loss_pct }}% will be charged at {{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} {{ $rateLabel }} of excess loss.
           </div>
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
