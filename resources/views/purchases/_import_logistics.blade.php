@@ -2007,7 +2007,8 @@
       const pauseBtn   = document.getElementById('wiPauseBtn');
       const errorsWrap2 = document.getElementById('wiSkippedErrors');
       const hasErrors  = result.errors && result.errors.length > 0;
-      const reloadDelay = hasErrors ? 6000 : 1800;
+      const errorCount  = hasErrors ? result.errors.length : 0;
+      const reloadDelay = hasErrors ? Math.min(15000, 3000 + errorCount * 500) : 1800;
 
       // Show the Pause button only when there are errors worth pausing for
       if (hasErrors && pauseBtn) pauseBtn.classList.remove('hidden');
