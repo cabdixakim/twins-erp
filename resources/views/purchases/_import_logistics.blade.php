@@ -1060,12 +1060,20 @@
   const btnAdd = document.getElementById('btnAddTruck');
   if (btnAdd) btnAdd.addEventListener('click', () => openTruckModal('addTruckModal'));
 
-  // ── Live conflict detection for Add Truck modal ───────────────────────────
+  // ── Shared truck registry — single source of truth for all conflict checks ─
+  // Keyed by truck id (string) → { truckReg, trailerReg } (lower-cased, trimmed).
+  // Edit Truck modals update this on every keystroke and revert it on cancel/ESC,
+  // so cross-modal conflict detection is always current without a page reload.
   @if($nom)
-  (function () {
-    const TRUCK_REGS   = new Set(@json($trucks->pluck('truck_reg')->filter()->map(fn($r) => strtolower(trim($r)))->values()->all()));
-    const TRAILER_REGS = new Set(@json($trucks->pluck('trailer_reg')->filter(fn($r) => $r !== null && trim($r) !== '')->map(fn($r) => strtolower(trim($r)))->values()->all()));
+  window._truckRegistry = @json(
+    $trucks->mapWithKeys(fn($t) => [(string) $t->id => [
+      'truckReg'   => strtolower(trim($t->truck_reg   ?? '')),
+      'trailerReg' => strtolower(trim($t->trailer_reg ?? '')),
+    ]])->all()
+  );
 
+  // ── Live conflict detection for Add Truck modal ───────────────────────────
+  (function () {
     const truckInput   = document.getElementById('addTruckRegInput');
     const trailerInput = document.getElementById('addTrailerRegInput');
     const truckWarn    = document.getElementById('addTruckRegConflict');
@@ -1074,9 +1082,12 @@
 
     if (!truckInput || !trailerInput || !truckWarn || !trailerWarn || !submitBtn) return;
 
-    function checkField(input, warn, existingSet, label) {
+    function getTruckRegs()   { return new Set(Object.values(window._truckRegistry).map(function(r){ return r.truckReg;   }).filter(Boolean)); }
+    function getTrailerRegs() { return new Set(Object.values(window._truckRegistry).map(function(r){ return r.trailerReg; }).filter(Boolean)); }
+
+    function checkField(input, warn, getSet, label) {
       const val = input.value.trim().toLowerCase();
-      const conflict = val !== '' && existingSet.has(val);
+      const conflict = val !== '' && getSet().has(val);
       if (conflict) {
         warn.textContent = label + ' already exists in this nomination.';
         warn.classList.remove('hidden');
@@ -1095,47 +1106,54 @@
     }
 
     ['input', 'blur'].forEach(function (ev) {
-      truckInput.addEventListener(ev,   function () { checkField(truckInput,   truckWarn,   TRUCK_REGS,   'This truck reg'); });
-      trailerInput.addEventListener(ev, function () { checkField(trailerInput, trailerWarn, TRAILER_REGS, 'This trailer reg'); });
+      truckInput.addEventListener(ev,   function () { checkField(truckInput,   truckWarn,   getTruckRegs,   'This truck reg'); });
+      trailerInput.addEventListener(ev, function () { checkField(trailerInput, trailerWarn, getTrailerRegs, 'This trailer reg'); });
     });
 
     // Check pre-filled values immediately (e.g. after a server-side validation error re-opens the modal)
-    checkField(truckInput,   truckWarn,   TRUCK_REGS,   'This truck reg');
-    checkField(trailerInput, trailerWarn, TRAILER_REGS, 'This trailer reg');
+    checkField(truckInput,   truckWarn,   getTruckRegs,   'This truck reg');
+    checkField(trailerInput, trailerWarn, getTrailerRegs, 'This trailer reg');
   })();
 
   // ── Live conflict detection for each Edit Truck modal ────────────────────
   @foreach($trucks->filter(fn($t) => in_array($t->status, ['nominated', 'loading_failed'])) as $truck)
   (function () {
-    // Build sets excluding this truck's own current values
-    const OTHER_TRUCK_REGS   = new Set(@json(
-      $trucks->filter(fn($t) => $t->id !== $truck->id)
-             ->pluck('truck_reg')
-             ->filter()
-             ->map(fn($r) => strtolower(trim($r)))
-             ->values()
-             ->all()
-    ));
-    const OTHER_TRAILER_REGS = new Set(@json(
-      $trucks->filter(fn($t) => $t->id !== $truck->id)
-             ->pluck('trailer_reg')
-             ->filter(fn($r) => $r !== null && trim($r) !== '')
-             ->map(fn($r) => strtolower(trim($r)))
-             ->values()
-             ->all()
-    ));
+    const TRUCK_ID = '{{ $truck->id }}';
 
-    const truckInput   = document.getElementById('editTruckRegInput-{{ $truck->id }}');
-    const trailerInput = document.getElementById('editTrailerRegInput-{{ $truck->id }}');
-    const truckWarn    = document.getElementById('editTruckRegConflict-{{ $truck->id }}');
-    const trailerWarn  = document.getElementById('editTrailerRegConflict-{{ $truck->id }}');
-    const submitBtn    = document.getElementById('editTruckSubmitBtn-{{ $truck->id }}');
+    // Snapshot the values at page-load time so we can revert the registry on cancel/ESC
+    const origTruckReg   = window._truckRegistry[TRUCK_ID] ? window._truckRegistry[TRUCK_ID].truckReg   : '';
+    const origTrailerReg = window._truckRegistry[TRUCK_ID] ? window._truckRegistry[TRUCK_ID].trailerReg : '';
 
-    if (!truckInput || !trailerInput || !truckWarn || !trailerWarn || !submitBtn) return;
+    const truckInput   = document.getElementById('editTruckRegInput-'    + TRUCK_ID);
+    const trailerInput = document.getElementById('editTrailerRegInput-'  + TRUCK_ID);
+    const truckWarn    = document.getElementById('editTruckRegConflict-'   + TRUCK_ID);
+    const trailerWarn  = document.getElementById('editTrailerRegConflict-' + TRUCK_ID);
+    const submitBtn    = document.getElementById('editTruckSubmitBtn-'   + TRUCK_ID);
+    const modalEl      = document.getElementById('editTruckModal-'       + TRUCK_ID);
 
-    function checkEditField(input, warn, existingSet, label) {
+    if (!truckInput || !trailerInput || !truckWarn || !trailerWarn || !submitBtn || !modalEl) return;
+
+    // Read the other trucks' regs fresh from the registry each time a field is checked
+    function getOtherTruckRegs() {
+      return new Set(
+        Object.entries(window._truckRegistry)
+          .filter(function(e){ return e[0] !== TRUCK_ID; })
+          .map(function(e){ return e[1].truckReg; })
+          .filter(Boolean)
+      );
+    }
+    function getOtherTrailerRegs() {
+      return new Set(
+        Object.entries(window._truckRegistry)
+          .filter(function(e){ return e[0] !== TRUCK_ID; })
+          .map(function(e){ return e[1].trailerReg; })
+          .filter(Boolean)
+      );
+    }
+
+    function checkEditField(input, warn, getSet, label) {
       const val = input.value.trim().toLowerCase();
-      const conflict = val !== '' && existingSet.has(val);
+      const conflict = val !== '' && getSet().has(val);
       if (conflict) {
         warn.textContent = label + ' already exists in this nomination.';
         warn.classList.remove('hidden');
@@ -1152,14 +1170,41 @@
       submitBtn.disabled = !truckWarn.classList.contains('hidden') || !trailerWarn.classList.contains('hidden');
     }
 
+    // Update the registry as the user types so other open modals see current values immediately
+    truckInput.addEventListener('input', function () {
+      if (window._truckRegistry[TRUCK_ID]) {
+        window._truckRegistry[TRUCK_ID].truckReg = truckInput.value.trim().toLowerCase();
+      }
+    });
+    trailerInput.addEventListener('input', function () {
+      if (window._truckRegistry[TRUCK_ID]) {
+        window._truckRegistry[TRUCK_ID].trailerReg = trailerInput.value.trim().toLowerCase();
+      }
+    });
+
+    // Revert the registry entry when the modal is dismissed without saving,
+    // so cancelled edits don't pollute conflict checks in other modals
+    function revertRegistry() {
+      if (window._truckRegistry[TRUCK_ID]) {
+        window._truckRegistry[TRUCK_ID].truckReg   = origTruckReg;
+        window._truckRegistry[TRUCK_ID].trailerReg = origTrailerReg;
+      }
+    }
+    modalEl.querySelectorAll('[onclick*="closeTruckModal"]').forEach(function(btn) {
+      btn.addEventListener('click', revertRegistry);
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) revertRegistry();
+    });
+
     ['input', 'blur'].forEach(function (ev) {
-      truckInput.addEventListener(ev,   function () { checkEditField(truckInput,   truckWarn,   OTHER_TRUCK_REGS,   'This truck reg'); });
-      trailerInput.addEventListener(ev, function () { checkEditField(trailerInput, trailerWarn, OTHER_TRAILER_REGS, 'This trailer reg'); });
+      truckInput.addEventListener(ev,   function () { checkEditField(truckInput,   truckWarn,   getOtherTruckRegs,   'This truck reg'); });
+      trailerInput.addEventListener(ev, function () { checkEditField(trailerInput, trailerWarn, getOtherTrailerRegs, 'This trailer reg'); });
     });
 
     // Check pre-filled values immediately (e.g. after a server-side validation error re-opens the modal)
-    checkEditField(truckInput,   truckWarn,   OTHER_TRUCK_REGS,   'This truck reg');
-    checkEditField(trailerInput, trailerWarn, OTHER_TRAILER_REGS, 'This trailer reg');
+    checkEditField(truckInput,   truckWarn,   getOtherTruckRegs,   'This truck reg');
+    checkEditField(trailerInput, trailerWarn, getOtherTrailerRegs, 'This trailer reg');
   })();
   @endforeach
   @endif
