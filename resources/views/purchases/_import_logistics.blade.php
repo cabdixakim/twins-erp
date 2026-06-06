@@ -472,19 +472,21 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
-            <input type="text" name="truck_reg" value="{{ old('truck_reg') }}" placeholder="e.g. KCA 123A" maxlength="40"
+            <input id="addTruckRegInput" type="text" name="truck_reg" value="{{ old('truck_reg') }}" placeholder="e.g. KCA 123A" maxlength="40"
                    class="w-full h-10 rounded-xl border {{ $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @error('truck_reg')
               <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
             @enderror
+            <p id="addTruckRegConflict" class="hidden mt-1 text-xs text-amber-400"></p>
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
-            <input type="text" name="trailer_reg" value="{{ old('trailer_reg') }}" placeholder="e.g. TRLR-001" maxlength="40"
+            <input id="addTrailerRegInput" type="text" name="trailer_reg" value="{{ old('trailer_reg') }}" placeholder="e.g. TRLR-001" maxlength="40"
                    class="w-full h-10 rounded-xl border {{ $errors->has('trailer_reg') && !session('edit_error_truck_id') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @if($errors->has('trailer_reg') && !session('edit_error_truck_id'))
               <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
             @endif
+            <p id="addTrailerRegConflict" class="hidden mt-1 text-xs text-amber-400"></p>
           </div>
         </div>
         <div>
@@ -527,8 +529,8 @@
                 class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
-        <button type="submit"
-                class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition">
+        <button id="addTruckSubmitBtn" type="submit"
+                class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
           Add truck
         </button>
       </div>
@@ -1052,6 +1054,51 @@
   // Add truck button
   const btnAdd = document.getElementById('btnAddTruck');
   if (btnAdd) btnAdd.addEventListener('click', () => openTruckModal('addTruckModal'));
+
+  // ── Live conflict detection for Add Truck modal ───────────────────────────
+  @if($nom)
+  (function () {
+    const TRUCK_REGS   = new Set(@json($trucks->pluck('truck_reg')->filter()->map(fn($r) => strtolower(trim($r)))->values()->all()));
+    const TRAILER_REGS = new Set(@json($trucks->pluck('trailer_reg')->filter(fn($r) => $r !== null && trim($r) !== '')->map(fn($r) => strtolower(trim($r)))->values()->all()));
+
+    const truckInput   = document.getElementById('addTruckRegInput');
+    const trailerInput = document.getElementById('addTrailerRegInput');
+    const truckWarn    = document.getElementById('addTruckRegConflict');
+    const trailerWarn  = document.getElementById('addTrailerRegConflict');
+    const submitBtn    = document.getElementById('addTruckSubmitBtn');
+
+    if (!truckInput || !trailerInput || !truckWarn || !trailerWarn || !submitBtn) return;
+
+    function checkField(input, warn, existingSet, label) {
+      const val = input.value.trim().toLowerCase();
+      const conflict = val !== '' && existingSet.has(val);
+      if (conflict) {
+        warn.textContent = label + ' already exists in this nomination.';
+        warn.classList.remove('hidden');
+        input.classList.add('!border-amber-400');
+      } else {
+        warn.textContent = '';
+        warn.classList.add('hidden');
+        input.classList.remove('!border-amber-400');
+      }
+      updateSubmit();
+    }
+
+    function updateSubmit() {
+      const hasConflict = !truckWarn.classList.contains('hidden') || !trailerWarn.classList.contains('hidden');
+      submitBtn.disabled = hasConflict;
+    }
+
+    ['input', 'blur'].forEach(function (ev) {
+      truckInput.addEventListener(ev,   function () { checkField(truckInput,   truckWarn,   TRUCK_REGS,   'This truck reg'); });
+      trailerInput.addEventListener(ev, function () { checkField(trailerInput, trailerWarn, TRAILER_REGS, 'This trailer reg'); });
+    });
+
+    // Check pre-filled values immediately (e.g. after a server-side validation error re-opens the modal)
+    checkField(truckInput,   truckWarn,   TRUCK_REGS,   'This truck reg');
+    checkField(trailerInput, trailerWarn, TRAILER_REGS, 'This trailer reg');
+  })();
+  @endif
 
   // Auto-open add-truck modal if server returned a truck_reg or trailer_reg validation error (add form only)
   @if (($errors->has('truck_reg') || $errors->has('trailer_reg')) && !session('edit_error_truck_id'))
