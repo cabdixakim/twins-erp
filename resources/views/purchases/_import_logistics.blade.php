@@ -998,11 +998,14 @@
         <button type="button" id="wiCancelBtn" class="h-10 px-4 rounded-xl border text-sm font-semibold transition hover:opacity-80" style="background:var(--tw-surface);border-color:var(--tw-border);color:var(--tw-fg)">
           Cancel
         </button>
-        <button type="button" id="wiNextBtn" disabled
-                class="h-10 px-5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                style="background:var(--tw-accent);border:1px solid rgba(var(--tw-accent-rgb),.4)">
-          Review rows →
-        </button>
+        <div class="flex flex-col items-end gap-1">
+          <button type="button" id="wiNextBtn" disabled
+                  class="h-10 px-5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style="background:var(--tw-accent);border:1px solid rgba(var(--tw-accent-rgb),.4)">
+            Review rows →
+          </button>
+          <p id="wiConflictNote" class="hidden text-[11px] font-medium" style="color:#f59e0b"></p>
+        </div>
       </div>
     </div>
 
@@ -1149,6 +1152,7 @@
   const summaryBar      = document.getElementById('wiSummaryBar');
   const readyEl         = document.getElementById('wiReadyCount');
   const conflictEl      = document.getElementById('wiConflictCount');
+  const conflictNote    = document.getElementById('wiConflictNote');
   const errorEl         = document.getElementById('wiErrorCount');
   const successEl       = document.getElementById('wiSuccessMsg');
   const skippedEl       = document.getElementById('wiSkippedMsg');
@@ -1836,8 +1840,22 @@
   function updateImportButton() {
     if (!nextBtn || currentStep !== 2) return;
     const n = countReady();
+    const k = countConflicts();
+    const blockedByConflicts = k > 0;
     nextBtn.textContent = 'Import ' + n + ' truck' + (n !== 1 ? 's' : '') + ' →';
-    nextBtn.disabled    = n === 0 || hasDuplicateRegs();
+    nextBtn.disabled    = n === 0 || blockedByConflicts;
+    const noteText = blockedByConflicts
+      ? 'Resolve ' + k + ' conflict' + (k !== 1 ? 's' : '') + ' to enable import'
+      : '';
+    if (conflictNote) {
+      conflictNote.textContent = noteText;
+      conflictNote.classList.toggle('hidden', !blockedByConflicts);
+    }
+    if (noteText) {
+      nextBtn.setAttribute('title', noteText);
+    } else {
+      nextBtn.removeAttribute('title');
+    }
   }
 
   // ── Next / Back ───────────────────────────────────────────────────────────
