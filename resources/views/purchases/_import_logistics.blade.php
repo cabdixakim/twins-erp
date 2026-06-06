@@ -1110,6 +1110,10 @@
   const PRODUCT_CODE  = @json(strtolower($purchase->product->code ?? ''));
   const PRODUCT_NAME  = @json(strtolower($purchase->product->name ?? ''));
 
+  // Server-side regs already saved for this nomination — used for live duplicate detection
+  const EXISTING_TRUCK_REGS   = new Set(@json($trucks->pluck('truck_reg')->filter()->map(fn($r) => strtolower(trim($r)))->values()->all()));
+  const EXISTING_TRAILER_REGS = new Set(@json($trucks->pluck('trailer_reg')->filter(fn($r) => $r !== null && trim($r) !== '')->map(fn($r) => strtolower(trim($r)))->values()->all()));
+
   const sectionPicker = document.getElementById('wiSectionPicker');
   const sectionList   = document.getElementById('wiSectionList');
   const columnPicker  = document.getElementById('wiColumnPicker');
@@ -1625,8 +1629,8 @@
   function revalidateDuplicateRegs() {
     if (!reviewBody) return;
 
-    // Helper: highlight a single field group for duplicates
-    function highlightDups(fieldName, dupMsg) {
+    // Helper: highlight a single field group for within-batch and server-side duplicates
+    function highlightDups(fieldName, existingSet, dupMsg, serverMsg) {
       const inputs = Array.from(reviewBody.querySelectorAll('[data-field="' + fieldName + '"]'));
       const counts = {};
       inputs.forEach(inp => {
@@ -1634,12 +1638,13 @@
         if (key) counts[key] = (counts[key] || 0) + 1;
       });
       inputs.forEach(inp => {
-        const key = inp.value.trim().toLowerCase();
-        const isDup = key && counts[key] > 1;
-        if (isDup) {
+        const key        = inp.value.trim().toLowerCase();
+        const isBatchDup  = key && counts[key] > 1;
+        const isServerDup = key && existingSet.has(key);
+        if (isBatchDup || isServerDup) {
           inp.style.borderColor = '#f59e0b';
           inp.style.background  = 'rgba(245,158,11,.09)';
-          inp.title = dupMsg;
+          inp.title = isServerDup ? serverMsg : dupMsg;
         } else if (inp.value.trim() !== '') {
           // restore valid state (validateCell handles empty)
           inp.style.borderColor = 'var(--tw-border)';
@@ -1649,20 +1654,27 @@
       });
     }
 
-    highlightDups('truck_reg',   'Duplicate truck reg — this row will be skipped');
-    highlightDups('trailer_reg', 'Duplicate trailer reg — this row will be skipped');
+    highlightDups('truck_reg',   EXISTING_TRUCK_REGS,   'Duplicate truck reg — this row will be skipped',   'Truck reg already exists in this nomination');
+    highlightDups('trailer_reg', EXISTING_TRAILER_REGS, 'Duplicate trailer reg — this row will be skipped', 'Trailer reg already exists in this nomination');
   }
 
   function hasDuplicateRegs() {
     if (!reviewBody) return false;
-    for (const fieldName of ['truck_reg', 'trailer_reg']) {
+    const checks = [
+      ['truck_reg',   EXISTING_TRUCK_REGS],
+      ['trailer_reg', EXISTING_TRAILER_REGS],
+    ];
+    for (const [fieldName, existingSet] of checks) {
       const inputs = Array.from(reviewBody.querySelectorAll('[data-field="' + fieldName + '"]'));
       const counts = {};
       inputs.forEach(inp => {
         const key = inp.value.trim().toLowerCase();
         if (key) counts[key] = (counts[key] || 0) + 1;
       });
-      if (inputs.some(inp => { const k = inp.value.trim().toLowerCase(); return k && counts[k] > 1; })) return true;
+      if (inputs.some(inp => {
+        const k = inp.value.trim().toLowerCase();
+        return k && (counts[k] > 1 || existingSet.has(k));
+      })) return true;
     }
     return false;
   }
