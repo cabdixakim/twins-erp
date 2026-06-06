@@ -12,7 +12,7 @@ class DashboardController extends Controller {
         $balances = TransporterLedgerEntry::where('company_id', $cid)
             ->selectRaw('transporter_id, SUM(amount) as balance')
             ->groupBy('transporter_id')
-            ->having('balance', '>', 0)
+            ->havingRaw('SUM(amount) > 0')
             ->pluck('balance', 'transporter_id');
 
         $totalFreightPayable = $balances->sum();
