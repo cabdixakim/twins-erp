@@ -9,6 +9,7 @@ use App\Models\Purchase;
 use App\Models\Supplier;
 use App\Models\Transporter;
 use App\Models\TransporterLedgerEntry;
+use App\Http\Controllers\SupplierLedgerController;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -378,9 +379,17 @@ class PurchaseController extends Controller
 
         $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
 
+        // Landed / batch costs for this purchase
+        $batchCosts = $purchase->batch_id
+            ? \App\Models\BatchCost::where('company_id', $cid)
+                ->where('purchase_id', $purchase->id)
+                ->orderBy('entry_date')
+                ->get()
+            : collect();
+
         return view('purchases.show', compact(
             'purchase', 'depots', 'importMovements', 'clients',
-            'importNomination', 'transporters', 'volumeUnit'
+            'importNomination', 'transporters', 'volumeUnit', 'batchCosts'
         ));
     }
 
@@ -463,6 +472,22 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         $purchase->status = 'confirmed';
         $purchase->updated_by = $u?->id;
         $purchase->save();
+
+        // Post supplier invoice for cross_dock at confirm (goods are in cross dock; local_depot invoiced at receive)
+        if ($purchase->type === 'cross_dock' && $purchase->supplier_id) {
+            $invoiceAmt = round((float) $purchase->qty * (float) $purchase->unit_price, 4);
+            SupplierLedgerController::postInvoice(
+                companyId:   (int) $purchase->company_id,
+                supplierId:  (int) $purchase->supplier_id,
+                amount:      $invoiceAmt,
+                currency:    $purchase->currency ?? 'USD',
+                description: "Purchase {$purchase->reference} — cross-dock confirmed",
+                entryDate:   now()->toDateString(),
+                refType:     'purchase',
+                refId:       (int) $purchase->id,
+                createdBy:   $u?->id,
+            );
+        }
     });
 
     $msg = match ($purchase->type) {
@@ -564,6 +589,22 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         $purchase->status = 'received';
         $purchase->updated_by = $u?->id;
         $purchase->save();
+
+        // Post supplier invoice (idempotent)
+        if ($purchase->supplier_id) {
+            $invoiceAmt = round((float) $purchase->qty * (float) $purchase->unit_price, 4);
+            SupplierLedgerController::postInvoice(
+                companyId:   (int) $purchase->company_id,
+                supplierId:  (int) $purchase->supplier_id,
+                amount:      $invoiceAmt,
+                currency:    $purchase->currency ?? 'USD',
+                description: "Purchase {$purchase->reference} — received into depot",
+                entryDate:   now()->toDateString(),
+                refType:     'purchase',
+                refId:       (int) $purchase->id,
+                createdBy:   $u?->id,
+            );
+        }
 
         // Post freight charge to transporter ledger if a transporter + amount is set
         if ($purchase->transporter_id && (float) $purchase->freight_amount > 0) {

@@ -1,1 +1,2 @@
 - [Post-merge script](post-merge.md) — php artisan migrate --force + view:clear; configured at scripts/post-merge.sh, 60s timeout.
+- [Ledger auto-posting pattern](ledger-auto-posting.md) — supplier invoice timing: local_depot at receive(), cross_dock at confirm(), import per truck at recordDelivery(); always idempotent via ref_type+ref_id+type check.

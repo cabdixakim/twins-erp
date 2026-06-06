@@ -13,6 +13,9 @@ class Depot extends Model
     protected $fillable = [
         'name',
         'city',
+        'default_currency',
+        'contact_person',
+        'phone',
         'storage_fee_per_1000_l',
         'default_shrinkage_pct',
         'is_active',

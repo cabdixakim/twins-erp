@@ -9,6 +9,7 @@ use App\Models\Purchase;
 use App\Models\ImportNomination;
 use App\Models\ImportTruck;
 use App\Models\TransporterLedgerEntry;
+use App\Http\Controllers\SupplierLedgerController;
 
 class ImportNominationController extends Controller
 {
@@ -319,6 +320,24 @@ class ImportNominationController extends Controller
                     'ref_id'         => $truck->id,
                     'created_by'     => auth()->id(),
                 ]);
+            }
+        }
+
+        // Post supplier invoice for qty delivered (idempotent per truck)
+        if ($purchase->supplier_id && $qtyDelivered > 0) {
+            $invoiceAmt = round($qtyDelivered * (float) $purchase->unit_price, 4);
+            if ($invoiceAmt > 0) {
+                SupplierLedgerController::postInvoice(
+                    companyId:   $cid,
+                    supplierId:  (int) $purchase->supplier_id,
+                    amount:      $invoiceAmt,
+                    currency:    $purchase->currency ?? 'USD',
+                    description: "Import delivery: truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
+                    entryDate:   $data['delivery_date'],
+                    refType:     ImportTruck::class,
+                    refId:       (int) $truck->id,
+                    createdBy:   auth()->id(),
+                );
             }
         }
 

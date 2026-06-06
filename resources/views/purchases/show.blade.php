@@ -394,6 +394,155 @@
 </div>
 
 {{-- =========================
+     LANDED COSTS / BATCH COSTS
+   ========================= --}}
+@if($purchase->status !== 'draft' && $purchase->batch_id)
+<div class="mt-6 rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] overflow-hidden">
+  <div class="px-5 py-3 border-b border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] flex items-center justify-between">
+    <span class="text-xs font-semibold text-[color:var(--tw-fg)]">Landed Costs</span>
+    <button type="button" onclick="document.getElementById('addCostModal').classList.remove('hidden')"
+            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border border-[color:var(--tw-border)] text-[10px] font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
+      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Add cost
+    </button>
+  </div>
+  @if($batchCosts->isEmpty())
+    <div class="px-5 py-5 text-xs text-[color:var(--tw-muted)]">No landed costs recorded yet — freight, duty, border charges etc.</div>
+  @else
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-[color:var(--tw-muted)] border-b border-[color:var(--tw-border)]">
+            <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
+            <th class="text-left py-2.5 pr-3 font-semibold">Category</th>
+            <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
+            <th class="text-right py-2.5 pr-3 font-semibold">Amount</th>
+            <th class="py-2.5 pr-5 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($batchCosts as $bc)
+            @php
+              $catColor = match($bc->category) {
+                'freight'        => 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+                'duty'           => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+                'border_charge'  => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30',
+                'storage'        => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+                'penalty'        => 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+                default          => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30',
+              };
+              $catLabel = ucfirst(str_replace('_', ' ', $bc->category));
+            @endphp
+            <tr class="border-b border-[color:var(--tw-border)] last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+              <td class="py-2.5 pl-5 pr-3 text-xs text-[color:var(--tw-muted)] whitespace-nowrap">{{ $bc->entry_date->format('d M Y') }}</td>
+              <td class="py-2.5 pr-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $catColor }}">{{ $catLabel }}</span>
+              </td>
+              <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-fg)]">{{ $bc->description }}</td>
+              <td class="py-2.5 pr-3 text-right text-xs font-semibold text-[color:var(--tw-fg)]">
+                {{ number_format($bc->amount, 2) }} {{ $bc->currency }}
+                @if($bc->currency !== 'USD' && $bc->exchange_rate != 1)
+                  <span class="text-[10px] text-[color:var(--tw-muted)] ml-1">≈ {{ number_format($bc->amount_base, 2) }} base</span>
+                @endif
+              </td>
+              <td class="py-2.5 pr-5 text-right">
+                <form method="POST"
+                      action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
+                      onsubmit="return confirm('Remove this cost?')"
+                      class="inline">
+                  @csrf @method('DELETE')
+                  <button type="submit" class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                    </svg>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+        <tfoot>
+          <tr class="border-t border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)]">
+            <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold text-[color:var(--tw-muted)]">Total landed costs</td>
+            <td class="py-2.5 pr-3 text-right text-xs font-bold text-[color:var(--tw-fg)]">
+              {{ number_format($batchCosts->sum('amount_base'), 2) }} (base)
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  @endif
+</div>
+
+{{-- Add Cost Modal --}}
+<div id="addCostModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)">
+  <div class="w-full max-w-md rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] shadow-2xl p-6"
+       onclick="event.stopPropagation()">
+    <h3 class="text-sm font-bold text-[color:var(--tw-fg)] mb-4">Add landed cost</h3>
+    <form method="POST" action="{{ route('purchases.batch-costs.store', $purchase) }}" class="space-y-4">
+      @csrf
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Category</label>
+          <select name="category" required
+                  class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+            <option value="freight">Freight</option>
+            <option value="duty">Duty / Tax</option>
+            <option value="border_charge">Border charge</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="storage">Storage</option>
+            <option value="penalty">Penalty</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Date</label>
+          <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Description</label>
+        <input name="description" type="text" required
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+               placeholder="e.g. Freight from Dar to Lubumbashi">
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Amount</label>
+          <input name="amount" type="number" step="0.01" min="0.01" required
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                 placeholder="0.00">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Currency</label>
+          <input name="currency" value="{{ $purchase->currency ?? 'USD' }}" maxlength="8" required
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Exchange rate to base (1 if same currency)</label>
+        <input name="exchange_rate" type="number" step="0.000001" value="1"
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('addCostModal').classList.add('hidden')"
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
+          Save cost
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+@endif
+
+{{-- =========================
      CONFIRM MODAL (draft)
    ========================= --}}
 @if($purchase->status === 'draft')

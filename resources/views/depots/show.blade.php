@@ -1,0 +1,268 @@
+@php
+    $border   = 'border-[color:var(--tw-border)]';
+    $surface  = 'bg-[color:var(--tw-surface)]';
+    $surface2 = 'bg-[color:var(--tw-surface-2)]';
+    $fg       = 'text-[color:var(--tw-fg)]';
+    $muted    = 'text-[color:var(--tw-muted)]';
+
+    $chargeTypeLabels = [
+        'storage_charge'   => ['label' => 'Storage',    'color' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'],
+        'throughput_charge'=> ['label' => 'Throughput', 'color' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'],
+        'loading_fee'      => ['label' => 'Loading fee','color' => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30'],
+        'other_charge'     => ['label' => 'Other',      'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
+        'payment'          => ['label' => 'Payment',    'color' => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'],
+        'adjustment'       => ['label' => 'Adjustment', 'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
+    ];
+
+    $sym = fn(string $code) => match($code) {
+        'USD' => '$', 'EUR' => '€', 'GBP' => '£',
+        'ZAR' => 'R ', 'CDF' => 'FC ', 'ZMW' => 'K ', 'ZWL' => 'ZWL ',
+        default => $code . ' '
+    };
+@endphp
+
+@extends('layouts.app')
+@section('title', $depot->name . ' — Charges')
+@section('subtitle', 'Storage, throughput & loading fees')
+
+@section('content')
+
+@if(session('status'))
+    <div class="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-600 text-white px-4 py-2.5 text-xs font-semibold">
+        {{ session('status') }}
+    </div>
+@endif
+
+{{-- Back + actions --}}
+<div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+    <a href="{{ route('depots.index') }}"
+       class="inline-flex items-center gap-1.5 text-xs {{ $muted }} hover:text-[color:var(--tw-fg)] transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        All depots
+    </a>
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ route('depots.statement', $depot) }}" target="_blank"
+           class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
+            </svg>
+            Print statement
+        </a>
+        <a href="{{ route('depots.export', $depot) }}"
+           class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Export CSV
+        </a>
+        <button type="button" onclick="document.getElementById('chargeModal').classList.remove('hidden')"
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Record charge
+        </button>
+        <button type="button" onclick="document.getElementById('paymentModal').classList.remove('hidden')"
+                class="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Record payment
+        </button>
+    </div>
+</div>
+
+{{-- Depot name --}}
+<div class="mb-5">
+    <h1 class="text-xl font-bold {{ $fg }} mb-0.5">{{ $depot->name }}</h1>
+    <p class="text-xs {{ $muted }}">
+        {{ $depot->city ?: '' }}
+        @if($depot->contact_person) · {{ $depot->contact_person }} @endif
+        @if($depot->default_currency) · {{ $depot->default_currency }} @endif
+    </p>
+</div>
+
+{{-- Balance summary --}}
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+        <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Total charges</div>
+        <div class="text-base font-bold {{ $fg }}">{{ $sym($currency) }}{{ number_format($chargesTotal, 2) }}</div>
+        <div class="text-[10px] {{ $muted }}">Storage, throughput, loading</div>
+    </div>
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+        <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Payments made</div>
+        <div class="text-base font-bold text-sky-500">{{ $sym($currency) }}{{ number_format($paymentTotal, 2) }}</div>
+        <div class="text-[10px] {{ $muted }}">Settled charges</div>
+    </div>
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+        <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Net payable</div>
+        @if(abs($netPayable) < 0.005)
+            <div class="text-base font-bold text-emerald-500">Settled</div>
+        @elseif($netPayable > 0)
+            <div class="text-base font-bold text-amber-500">{{ $sym($currency) }}{{ number_format($netPayable, 2) }}</div>
+        @else
+            <div class="text-base font-bold text-emerald-500">Overpaid {{ $sym($currency) }}{{ number_format(abs($netPayable), 2) }}</div>
+        @endif
+        <div class="text-[10px] {{ $muted }}">Current balance owed</div>
+    </div>
+</div>
+
+{{-- Ledger entries --}}
+<div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-6">
+    <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
+        <span class="text-xs font-semibold {{ $fg }}">Charge & payment entries</span>
+        <span class="text-xs {{ $muted }}">Most recent first</span>
+    </div>
+
+    @if($entries->isEmpty())
+        <div class="p-8 text-center">
+            <p class="text-sm {{ $muted }}">No entries yet — use "Record charge" to add depot charges.</p>
+        </div>
+    @else
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs {{ $muted }} border-b {{ $border }}">
+                        <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Type</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
+                        <th class="text-right py-2.5 pr-3 font-semibold">Charge</th>
+                        <th class="text-right py-2.5 pr-5 font-semibold">Payment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($entries as $e)
+                        @php
+                            $meta     = $chargeTypeLabels[$e->type] ?? ['label' => $e->type, 'color' => 'bg-slate-500/15 text-slate-400 border border-slate-500/30'];
+                            $isCharge = (float) $e->amount > 0;
+                        @endphp
+                        <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+                            <td class="py-3 pl-5 pr-3 text-xs {{ $muted }} whitespace-nowrap">
+                                {{ $e->entry_date->format('d M Y') }}
+                            </td>
+                            <td class="py-3 pr-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $meta['color'] }}">
+                                    {{ $meta['label'] }}
+                                </span>
+                            </td>
+                            <td class="py-3 pr-3 text-xs {{ $fg }}">{{ $e->description }}</td>
+                            <td class="py-3 pr-3 text-right text-xs font-semibold {{ $isCharge ? 'text-amber-500' : $muted }}">
+                                {{ $isCharge ? ($sym($e->currency) . number_format(abs((float)$e->amount), 2)) : '' }}
+                            </td>
+                            <td class="py-3 pr-5 text-right text-xs font-semibold {{ !$isCharge ? 'text-sky-400' : $muted }}">
+                                {{ !$isCharge ? ($sym($e->currency) . number_format(abs((float)$e->amount), 2)) : '' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @if($entries->hasPages())
+            <div class="px-5 py-3 border-t {{ $border }}">
+                {{ $entries->links() }}
+            </div>
+        @endif
+    @endif
+</div>
+
+{{-- Record Charge Modal --}}
+<div id="chargeModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6"
+         onclick="event.stopPropagation()">
+        <h3 class="text-sm font-bold {{ $fg }} mb-4">Record charge from {{ $depot->name }}</h3>
+        <form method="POST" action="{{ route('depots.charges.store', $depot) }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Charge type</label>
+                <select name="type" required
+                        class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                    <option value="storage_charge">Storage charge</option>
+                    <option value="throughput_charge">Throughput charge</option>
+                    <option value="loading_fee">Loading fee</option>
+                    <option value="other_charge">Other charge</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Amount</label>
+                <div class="flex gap-2 mt-1">
+                    <input name="amount" type="number" step="0.01" min="0.01" required
+                           class="flex-1 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           placeholder="0.00">
+                    <input name="currency" value="{{ $depot->default_currency ?: 'USD' }}"
+                           class="w-20 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           maxlength="8">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Date</label>
+                <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
+                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Description (optional)</label>
+                <input name="description" type="text"
+                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                       placeholder="e.g. March 2026 storage fee">
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('chargeModal').classList.add('hidden')"
+                        class="flex-1 h-9 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 h-9 rounded-xl border border-amber-500/40 bg-amber-500/10 text-xs font-semibold text-amber-500 hover:bg-amber-500/20 transition">
+                    Save charge
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Record Payment Modal --}}
+<div id="paymentModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6"
+         onclick="event.stopPropagation()">
+        <h3 class="text-sm font-bold {{ $fg }} mb-4">Record payment to {{ $depot->name }}</h3>
+        <form method="POST" action="{{ route('depots.payments.store', $depot) }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Amount</label>
+                <div class="flex gap-2 mt-1">
+                    <input name="amount" type="number" step="0.01" min="0.01" required
+                           class="flex-1 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           placeholder="0.00">
+                    <input name="currency" value="{{ $depot->default_currency ?: 'USD' }}"
+                           class="w-20 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           maxlength="8">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Date</label>
+                <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
+                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Note (optional)</label>
+                <input name="description" type="text"
+                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                       placeholder="e.g. Bank transfer ref 12345">
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')"
+                        class="flex-1 h-9 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 h-9 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
+                    Save payment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@endsection

@@ -100,6 +100,33 @@ State machine: `draft → confirmed → nominated → received`
 - **Purchase show.blade.php**: new Edit/Cancel/Void buttons; Cancel modal + Void modal; cleaner header subtitle; removed "Tip:" idempotency note; buttons use SVG icons not text glyphs.
 - **edit.blade.php**: new view — clone of create adapted for PATCH editing of drafts. Type is shown as read-only badge, not changeable.
 
+### Phase 5 — Pre-Sales Ledgers ✅
+
+#### Supplier Ledger
+- **`supplier_ledger_entries` table** — `purchase_invoice | payment | credit_note | adjustment` entries; positive = owed to supplier
+- **`SupplierLedgerEntry` model** — standard timestamps, polymorphic `ref_type/ref_id`
+- **`SupplierLedgerController`** — `index`, `show`, `recordPayment`, `recordCredit`, `statement`, `exportCsv` + static `postInvoice()` helper
+- **Auto-posting**: local_depot → invoice posted on `receive()`; cross_dock → invoice posted on `confirm()`; import → invoice posted per truck on `recordDelivery()` (proportional: qty_delivered × unit_price)
+- **Views**: `suppliers/index.blade.php`, `suppliers/show.blade.php`, `suppliers/statement.blade.php` (printable)
+- **Routes**: `/suppliers`, `/suppliers/{supplier}`, `/suppliers/{supplier}/payments`, `/suppliers/{supplier}/credits`, `/suppliers/{supplier}/statement`, `/suppliers/{supplier}/export`
+- **Nav**: "Suppliers" added to primary nav (between Transporters and Depots)
+- **Dashboard**: Supplier Payables KPI card (rose colour, top-3 breakdown)
+
+#### Depot Charges Ledger
+- **`depots` table extended** — `default_currency`, `contact_person`, `phone` columns added
+- **`depot_ledger_entries` table** — `storage_charge | throughput_charge | loading_fee | other_charge | payment | adjustment`
+- **`DepotLedgerEntry` model** — standard polymorphic ledger entry
+- **`DepotLedgerController`** — `index`, `show`, `recordCharge`, `recordPayment`, `statement`, `exportCsv`
+- **Views**: `depots/index.blade.php`, `depots/show.blade.php`, `depots/statement.blade.php` (printable)
+- **Routes**: `/depots`, `/depots/{depot}`, `/depots/{depot}/charges`, `/depots/{depot}/payments`, `/depots/{depot}/statement`, `/depots/{depot}/export`
+- **Nav**: "Depots" added to primary nav (after Suppliers)
+- **Dashboard**: Depot Payables KPI card (purple colour, top-3 breakdown)
+
+#### Batch Costs (Landed Costs) UI
+- **`BatchCostController`** — `store` + `destroy`; validates category (freight/duty/border_charge/hospitality/storage/penalty/other), amount, currency, exchange_rate, entry_date
+- **Routes**: `POST /purchases/{purchase}/batch-costs`, `DELETE /purchases/{purchase}/batch-costs/{batchCost}`
+- **Purchase show page**: "Landed Costs" section (visible once confirmed); "Add cost" modal inline; table with category badge, description, amount/currency, exchange rate; total base-currency footer; per-row delete
+
 ### Phase 4 — Clients Module ✅
 - **`clients` table**: `company_id`, `name`, `code`, `type`, `country`, `city`, `contact_person`, `phone`, `email`, `currency`, `credit_limit`, `is_active`, `notes`
 - **`purchases.client_id`**: nullable FK to `clients` — set when a cross-dock purchase is dispatched

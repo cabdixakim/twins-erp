@@ -7,6 +7,8 @@ use App\Models\Transporter;
 use App\Models\Purchase;
 use App\Models\DepotStock;
 use App\Models\Depot;
+use App\Models\SupplierLedgerEntry;
+use App\Models\DepotLedgerEntry;
 
 class DashboardController extends Controller {
     public function index() {
@@ -64,13 +66,70 @@ class DashboardController extends Controller {
 
         $totalStockOnHand = $depotStockRows->sum('total_qty');
 
+        // Supplier payables (only positive = we owe them)
+        $supplierBalances = SupplierLedgerEntry::where('company_id', $cid)
+            ->selectRaw('supplier_id, currency, SUM(amount) as balance')
+            ->groupBy('supplier_id', 'currency')
+            ->havingRaw('SUM(amount) > 0')
+            ->get();
+
+        $supplierByCurrency = $supplierBalances
+            ->groupBy('currency')
+            ->map(fn($rows) => $rows->sum('balance'))
+            ->sortDesc();
+
+        $supplierPayableTotal = $supplierByCurrency->sum();
+
+        // Top 3 supplier balances
+        $topSuppliers = collect();
+        if ($supplierBalances->isNotEmpty()) {
+            $top = $supplierBalances->sortByDesc('balance')->take(3);
+            $sIds = $top->pluck('supplier_id')->unique();
+            $sNames = DB::table('suppliers')->where('company_id', $cid)->whereIn('id', $sIds)->pluck('name', 'id');
+            $topSuppliers = $top->map(fn($r) => (object)[
+                'id' => $r->supplier_id, 'name' => $sNames[$r->supplier_id] ?? 'Unknown',
+                'balance' => $r->balance, 'currency' => $r->currency,
+            ])->values();
+        }
+
+        // Depot payables (only positive = we owe depots)
+        $depotBalances = DepotLedgerEntry::where('company_id', $cid)
+            ->selectRaw('depot_id, currency, SUM(amount) as balance')
+            ->groupBy('depot_id', 'currency')
+            ->havingRaw('SUM(amount) > 0')
+            ->get();
+
+        $depotByCurrency = $depotBalances
+            ->groupBy('currency')
+            ->map(fn($rows) => $rows->sum('balance'))
+            ->sortDesc();
+
+        $depotPayableTotal = $depotByCurrency->sum();
+
+        $topDepots = collect();
+        if ($depotBalances->isNotEmpty()) {
+            $top = $depotBalances->sortByDesc('balance')->take(3);
+            $dIds = $top->pluck('depot_id')->unique();
+            $dNames = Depot::where('company_id', $cid)->whereIn('id', $dIds)->pluck('name', 'id');
+            $topDepots = $top->map(fn($r) => (object)[
+                'id' => $r->depot_id, 'name' => $dNames[$r->depot_id] ?? 'Unknown',
+                'balance' => $r->balance, 'currency' => $r->currency,
+            ])->values();
+        }
+
         return view('dashboard.index', compact(
             'byCurrency',
             'topTransporters',
             'openPurchasesCount',
             'openByStatus',
             'depotStockRows',
-            'totalStockOnHand'
+            'totalStockOnHand',
+            'supplierByCurrency',
+            'topSuppliers',
+            'supplierPayableTotal',
+            'depotByCurrency',
+            'topDepots',
+            'depotPayableTotal'
         ));
     }
 }

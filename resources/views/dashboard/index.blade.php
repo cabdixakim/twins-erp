@@ -93,6 +93,118 @@
     </div>
   </div>
 
+  {{-- Supplier Payables --}}
+  <div>
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Supplier Payables</h2>
+    <a href="{{ route('suppliers.index') }}"
+       class="group block bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow shadow-rose-500/5 hover:border-rose-500/40 hover:shadow-rose-500/10 transition-all">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs text-slate-400 mb-1">Outstanding Supplier Payables</p>
+            @if($supplierByCurrency->count() === 1)
+              <p class="text-2xl font-bold text-rose-400">${{ number_format($supplierByCurrency->first(), 2) }}</p>
+            @elseif($supplierByCurrency->count() > 1)
+              <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                @foreach($supplierByCurrency as $currency => $total)
+                  @if(!$loop->first)<span class="text-slate-600 text-lg leading-none">·</span>@endif
+                  <span class="text-2xl font-bold text-rose-400 leading-none">
+                    {{ number_format($total, 2) }}<span class="text-sm font-semibold text-rose-500/80 ml-1">{{ $currency }}</span>
+                  </span>
+                @endforeach
+              </div>
+            @else
+              <p class="text-2xl font-bold text-slate-300">$0.00</p>
+            @endif
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-slate-600 group-hover:text-rose-400 transition-colors flex-shrink-0 ml-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+        </svg>
+      </div>
+      @if($topSuppliers->isNotEmpty())
+        <div class="mt-4 border-t border-slate-800 pt-4 space-y-2">
+          @foreach($topSuppliers as $s)
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-300 truncate max-w-[60%]">{{ $s->name }}</span>
+              <span class="font-semibold text-rose-300">
+                {{ number_format($s->balance, 2) }}
+                <span class="text-xs font-medium text-rose-400/70 ml-0.5">{{ $s->currency }}</span>
+              </span>
+            </div>
+          @endforeach
+          @if($topSuppliers->count() >= 3)
+            <p class="text-xs text-slate-500 pt-1">Showing top 3 — <span class="underline underline-offset-2">view all</span></p>
+          @endif
+        </div>
+      @else
+        <p class="mt-3 text-xs text-slate-500">No outstanding balances — all suppliers are settled.</p>
+      @endif
+    </a>
+  </div>
+
+  {{-- Depot Payables --}}
+  <div>
+    <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Depot Payables</h2>
+    <a href="{{ route('depots.index') }}"
+       class="group block bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow shadow-purple-500/5 hover:border-purple-500/40 hover:shadow-purple-500/10 transition-all">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5-9 5-9-5z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10v9l9 5 9-5v-9"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v9"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs text-slate-400 mb-1">Outstanding Depot Charges</p>
+            @if($depotByCurrency->count() === 1)
+              <p class="text-2xl font-bold text-purple-400">${{ number_format($depotByCurrency->first(), 2) }}</p>
+            @elseif($depotByCurrency->count() > 1)
+              <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                @foreach($depotByCurrency as $currency => $total)
+                  @if(!$loop->first)<span class="text-slate-600 text-lg leading-none">·</span>@endif
+                  <span class="text-2xl font-bold text-purple-400 leading-none">
+                    {{ number_format($total, 2) }}<span class="text-sm font-semibold text-purple-500/80 ml-1">{{ $currency }}</span>
+                  </span>
+                @endforeach
+              </div>
+            @else
+              <p class="text-2xl font-bold text-slate-300">$0.00</p>
+            @endif
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition-colors flex-shrink-0 ml-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+        </svg>
+      </div>
+      @if($topDepots->isNotEmpty())
+        <div class="mt-4 border-t border-slate-800 pt-4 space-y-2">
+          @foreach($topDepots as $d)
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-300 truncate max-w-[60%]">{{ $d->name }}</span>
+              <span class="font-semibold text-purple-300">
+                {{ number_format($d->balance, 2) }}
+                <span class="text-xs font-medium text-purple-400/70 ml-0.5">{{ $d->currency }}</span>
+              </span>
+            </div>
+          @endforeach
+          @if($topDepots->count() >= 3)
+            <p class="text-xs text-slate-500 pt-1">Showing top 3 — <span class="underline underline-offset-2">view all</span></p>
+          @endif
+        </div>
+      @else
+        <p class="mt-3 text-xs text-slate-500">No outstanding charges — all depots are settled.</p>
+      @endif
+    </a>
+  </div>
+
   {{-- Outstanding Freight Payables --}}
   <div>
     <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Freight Payables</h2>

@@ -20,6 +20,9 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\TransporterLedgerController;
+use App\Http\Controllers\SupplierLedgerController;
+use App\Http\Controllers\DepotLedgerController;
+use App\Http\Controllers\BatchCostController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
@@ -234,6 +237,40 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('transporters.show');
         Route::post('/transporters/{transporter}/payments', [TransporterLedgerController::class, 'recordPayment'])
             ->name('transporters.payments.store');
+
+        // Supplier ledger
+        Route::get('/suppliers', [SupplierLedgerController::class, 'index'])
+            ->name('suppliers.index');
+        Route::get('/suppliers/{supplier}/statement', [SupplierLedgerController::class, 'statement'])
+            ->name('suppliers.statement');
+        Route::get('/suppliers/{supplier}/export', [SupplierLedgerController::class, 'exportCsv'])
+            ->name('suppliers.export');
+        Route::get('/suppliers/{supplier}', [SupplierLedgerController::class, 'show'])
+            ->name('suppliers.show');
+        Route::post('/suppliers/{supplier}/payments', [SupplierLedgerController::class, 'recordPayment'])
+            ->name('suppliers.payments.store');
+        Route::post('/suppliers/{supplier}/credits', [SupplierLedgerController::class, 'recordCredit'])
+            ->name('suppliers.credits.store');
+
+        // Depot ledger
+        Route::get('/depots', [DepotLedgerController::class, 'index'])
+            ->name('depots.index');
+        Route::get('/depots/{depot}/statement', [DepotLedgerController::class, 'statement'])
+            ->name('depots.statement');
+        Route::get('/depots/{depot}/export', [DepotLedgerController::class, 'exportCsv'])
+            ->name('depots.export');
+        Route::get('/depots/{depot}', [DepotLedgerController::class, 'show'])
+            ->name('depots.show');
+        Route::post('/depots/{depot}/charges', [DepotLedgerController::class, 'recordCharge'])
+            ->name('depots.charges.store');
+        Route::post('/depots/{depot}/payments', [DepotLedgerController::class, 'recordPayment'])
+            ->name('depots.payments.store');
+
+        // Batch / landed costs
+        Route::post('/purchases/{purchase}/batch-costs', [BatchCostController::class, 'store'])
+            ->name('purchases.batch-costs.store');
+        Route::delete('/purchases/{purchase}/batch-costs/{batchCost}', [BatchCostController::class, 'destroy'])
+            ->name('purchases.batch-costs.destroy');
 
         // Sales (company-scoped)
         Route::get('/sales/export', [SalesController::class, 'exportCsv'])->name('sales.export');

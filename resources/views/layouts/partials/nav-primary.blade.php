@@ -132,4 +132,40 @@
         </div>
     </a>
 
+    {{-- SUPPLIERS --}}
+    <a href="{{ route('suppliers.index') }}"
+       class="{{ $itemBase }} {{ $onSuppliers ?? false ? $itemActive : $itemIdle }}">
+        <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
+                     {{ ($onSuppliers ?? false) ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent' }}"></span>
+
+        <span class="{{ $iconWrapBase }} {{ ($onSuppliers ?? false) ? $iconWrapActive : $iconWrapIdle }}">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+        </span>
+
+        <div class="min-w-0 sidebar-label">
+            <div class="{{ $title }}">Suppliers</div>
+        </div>
+    </a>
+
+    {{-- DEPOTS --}}
+    <a href="{{ route('depots.index') }}"
+       class="{{ $itemBase }} {{ $onDepotLedger ?? false ? $itemActive : $itemIdle }}">
+        <span class="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full
+                     {{ ($onDepotLedger ?? false) ? 'bg-[color:var(--tw-accent)]' : 'bg-transparent' }}"></span>
+
+        <span class="{{ $iconWrapBase }} {{ ($onDepotLedger ?? false) ? $iconWrapActive : $iconWrapIdle }}">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5-9 5-9-5z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10v9l9 5 9-5v-9"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v9"/>
+            </svg>
+        </span>
+
+        <div class="min-w-0 sidebar-label">
+            <div class="{{ $title }}">Depots</div>
+        </div>
+    </a>
+
 </div>
