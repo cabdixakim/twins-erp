@@ -1918,10 +1918,16 @@
       let deadline     = Date.now() + msLeft;
       let hoverPaused  = false;
       let buttonPaused = false;
+      let stickyPaused = false; // set once user scrolls/clicks the error list — stays until they resume
       let reloadTimer;
       let countdownInterval;
 
-      function isPaused() { return hoverPaused || buttonPaused; }
+      function isPaused() { return hoverPaused || buttonPaused || stickyPaused; }
+
+      function updatePauseBtnLabel() {
+        if (!pauseBtn) return;
+        pauseBtn.textContent = isPaused() ? 'Resume countdown' : 'Pause';
+      }
 
       function updateMsg() {
         if (!countdownEl) return;
@@ -1969,31 +1975,49 @@
         window.location.href = reloadUrl;
       }, msLeft);
 
-      // Hover over error list → pause while hovering
+      // Hover over error list → pause while hovering (desktop)
       if (errorsWrap2) {
         errorsWrap2.addEventListener('mouseenter', () => {
           if (!hoverPaused) {
             hoverPaused = true;
             applyPause();
+            updatePauseBtnLabel();
           }
         });
         errorsWrap2.addEventListener('mouseleave', () => {
           if (hoverPaused) {
             hoverPaused = false;
+            updatePauseBtnLabel();
             if (!isPaused()) applyResume();
           }
         });
+
+        // Scroll or click inside the error list → sticky pause (works on touch/mobile too)
+        function activateSticky() {
+          if (stickyPaused) return;
+          stickyPaused = true;
+          buttonPaused = false; // sticky supersedes the manual toggle
+          applyPause();
+          updatePauseBtnLabel();
+        }
+        errorsWrap2.addEventListener('click', activateSticky);
+        errorsWrap2.addEventListener('scroll', activateSticky);
       }
 
-      // Pause/Resume button — independent of hover state
+      // Pause/Resume button — clears all paused states when resuming
       if (pauseBtn) {
         pauseBtn.addEventListener('click', () => {
-          buttonPaused = !buttonPaused;
-          pauseBtn.textContent = buttonPaused ? 'Resume' : 'Pause';
-          if (buttonPaused) {
+          if (stickyPaused || buttonPaused) {
+            // Resume: clear every paused flag so the countdown restarts
+            stickyPaused = false;
+            buttonPaused = false;
+            updatePauseBtnLabel();
+            if (!isPaused()) applyResume();
+          } else {
+            // Manually pause
+            buttonPaused = true;
             applyPause();
-          } else if (!isPaused()) {
-            applyResume();
+            updatePauseBtnLabel();
           }
         });
       }
