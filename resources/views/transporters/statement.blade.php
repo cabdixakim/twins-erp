@@ -118,6 +118,34 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
 .footer-right{font-size:10px;color:#9ca3af;text-align:right;line-height:1.6}
 .footer-right .conf{display:inline-block;margin-top:4px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#d1d5db}
 
+/* ── Mobile ── */
+@media(max-width:640px){
+  body{padding:12px 8px}
+  .controls{flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .btn{font-size:12px;padding:9px 14px}
+  .page{border-radius:10px}
+  .hdr{padding:18px 20px 16px;flex-direction:column;gap:10px}
+  .hdr-right{text-align:left}
+  .doc-title{font-size:15px}
+  .info-row{grid-template-columns:1fr}
+  .info-block{padding:14px 20px}
+  .info-block+.info-block{border-left:none;border-top:1px solid #e5e7eb}
+  .summary-strip{grid-template-columns:1fr 1fr}
+  .sum-cell{padding:12px 16px}
+  .sum-cell .amt{font-size:15px}
+  .sum-cell+.sum-cell:nth-child(3){border-left:none;border-top:1px solid #e5e7eb}
+  .balance-highlight{margin:12px 16px;padding:12px 16px;flex-direction:column;align-items:flex-start;gap:6px}
+  .bh-value{font-size:20px}
+  .section-title{padding:10px 20px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:560px}
+  th:first-child,td:first-child{padding-left:20px}
+  th:last-child,td:last-child{padding-right:20px}
+  td,th{padding:8px 10px}
+  .footer{padding:14px 20px;flex-direction:column;align-items:flex-start;gap:6px}
+  .footer-right{text-align:left}
+}
+
 /* ── Print ── */
 @media print{
   body{background:#fff;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -142,7 +170,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
         Export CSV
     </a>
-    <button onclick="window.print()" class="btn btn-dark">
+    <button type="button" onclick="window.print()" class="btn btn-dark">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
         Print / Save as PDF
     </button>
@@ -255,6 +283,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
             No transactions have been recorded for this transporter yet.
         </div>
     @else
+    <div class="table-wrap">
     <table>
         <thead>
             <tr>
@@ -323,6 +352,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
             </tr>
         </tbody>
     </table>
+    </div>
     @endif
 
     {{-- Footer --}}
