@@ -9,28 +9,36 @@ class DashboardController extends Controller {
     public function index() {
         $cid = (int) auth()->user()->active_company_id;
 
-        $balances = TransporterLedgerEntry::where('company_id', $cid)
-            ->selectRaw('transporter_id, SUM(amount) as balance')
-            ->groupBy('transporter_id')
+        // Balance per transporter × currency (only positive balances)
+        $entries = TransporterLedgerEntry::where('company_id', $cid)
+            ->selectRaw('transporter_id, currency, SUM(amount) as balance')
+            ->groupBy('transporter_id', 'currency')
             ->havingRaw('SUM(amount) > 0')
-            ->pluck('balance', 'transporter_id');
+            ->get();
 
-        $totalFreightPayable = $balances->sum();
+        // Total per currency, sorted descending
+        $byCurrency = $entries
+            ->groupBy('currency')
+            ->map(fn($rows) => $rows->sum('balance'))
+            ->sortDesc();
 
+        // Top 3 transporter+currency combos by balance
         $topTransporters = collect();
-        if ($balances->isNotEmpty()) {
-            $topIds = $balances->sortDesc()->take(3)->keys();
+        if ($entries->isNotEmpty()) {
+            $topEntries = $entries->sortByDesc('balance')->take(3);
+            $transporterIds = $topEntries->pluck('transporter_id')->unique();
             $transporterNames = Transporter::where('company_id', $cid)
-                ->whereIn('id', $topIds)
+                ->whereIn('id', $transporterIds)
                 ->pluck('name', 'id');
 
-            $topTransporters = $topIds->map(fn($id) => (object)[
-                'id'      => $id,
-                'name'    => $transporterNames[$id] ?? 'Unknown',
-                'balance' => $balances[$id],
-            ]);
+            $topTransporters = $topEntries->map(fn($row) => (object)[
+                'id'       => $row->transporter_id,
+                'name'     => $transporterNames[$row->transporter_id] ?? 'Unknown',
+                'balance'  => $row->balance,
+                'currency' => $row->currency,
+            ])->values();
         }
 
-        return view('dashboard.index', compact('totalFreightPayable', 'topTransporters'));
+        return view('dashboard.index', compact('byCurrency', 'topTransporters'));
     }
 }
