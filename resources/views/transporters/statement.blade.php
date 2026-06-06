@@ -4,11 +4,11 @@
         'CDF' => 'FC ', 'ZMW' => 'K ', 'ZWL' => 'ZWL ', default => $currency . ' '
     };
     $typeMeta = [
-        'freight_charge' => ['label' => 'Freight',      'badge' => '#dcfce7', 'text' => '#166534'],
-        'advance'        => ['label' => 'Advance',      'badge' => '#fef9c3', 'text' => '#854d0e'],
+        'freight_charge' => ['label' => 'Freight',      'badge' => '#d1fae5', 'text' => '#065f46'],
+        'advance'        => ['label' => 'Advance',      'badge' => '#fef3c7', 'text' => '#92400e'],
         'short_charge'   => ['label' => 'Short charge', 'badge' => '#fee2e2', 'text' => '#991b1b'],
         'payment'        => ['label' => 'Payment',      'badge' => '#dbeafe', 'text' => '#1e40af'],
-        'recovery'       => ['label' => 'Recovery',     'badge' => '#f3e8ff', 'text' => '#6b21a8'],
+        'recovery'       => ['label' => 'Recovery',     'badge' => '#ede9fe', 'text' => '#5b21b6'],
     ];
 @endphp
 <!DOCTYPE html>
@@ -19,80 +19,120 @@
 <title>Statement — {{ $transporter->name }}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:12px;color:#1a1a2e;background:#eef2f7;padding:28px 16px}
-.controls{display:flex;justify-content:center;gap:10px;margin-bottom:24px}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;border:none;transition:opacity .15s}
-.btn-dark{background:#1e293b;color:#fff}
-.btn-light{background:#fff;color:#334155;border:1px solid #e2e8f0}
-.btn:hover{opacity:.88}
-.page{max-width:820px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 4px 32px rgba(0,0,0,.10);overflow:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:12px;color:#111827;background:#e5e7eb;padding:32px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+a{text-decoration:none}
 
-/* ── Header ── */
-.hdr{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:#fff;padding:30px 36px;display:flex;justify-content:space-between;align-items:flex-start}
-.co-name{font-size:22px;font-weight:800;letter-spacing:-.5px}
-.co-sub{font-size:11px;opacity:.55;margin-top:3px;letter-spacing:.3px}
-.stmt-title .lbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;opacity:.5}
-.stmt-title h1{font-size:21px;font-weight:700;margin-top:2px}
-.stmt-title .gen{font-size:11px;opacity:.6;margin-top:3px}
+/* ── Screen controls ── */
+.controls{display:flex;justify-content:center;gap:10px;margin-bottom:28px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;border:none;transition:opacity .15s;line-height:1}
+.btn-dark{background:#111827;color:#fff}
+.btn-light{background:#fff;color:#374151;border:1px solid #d1d5db;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.btn:hover{opacity:.85}
+
+/* ── Page ── */
+.page{max-width:840px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.12);overflow:hidden}
+
+/* ── Header band ── */
+.hdr{background:#0f172a;color:#fff;padding:28px 40px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.hdr-left{}
+.co-name{font-size:20px;font-weight:800;letter-spacing:-.4px;color:#f8fafc}
+.co-tagline{font-size:10.5px;color:#94a3b8;margin-top:3px;letter-spacing:.2px}
+.hdr-right{text-align:right;flex-shrink:0}
+.doc-label{font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#64748b;margin-bottom:4px}
+.doc-title{font-size:18px;font-weight:800;color:#f8fafc;letter-spacing:-.3px}
+.doc-date{font-size:11px;color:#64748b;margin-top:5px}
+
+/* ── Accent stripe (thin color bar under header) ── */
+.accent-stripe{height:4px;background:linear-gradient(90deg,#0ea5e9 0%,#6366f1 50%,#10b981 100%)}
 
 /* ── Info row ── */
-.info-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #e2e8f0}
-.info-block{padding:18px 36px;border-right:1px solid #e2e8f0}
-.info-block:last-child{border-right:none}
-.info-block .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:5px}
-.info-block .val{font-size:14px;font-weight:700;color:#1e293b}
-.info-block .sub{font-size:11px;color:#64748b;margin-top:2px}
+.info-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #e5e7eb}
+.info-block{padding:20px 40px}
+.info-block+.info-block{border-left:1px solid #e5e7eb}
+.ib-label{font-size:9px;text-transform:uppercase;letter-spacing:1.8px;color:#9ca3af;margin-bottom:7px;font-weight:600}
+.ib-name{font-size:16px;font-weight:700;color:#111827;line-height:1.2}
+.ib-sub{font-size:11px;color:#6b7280;margin-top:3px;line-height:1.5}
 
-/* ── Summary bar ── */
-.summary{display:grid;grid-template-columns:repeat(5,1fr);background:#f8fafc;border-bottom:1px solid #e2e8f0}
-.sum-item{padding:14px 16px;border-right:1px solid #e2e8f0}
-.sum-item:last-child{border-right:none}
-.sum-item .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:5px}
-.sum-item .amt{font-size:15px;font-weight:800}
-.sum-item .sub{font-size:10px;color:#94a3b8;margin-top:2px}
+/* ── Summary strip ── */
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);background:#f8fafc;border-bottom:1px solid #e5e7eb}
+.sum-cell{padding:16px 20px;position:relative}
+.sum-cell+.sum-cell{border-left:1px solid #e5e7eb}
+.sum-cell .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:#9ca3af;font-weight:600;margin-bottom:6px}
+.sum-cell .amt{font-size:18px;font-weight:800;line-height:1}
+.sum-cell .sub{font-size:10px;color:#9ca3af;margin-top:4px}
+.sum-charges .amt{color:#059669}
+.sum-payments .amt{color:#2563eb}
+.sum-deductions .amt{color:#dc2626}
+.sum-balance-owed .amt{color:#d97706}
+.sum-balance-clear .amt{color:#059669}
+
+/* ── Balance highlight box ── */
+.balance-highlight{margin:16px 40px;border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bh-owed{background:#fffbeb;border:1.5px solid #fbbf24}
+.bh-clear{background:#f0fdf4;border:1.5px solid #86efac}
+.bh-label{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.8px}
+.bh-value{font-size:22px;font-weight:800}
+.bh-owed .bh-value{color:#d97706}
+.bh-clear .bh-value{color:#059669}
+.bh-note{font-size:11px;color:#9ca3af;margin-top:2px}
+
+/* ── Section title ── */
+.section-title{padding:14px 40px 10px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;background:#f9fafb;display:flex;align-items:center;justify-content:space-between}
+.section-title h2{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.8px}
+.section-title .cnt{font-size:11px;color:#9ca3af}
 
 /* ── Table ── */
-.tbl-hdr{padding:16px 36px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
-.tbl-hdr h2{font-size:13px;font-weight:700;color:#334155}
-.tbl-hdr .cnt{font-size:11px;color:#94a3b8}
 table{width:100%;border-collapse:collapse}
-thead tr{background:#f8fafc;border-bottom:2px solid #e2e8f0}
-th{padding:9px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:#64748b}
+thead tr{background:#f9fafb}
+th{padding:10px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;border-bottom:2px solid #e5e7eb;white-space:nowrap}
+th:first-child{padding-left:40px}
+th:last-child{padding-right:40px;text-align:right}
 th.r{text-align:right}
-th:first-child{padding-left:36px}
-th:last-child{padding-right:36px}
-tbody tr{border-bottom:1px solid #f1f5f9}
-tbody tr:nth-child(even){background:#fafbfd}
-td{padding:8px 10px;font-size:11px;color:#334155;vertical-align:middle}
-td:first-child{padding-left:36px}
-td:last-child{padding-right:36px;text-align:right;font-weight:600}
+tbody tr{border-bottom:1px solid #f3f4f6;transition:background .1s}
+tbody tr:nth-child(even){background:#fafafa}
+tbody tr:last-child{border-bottom:none}
+td{padding:9px 12px;font-size:11.5px;color:#374151;vertical-align:middle}
+td:first-child{padding-left:40px}
+td:last-child{padding-right:40px;text-align:right;font-weight:600}
 td.r{text-align:right;font-weight:600}
-td.mt{color:#94a3b8}
-.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-.col-dr{color:#1e293b}
-.col-cr{color:#dc2626}
-.col-ow{color:#d97706;font-weight:700}
-.col-ok{color:#16a34a;font-weight:700}
-tr.total td{font-weight:800;font-size:12px;background:#f8fafc;border-top:2px solid #cbd5e1;padding-top:13px;padding-bottom:13px}
+td.muted{color:#9ca3af;font-size:11px}
+.badge{display:inline-block;padding:2px 9px;border-radius:100px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+
+/* Amount columns */
+.col-charge{color:#059669;font-weight:600}
+.col-payment{color:#2563eb;font-weight:600}
+.col-dash{color:#d1d5db}
+
+/* Balance column */
+.bal-owed{color:#d97706;font-weight:700}
+.bal-clear{color:#059669;font-weight:700}
+.bal-nil{color:#059669;font-weight:700}
+
+/* Closing row */
+tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px solid #cbd5e1;padding-top:14px;padding-bottom:14px}
 
 /* ── Footer ── */
-.foot{padding:18px 36px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:#f8fafc}
-.foot .l{font-size:10px;color:#94a3b8}
-.foot .l strong{color:#475569;font-size:11px}
-.foot .r{font-size:10px;color:#94a3b8;text-align:right}
+.footer{padding:18px 40px;border-top:1px solid #e5e7eb;background:#f9fafb;display:flex;justify-content:space-between;align-items:center}
+.footer-left{font-size:10px;color:#9ca3af;line-height:1.6}
+.footer-left strong{font-size:11px;color:#6b7280}
+.footer-right{font-size:10px;color:#9ca3af;text-align:right;line-height:1.6}
+.footer-right .conf{display:inline-block;margin-top:4px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#d1d5db}
 
 /* ── Print ── */
 @media print{
-  body{background:#fff;padding:0}
+  body{background:#fff;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .controls{display:none}
   .page{max-width:none;box-shadow:none;border-radius:0}
   tbody tr{page-break-inside:avoid}
-  @page{size:A4;margin:1.2cm 1.5cm}
+  .balance-highlight{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .accent-stripe{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:1cm 1.2cm}
 }
 </style>
 </head>
 <body>
 
+{{-- Screen-only controls --}}
 <div class="controls">
     <a href="{{ route('transporters.show', $transporter) }}" class="btn btn-light">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -112,87 +152,106 @@ tr.total td{font-weight:800;font-size:12px;background:#f8fafc;border-top:2px sol
 
     {{-- Header --}}
     <div class="hdr">
-        <div>
+        <div class="hdr-left">
             <div class="co-name">{{ $company->name ?? 'TWINS ERP' }}</div>
-            <div class="co-sub">Fuel &amp; Transport Management</div>
+            <div class="co-tagline">Fuel &amp; Transport Management</div>
         </div>
-        <div class="stmt-title" style="text-align:right">
-            <div class="lbl">Document</div>
-            <h1>Transporter Statement</h1>
-            <div class="gen">Generated {{ now()->format('d M Y') }}</div>
+        <div class="hdr-right">
+            <div class="doc-label">Document type</div>
+            <div class="doc-title">Transporter Statement</div>
+            <div class="doc-date">Generated {{ now()->format('d M Y') }}</div>
         </div>
     </div>
+
+    {{-- Accent stripe --}}
+    <div class="accent-stripe"></div>
 
     {{-- Info row --}}
     <div class="info-row">
         <div class="info-block">
-            <div class="lbl">Transporter</div>
-            <div class="val">{{ $transporter->name }}</div>
-            <div class="sub">
-                {{ $transporter->type === 'intl' ? 'International transporter' : 'Local transporter' }}
+            <div class="ib-label">Transporter</div>
+            <div class="ib-name">{{ $transporter->name }}</div>
+            <div class="ib-sub">
+                {{ $transporter->type === 'intl' ? 'International' : 'Local' }} transporter
                 @if($transporter->country) &middot; {{ $transporter->country }}@endif
+                @if($transporter->contact_person)<br>{{ $transporter->contact_person }}@if($transporter->phone) &middot; {{ $transporter->phone }}@endif@endif
             </div>
-            @if($transporter->contact_person)
-                <div class="sub">{{ $transporter->contact_person }}@if($transporter->phone) &middot; {{ $transporter->phone }}@endif</div>
-            @endif
         </div>
         <div class="info-block">
-            <div class="lbl">Statement Period</div>
+            <div class="ib-label">Statement period</div>
             @if($entries->isNotEmpty())
-                <div class="val">{{ $entries->first()->entry_date->format('d M Y') }} — {{ $entries->last()->entry_date->format('d M Y') }}</div>
+                <div class="ib-name">{{ $entries->first()->entry_date->format('d M Y') }} – {{ $entries->last()->entry_date->format('d M Y') }}</div>
             @else
-                <div class="val" style="color:#94a3b8">No transactions recorded</div>
+                <div class="ib-name" style="color:#9ca3af">No transactions yet</div>
             @endif
-            <div class="sub">Currency: {{ $currency }} &nbsp;&middot;&nbsp; {{ $entries->count() }} {{ $entries->count() === 1 ? 'transaction' : 'transactions' }}</div>
+            <div class="ib-sub">
+                Currency: <strong>{{ $currency }}</strong>
+                &nbsp;&middot;&nbsp;
+                {{ $entries->count() }} {{ $entries->count() === 1 ? 'transaction' : 'transactions' }}
+            </div>
         </div>
     </div>
 
-    {{-- Summary --}}
-    <div class="summary">
-        <div class="sum-item">
-            <div class="lbl">Freight earned</div>
-            <div class="amt" style="color:#16a34a">{{ $sym }}{{ number_format($freightTotal,2) }}</div>
-            <div class="sub">Gross from deliveries</div>
+    {{-- Summary strip --}}
+    <div class="summary-strip">
+        <div class="sum-cell sum-charges">
+            <div class="lbl">Freight charges</div>
+            <div class="amt">{{ $sym }}{{ number_format($freightTotal, 2) }}</div>
+            <div class="sub">Earned from deliveries</div>
         </div>
-        <div class="sum-item">
-            <div class="lbl">Advances paid</div>
-            <div class="amt" style="color:#d97706">{{ $sym }}{{ number_format($advanceTotal,2) }}</div>
-            <div class="sub">Upfront payments</div>
-        </div>
-        <div class="sum-item">
-            <div class="lbl">Short charges</div>
-            <div class="amt" style="color:#dc2626">{{ $sym }}{{ number_format($shortChargeTotal,2) }}</div>
-            <div class="sub">Deducted for excess loss</div>
-        </div>
-        <div class="sum-item">
+        <div class="sum-cell sum-payments">
             <div class="lbl">Payments made</div>
-            <div class="amt" style="color:#2563eb">{{ $sym }}{{ number_format($paymentTotal,2) }}</div>
+            <div class="amt">{{ $sym }}{{ number_format($paymentTotal, 2) }}</div>
             <div class="sub">Settled invoices</div>
         </div>
-        <div class="sum-item" style="{{ $netPayable > 0.005 ? 'background:#fffbeb' : 'background:#f0fdf4' }}">
-            <div class="lbl">Net payable</div>
+        <div class="sum-cell sum-deductions">
+            <div class="lbl">Deductions</div>
+            <div class="amt">{{ $sym }}{{ number_format($advanceTotal + $shortChargeTotal, 2) }}</div>
+            <div class="sub">Advances &amp; short charges</div>
+        </div>
+        <div class="sum-cell {{ $netPayable > 0.005 ? 'sum-balance-owed' : 'sum-balance-clear' }}">
+            <div class="lbl">Net balance</div>
             @if(abs($netPayable) < 0.005)
-                <div class="amt col-ok">Settled</div>
-                <div class="sub">Nothing outstanding</div>
+                <div class="amt sum-balance-clear">Settled</div>
+                <div class="sub">No outstanding amount</div>
             @elseif($netPayable > 0)
-                <div class="amt col-ow">{{ $sym }}{{ number_format($netPayable,2) }}</div>
+                <div class="amt">{{ $sym }}{{ number_format($netPayable, 2) }}</div>
                 <div class="sub">Still owed to transporter</div>
             @else
-                <div class="amt col-ok">{{ $sym }}{{ number_format(abs($netPayable),2) }} CR</div>
+                <div class="amt sum-balance-clear">{{ $sym }}{{ number_format(abs($netPayable), 2) }} CR</div>
                 <div class="sub">Credit on account</div>
             @endif
         </div>
     </div>
 
-    {{-- Table header --}}
-    <div class="tbl-hdr">
-        <h2>Transaction Ledger</h2>
-        <span class="cnt">{{ $entries->count() }} {{ $entries->count() === 1 ? 'entry' : 'entries' }}</span>
+    {{-- Balance highlight --}}
+    @if($entries->isNotEmpty())
+    <div class="balance-highlight {{ $netPayable > 0.005 ? 'bh-owed' : 'bh-clear' }}">
+        <div>
+            <div class="bh-label">{{ $netPayable > 0.005 ? 'Outstanding balance owed to transporter' : ($netPayable < -0.005 ? 'Overpayment — credit on account' : 'Account fully settled') }}</div>
+            <div class="bh-note">As at {{ now()->format('d M Y') }}</div>
+        </div>
+        <div class="bh-value">
+            @if(abs($netPayable) < 0.005)
+                {{ $sym }}0.00
+            @elseif($netPayable > 0)
+                {{ $sym }}{{ number_format($netPayable, 2) }}
+            @else
+                {{ $sym }}{{ number_format(abs($netPayable), 2) }}&nbsp;CR
+            @endif
+        </div>
+    </div>
+    @endif
+
+    {{-- Ledger section --}}
+    <div class="section-title">
+        <h2>Transaction detail</h2>
+        <span class="cnt">{{ $entries->count() }} {{ $entries->count() === 1 ? 'record' : 'records' }}</span>
     </div>
 
     @if($entries->isEmpty())
-        <div style="padding:48px 36px;text-align:center;color:#94a3b8;font-size:13px">
-            No transactions recorded yet.
+        <div style="padding:52px 40px;text-align:center;color:#9ca3af;font-size:13px">
+            No transactions have been recorded for this transporter yet.
         </div>
     @else
     <table>
@@ -201,52 +260,63 @@ tr.total td{font-weight:800;font-size:12px;background:#f8fafc;border-top:2px sol
                 <th>Date</th>
                 <th>Type</th>
                 <th>Description</th>
-                <th class="r">Debit (owed)</th>
-                <th class="r">Credit (paid)</th>
+                <th class="r">Charges</th>
+                <th class="r">Payments</th>
                 <th class="r">Balance</th>
             </tr>
         </thead>
         <tbody>
             @foreach($entries as $entry)
                 @php
-                    $isDebit = $entry->amount > 0;
-                    $meta = $typeMeta[$entry->type] ?? ['label' => ucfirst(str_replace('_',' ',$entry->type)), 'badge' => '#f1f5f9', 'text' => '#475569'];
-                    $bal = $entry->running_balance;
+                    $isCharge  = $entry->amount > 0;     // freight = positive = owed to transporter
+                    $isPayment = $entry->amount < 0;     // payment/advance/short = reduces balance
+                    $meta = $typeMeta[$entry->type] ?? ['label' => ucfirst(str_replace('_',' ',$entry->type)), 'badge' => '#f3f4f6', 'text' => '#6b7280'];
+                    $bal  = $entry->running_balance;
                 @endphp
                 <tr>
-                    <td class="mt" style="white-space:nowrap">{{ $entry->entry_date->format('d M Y') }}</td>
+                    <td class="muted" style="white-space:nowrap">{{ $entry->entry_date->format('d M Y') }}</td>
                     <td>
                         <span class="badge" style="background:{{ $meta['badge'] }};color:{{ $meta['text'] }}">{{ $meta['label'] }}</span>
                     </td>
-                    <td style="max-width:240px">{{ $entry->description }}</td>
-                    <td class="r col-dr">
-                        @if($isDebit){{ $sym }}{{ number_format($entry->amount,2) }}@else<span style="color:#cbd5e1">—</span>@endif
-                    </td>
-                    <td class="r col-cr">
-                        @if(!$isDebit){{ $sym }}{{ number_format(abs($entry->amount),2) }}@else<span style="color:#cbd5e1">—</span>@endif
-                    </td>
-                    <td class="r {{ $bal > 0.005 ? 'col-ow' : ($bal < -0.005 ? 'col-ok' : 'col-ok') }}">
-                        @if(abs($bal) < 0.005)
-                            <span style="color:#16a34a">Nil</span>
-                        @elseif($bal > 0)
-                            {{ $sym }}{{ number_format($bal,2) }}
+                    <td style="max-width:240px;color:#374151">{{ $entry->description }}</td>
+                    <td class="r">
+                        @if($isCharge)
+                            <span class="col-charge">{{ $sym }}{{ number_format($entry->amount, 2) }}</span>
                         @else
-                            {{ $sym }}{{ number_format(abs($bal),2) }}&nbsp;CR
+                            <span class="col-dash">—</span>
+                        @endif
+                    </td>
+                    <td class="r">
+                        @if($isPayment)
+                            <span class="col-payment">{{ $sym }}{{ number_format(abs($entry->amount), 2) }}</span>
+                        @else
+                            <span class="col-dash">—</span>
+                        @endif
+                    </td>
+                    <td class="r">
+                        @if(abs($bal) < 0.005)
+                            <span class="bal-nil">—</span>
+                        @elseif($bal > 0)
+                            <span class="bal-owed">{{ $sym }}{{ number_format($bal, 2) }}</span>
+                        @else
+                            <span class="bal-clear">{{ $sym }}{{ number_format(abs($bal), 2) }}&nbsp;CR</span>
                         @endif
                     </td>
                 </tr>
             @endforeach
-            <tr class="total">
-                <td colspan="3">Closing Balance</td>
-                <td class="r col-dr">{{ $sym }}{{ number_format($freightTotal,2) }}</td>
-                <td class="r col-cr">{{ $sym }}{{ number_format($advanceTotal + $shortChargeTotal + $paymentTotal,2) }}</td>
-                <td class="r {{ $netPayable > 0.005 ? 'col-ow' : 'col-ok' }}">
+
+            {{-- Closing row --}}
+            <tr class="closing">
+                <td colspan="3">Closing balance</td>
+                <td class="r col-charge">{{ $sym }}{{ number_format($freightTotal, 2) }}</td>
+                <td class="r col-payment">{{ $sym }}{{ number_format($advanceTotal + $shortChargeTotal + $paymentTotal, 2) }}</td>
+                <td class="r {{ $netPayable > 0.005 ? 'bal-owed' : 'bal-nil' }}">
                     @if(abs($netPayable) < 0.005)
                         Settled
                     @elseif($netPayable > 0)
-                        {{ $sym }}{{ number_format($netPayable,2) }}
+                        {{ $sym }}{{ number_format($netPayable, 2) }}
                     @else
-                        {{ $sym }}{{ number_format(abs($netPayable),2) }}&nbsp;CR
+                        {{ $sym }}{{ number_format(abs($netPayable), 2) }}&nbsp;CR
                     @endif
                 </td>
             </tr>
@@ -255,14 +325,15 @@ tr.total td{font-weight:800;font-size:12px;background:#f8fafc;border-top:2px sol
     @endif
 
     {{-- Footer --}}
-    <div class="foot">
-        <div class="l">
+    <div class="footer">
+        <div class="footer-left">
             <strong>TWINS ERP</strong><br>
             Fuel &amp; Transport Management System
         </div>
-        <div class="r">
+        <div class="footer-right">
             Generated {{ now()->format('d M Y, H:i') }}<br>
-            Confidential — for internal use only
+            {{ $transporter->name }} &middot; {{ $currency }}<br>
+            <span class="conf">Confidential — for internal use only</span>
         </div>
     </div>
 
