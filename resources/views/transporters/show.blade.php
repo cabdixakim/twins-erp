@@ -12,6 +12,13 @@
         'payment'        => ['label' => 'Payment',      'color' => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'],
         'recovery'       => ['label' => 'Recovery',     'color' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'],
     ];
+
+    // Fix #4 — currency symbol mapping
+    $currencySymbols = [
+        'USD' => '$', 'EUR' => '€', 'GBP' => '£',
+        'ZAR' => 'R ', 'CDF' => 'FC ', 'ZMW' => 'K ', 'ZWL' => 'ZWL ',
+    ];
+    $sym = fn(string $code) => $currencySymbols[$code] ?? ($code . ' ');
 @endphp
 
 @extends('layouts.app')
@@ -77,22 +84,22 @@
 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Freight earned</div>
-        <div class="text-base font-bold {{ $fg }}">{{ $currency }} {{ number_format($freightTotal, 2) }}</div>
+        <div class="text-base font-bold {{ $fg }}">{{ $sym($currency) }}{{ number_format($freightTotal, 2) }}</div>
         <div class="text-[10px] {{ $muted }}">Gross from deliveries</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Advances paid</div>
-        <div class="text-base font-bold text-amber-500">{{ $currency }} {{ number_format($advanceTotal, 2) }}</div>
+        <div class="text-base font-bold text-amber-500">{{ $sym($currency) }}{{ number_format($advanceTotal, 2) }}</div>
         <div class="text-[10px] {{ $muted }}">Upfront payments made</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Short charges</div>
-        <div class="text-base font-bold text-rose-500">{{ $currency }} {{ number_format($shortChargeTotal, 2) }}</div>
+        <div class="text-base font-bold text-rose-500">{{ $sym($currency) }}{{ number_format($shortChargeTotal, 2) }}</div>
         <div class="text-[10px] {{ $muted }}">Deducted for excess loss</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Payments made</div>
-        <div class="text-base font-bold text-sky-500">{{ $currency }} {{ number_format($paymentTotal, 2) }}</div>
+        <div class="text-base font-bold text-sky-500">{{ $sym($currency) }}{{ number_format($paymentTotal, 2) }}</div>
         <div class="text-[10px] {{ $muted }}">Settled invoices</div>
     </div>
     <div class="rounded-2xl border {{ $netPayable > 0.005 ? 'border-amber-500/40' : $border }} {{ $surface }} p-4 sm:col-span-1 col-span-2">
@@ -101,10 +108,10 @@
             <div class="text-base font-bold text-emerald-500">Settled</div>
             <div class="text-[10px] {{ $muted }}">Nothing outstanding</div>
         @elseif($netPayable > 0)
-            <div class="text-base font-bold text-amber-500">{{ $currency }} {{ number_format($netPayable, 2) }}</div>
+            <div class="text-base font-bold text-amber-500">{{ $sym($currency) }}{{ number_format($netPayable, 2) }}</div>
             <div class="text-[10px] {{ $muted }}">Still owed to transporter</div>
         @else
-            <div class="text-base font-bold text-emerald-500">{{ $currency }} {{ number_format(abs($netPayable), 2) }} overpaid</div>
+            <div class="text-base font-bold text-emerald-500">{{ $sym($currency) }}{{ number_format(abs($netPayable), 2) }} overpaid</div>
             <div class="text-[10px] {{ $muted }}">Credit on account</div>
         @endif
     </div>
@@ -138,6 +145,10 @@
                         @php
                             $meta    = $typeMeta[$entry->type] ?? ['label' => ucfirst($entry->type), 'color' => 'bg-[color:var(--tw-surface-2)] ' . $muted . ' border ' . $border];
                             $isDebit = $entry->amount > 0;
+                            // Fix #3 — resolve clickable ref link
+                            $linkKey = $entry->ref_type && $entry->ref_id ? $entry->ref_type . ':' . $entry->ref_id : null;
+                            $refUrl  = $linkKey ? ($refLinks[$linkKey] ?? null) : null;
+                            $refLabel = $entry->ref_type ? (class_basename($entry->ref_type) . ' #' . $entry->ref_id) : null;
                         @endphp
                         <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                             <td class="py-2.5 pl-5 pr-3 {{ $muted }} whitespace-nowrap">
@@ -151,21 +162,25 @@
                             <td class="py-2.5 pr-3 {{ $fg }} max-w-xs">
                                 {{ $entry->description }}
                             </td>
-                            <td class="py-2.5 pr-3 {{ $muted }}">
-                                @if($entry->ref_type && $entry->ref_id)
-                                    @php
-                                        $shortRef = class_basename($entry->ref_type) . ' #' . $entry->ref_id;
-                                    @endphp
-                                    <span class="font-mono text-[10px]">{{ $shortRef }}</span>
+                            <td class="py-2.5 pr-3 whitespace-nowrap">
+                                @if($refLabel)
+                                    @if($refUrl)
+                                        <a href="{{ $refUrl }}"
+                                           class="font-mono text-[10px] text-[color:var(--tw-accent)] hover:underline">
+                                            {{ $refLabel }}
+                                        </a>
+                                    @else
+                                        <span class="font-mono text-[10px] {{ $muted }}">{{ $refLabel }}</span>
+                                    @endif
                                 @else
-                                    —
+                                    <span class="{{ $muted }}">—</span>
                                 @endif
                             </td>
                             <td class="py-2.5 pr-5 text-right font-semibold whitespace-nowrap">
                                 @if($isDebit)
-                                    <span class="{{ $fg }}">{{ $entry->currency }} {{ number_format($entry->amount, 2) }}</span>
+                                    <span class="{{ $fg }}">{{ $sym($entry->currency) }}{{ number_format($entry->amount, 2) }}</span>
                                 @else
-                                    <span class="text-rose-500">− {{ $entry->currency }} {{ number_format(abs($entry->amount), 2) }}</span>
+                                    <span class="text-rose-500">− {{ $sym($entry->currency) }}{{ number_format(abs($entry->amount), 2) }}</span>
                                 @endif
                             </td>
                         </tr>
@@ -206,7 +221,7 @@
                     <select name="currency"
                             class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
                         @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
-                            <option value="{{ $cur }}" {{ $currency === $cur ? 'selected' : '' }}>{{ $cur }}</option>
+                            <option value="{{ $cur }}" {{ $currency === $cur ? 'selected' : '' }}>{{ $cur }} ({{ $sym($cur) }})</option>
                         @endforeach
                     </select>
                 </div>

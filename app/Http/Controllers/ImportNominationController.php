@@ -456,21 +456,34 @@ class ImportNominationController extends Controller
 
     /**
      * Sync the advance ledger entry for a nomination.
-     * Deletes any existing advance entry for this nomination and re-posts
-     * with the current amount (idempotent on update).
+     * Updates in-place if entry already exists (non-destructive — preserves audit trail).
+     * Removes the entry if advances drop to zero or transporter is unset.
      */
     private function syncAdvanceEntry(int $cid, ImportNomination $nom, array $data): void
     {
-        TransporterLedgerEntry::where('company_id', $cid)
-            ->where('ref_type', ImportNomination::class)
-            ->where('ref_id', $nom->id)
-            ->where('type', 'advance')
-            ->delete();
-
         $tid      = (int) ($data['transporter_id'] ?? 0);
         $advances = (float) ($data['advances'] ?? 0);
 
-        if ($tid && $advances > 0) {
+        $existing = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('ref_type', ImportNomination::class)
+            ->where('ref_id', $nom->id)
+            ->where('type', 'advance')
+            ->first();
+
+        // Remove entry if transporter was cleared or advances dropped to zero
+        if (!$tid || $advances <= 0) {
+            $existing?->delete();
+            return;
+        }
+
+        if ($existing) {
+            // Update in-place — preserve created_at and audit trail
+            $existing->update([
+                'transporter_id' => $tid,
+                'amount'         => -$advances,
+                'currency'       => $data['advances_currency'],
+            ]);
+        } else {
             TransporterLedgerEntry::create([
                 'company_id'     => $cid,
                 'transporter_id' => $tid,

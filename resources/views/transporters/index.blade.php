@@ -4,6 +4,13 @@
     $surface2 = 'bg-[color:var(--tw-surface-2)]';
     $fg       = 'text-[color:var(--tw-fg)]';
     $muted    = 'text-[color:var(--tw-muted)]';
+
+    // Fix #4 — currency symbol mapping
+    $currencySymbols = [
+        'USD' => '$', 'EUR' => '€', 'GBP' => '£',
+        'ZAR' => 'R ', 'CDF' => 'FC ', 'ZMW' => 'K ', 'ZWL' => 'ZWL ',
+    ];
+    $sym = fn(string $code) => $currencySymbols[$code] ?? ($code . ' ');
 @endphp
 
 @extends('layouts.app')
@@ -41,7 +48,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0z"/>
             <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414A1 1 0 0121 11.414V16a1 1 0 01-1 1h-1"/>
         </svg>
-        <div class="text-sm font-semibold {{ $fg }} mb-1">No transporters yet</div>
+        <div class="text-sm font-semibold {{ $fg }} mb-1">No active transporters</div>
         <div class="text-xs {{ $muted }} mb-4">Add transport partners in settings to track freight and payments here.</div>
         <a href="{{ route('settings.transporters.index') }}"
            class="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
@@ -55,17 +62,16 @@
                 <tr class="border-b {{ $border }} {{ $surface2 }} text-xs {{ $muted }}">
                     <th class="text-left py-3 pl-5 pr-3 font-semibold">Transporter</th>
                     <th class="text-left py-3 pr-3 font-semibold">Type</th>
-                    <th class="text-left py-3 pr-3 font-semibold">Currency</th>
                     <th class="text-right py-3 pr-3 font-semibold">Freight earned</th>
-                    <th class="text-right py-3 pr-3 font-semibold">Net payable</th>
-                    <th class="text-right py-3 pr-5 font-semibold">Status</th>
+                    <th class="text-right py-3 pr-5 font-semibold">Net payable</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($transporters as $tp)
                     @php
-                        $bal = (float) ($balances[$tp->id] ?? 0);
-                        $cur = $tp->default_currency ?: 'USD';
+                        $bal     = (float) ($balances[$tp->id] ?? 0);
+                        $freight = (float) ($freightTotals[$tp->id] ?? 0);
+                        $cur     = $tp->default_currency ?: 'USD';
                     @endphp
                     <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                         <td class="py-3 pl-5 pr-3">
@@ -80,32 +86,17 @@
                         <td class="py-3 pr-3 text-xs {{ $muted }}">
                             {{ $tp->type === 'intl' ? 'International' : ($tp->type === 'local' ? 'Local' : '—') }}
                         </td>
-                        <td class="py-3 pr-3 text-xs {{ $fg }}">{{ $cur }}</td>
                         <td class="py-3 pr-3 text-right text-xs {{ $muted }}">
-                            @php
-                                $freight = (float) \App\Models\TransporterLedgerEntry::where('company_id', auth()->user()->active_company_id)
-                                    ->where('transporter_id', $tp->id)
-                                    ->where('type', 'freight_charge')
-                                    ->sum('amount');
-                            @endphp
-                            {{ $cur }} {{ number_format($freight, 2) }}
+                            {{ $sym($cur) }}{{ number_format($freight, 2) }}
                         </td>
-                        <td class="py-3 pr-3 text-right">
+                        <td class="py-3 pr-5 text-right">
                             @if(abs($bal) < 0.005)
                                 <span class="text-xs {{ $muted }}">Settled</span>
                             @elseif($bal > 0)
-                                <span class="text-sm font-bold text-amber-500">{{ $cur }} {{ number_format($bal, 2) }}</span>
+                                <span class="text-sm font-bold text-amber-500">{{ $sym($cur) }}{{ number_format($bal, 2) }}</span>
                             @else
-                                <span class="text-xs text-emerald-500 font-semibold">Overpaid {{ $cur }} {{ number_format(abs($bal), 2) }}</span>
+                                <span class="text-xs text-emerald-500 font-semibold">Overpaid {{ $sym($cur) }}{{ number_format(abs($bal), 2) }}</span>
                             @endif
-                        </td>
-                        <td class="py-3 pr-5 text-right">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
-                                {{ $tp->is_active
-                                    ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                                    : 'bg-[color:var(--tw-surface-2)] ' . $muted . ' border ' . $border }}">
-                                {{ $tp->is_active ? 'Active' : 'Inactive' }}
-                            </span>
                         </td>
                     </tr>
                 @endforeach

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Transporter;
 use App\Models\TransporterLedgerEntry;
+use App\Models\ImportTruck;
+use App\Models\ImportNomination;
 
 class TransporterLedgerController extends Controller
 {
@@ -12,7 +15,9 @@ class TransporterLedgerController extends Controller
     {
         $cid = (int) auth()->user()->active_company_id;
 
+        // Fix #2: only show active transporters
         $transporters = Transporter::where('company_id', $cid)
+            ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
@@ -21,7 +26,14 @@ class TransporterLedgerController extends Controller
             ->groupBy('transporter_id')
             ->pluck('balance', 'transporter_id');
 
-        return view('transporters.index', compact('transporters', 'balances'));
+        // Precompute freight totals to avoid N+1 in the view
+        $freightTotals = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('type', 'freight_charge')
+            ->selectRaw('transporter_id, SUM(amount) as total')
+            ->groupBy('transporter_id')
+            ->pluck('total', 'transporter_id');
+
+        return view('transporters.index', compact('transporters', 'balances', 'freightTotals'));
     }
 
     public function show(Transporter $transporter)
@@ -49,8 +61,46 @@ class TransporterLedgerController extends Controller
 
         $currency = $transporter->default_currency ?: 'USD';
 
+        // Fix #3: Build clickable reference links
+        $allEntries = $entries->getCollection();
+
+        $truckIds = $allEntries
+            ->where('ref_type', ImportTruck::class)
+            ->pluck('ref_id')
+            ->unique();
+
+        $nominationIds = $allEntries
+            ->where('ref_type', ImportNomination::class)
+            ->pluck('ref_id')
+            ->unique();
+
+        $truckPurchaseIds = $truckIds->isNotEmpty()
+            ? DB::table('import_trucks')
+                ->join('import_nominations', 'import_trucks.nomination_id', '=', 'import_nominations.id')
+                ->whereIn('import_trucks.id', $truckIds)
+                ->pluck('import_nominations.purchase_id', 'import_trucks.id')
+            : collect();
+
+        $nominationPurchaseIds = $nominationIds->isNotEmpty()
+            ? DB::table('import_nominations')
+                ->whereIn('id', $nominationIds)
+                ->pluck('purchase_id', 'id')
+            : collect();
+
+        $refLinks = [];
+        foreach ($truckIds as $tid) {
+            if (isset($truckPurchaseIds[$tid])) {
+                $refLinks[ImportTruck::class . ':' . $tid] = route('purchases.show', $truckPurchaseIds[$tid]);
+            }
+        }
+        foreach ($nominationIds as $nid) {
+            if (isset($nominationPurchaseIds[$nid])) {
+                $refLinks[ImportNomination::class . ':' . $nid] = route('purchases.show', $nominationPurchaseIds[$nid]);
+            }
+        }
+
         return view('transporters.show', compact(
-            'transporter', 'entries',
+            'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
             'netPayable', 'currency'
         ));
@@ -79,7 +129,25 @@ class TransporterLedgerController extends Controller
             'created_by'     => auth()->id(),
         ]);
 
+        $sym    = self::currencySymbol($data['currency']);
         return redirect()->route('transporters.show', $transporter)
-            ->with('status', 'Payment of ' . $data['currency'] . ' ' . number_format($data['amount'], 2) . ' recorded.');
+            ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
+    }
+
+    /**
+     * Map currency codes to display symbols.
+     */
+    public static function currencySymbol(string $code): string
+    {
+        return match ($code) {
+            'USD' => '$',
+            'EUR' => '€',
+            'GBP' => '£',
+            'ZAR' => 'R ',
+            'CDF' => 'FC ',
+            'ZMW' => 'K ',
+            'ZWL' => 'ZWL ',
+            default => $code . ' ',
+        };
     }
 }
