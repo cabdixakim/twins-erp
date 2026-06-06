@@ -557,19 +557,21 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
-              <input type="text" name="truck_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('truck_reg', $truck->truck_reg) : $truck->truck_reg }}" maxlength="40"
+              <input id="editTruckRegInput-{{ $truck->id }}" type="text" name="truck_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('truck_reg', $truck->truck_reg) : $truck->truck_reg }}" maxlength="40"
                      class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
               @if(session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg'))
                 <p class="mt-1 text-xs text-rose-400">{{ $errors->first('truck_reg') }}</p>
               @endif
+              <p id="editTruckRegConflict-{{ $truck->id }}" class="hidden mt-1 text-xs text-amber-400"></p>
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
-              <input type="text" name="trailer_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('trailer_reg', $truck->trailer_reg) : $truck->trailer_reg }}" maxlength="40"
+              <input id="editTrailerRegInput-{{ $truck->id }}" type="text" name="trailer_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('trailer_reg', $truck->trailer_reg) : $truck->trailer_reg }}" maxlength="40"
                      class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
               @if(session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg'))
                 <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
               @endif
+              <p id="editTrailerRegConflict-{{ $truck->id }}" class="hidden mt-1 text-xs text-amber-400"></p>
             </div>
           </div>
           <div>
@@ -612,8 +614,8 @@
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
-          <button type="submit"
-                  class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition">
+          <button id="editTruckSubmitBtn-{{ $truck->id }}" type="submit"
+                  class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
             Save
           </button>
         </div>
@@ -1101,6 +1103,65 @@
     checkField(truckInput,   truckWarn,   TRUCK_REGS,   'This truck reg');
     checkField(trailerInput, trailerWarn, TRAILER_REGS, 'This trailer reg');
   })();
+
+  // ── Live conflict detection for each Edit Truck modal ────────────────────
+  @foreach($trucks->filter(fn($t) => in_array($t->status, ['nominated', 'loading_failed'])) as $truck)
+  (function () {
+    // Build sets excluding this truck's own current values
+    const OTHER_TRUCK_REGS   = new Set(@json(
+      $trucks->filter(fn($t) => $t->id !== $truck->id)
+             ->pluck('truck_reg')
+             ->filter()
+             ->map(fn($r) => strtolower(trim($r)))
+             ->values()
+             ->all()
+    ));
+    const OTHER_TRAILER_REGS = new Set(@json(
+      $trucks->filter(fn($t) => $t->id !== $truck->id)
+             ->pluck('trailer_reg')
+             ->filter(fn($r) => $r !== null && trim($r) !== '')
+             ->map(fn($r) => strtolower(trim($r)))
+             ->values()
+             ->all()
+    ));
+
+    const truckInput   = document.getElementById('editTruckRegInput-{{ $truck->id }}');
+    const trailerInput = document.getElementById('editTrailerRegInput-{{ $truck->id }}');
+    const truckWarn    = document.getElementById('editTruckRegConflict-{{ $truck->id }}');
+    const trailerWarn  = document.getElementById('editTrailerRegConflict-{{ $truck->id }}');
+    const submitBtn    = document.getElementById('editTruckSubmitBtn-{{ $truck->id }}');
+
+    if (!truckInput || !trailerInput || !truckWarn || !trailerWarn || !submitBtn) return;
+
+    function checkEditField(input, warn, existingSet, label) {
+      const val = input.value.trim().toLowerCase();
+      const conflict = val !== '' && existingSet.has(val);
+      if (conflict) {
+        warn.textContent = label + ' already exists in this nomination.';
+        warn.classList.remove('hidden');
+        input.classList.add('!border-amber-400');
+      } else {
+        warn.textContent = '';
+        warn.classList.add('hidden');
+        input.classList.remove('!border-amber-400');
+      }
+      updateEditSubmit();
+    }
+
+    function updateEditSubmit() {
+      submitBtn.disabled = !truckWarn.classList.contains('hidden') || !trailerWarn.classList.contains('hidden');
+    }
+
+    ['input', 'blur'].forEach(function (ev) {
+      truckInput.addEventListener(ev,   function () { checkEditField(truckInput,   truckWarn,   OTHER_TRUCK_REGS,   'This truck reg'); });
+      trailerInput.addEventListener(ev, function () { checkEditField(trailerInput, trailerWarn, OTHER_TRAILER_REGS, 'This trailer reg'); });
+    });
+
+    // Check pre-filled values immediately (e.g. after a server-side validation error re-opens the modal)
+    checkEditField(truckInput,   truckWarn,   OTHER_TRUCK_REGS,   'This truck reg');
+    checkEditField(trailerInput, trailerWarn, OTHER_TRAILER_REGS, 'This trailer reg');
+  })();
+  @endforeach
   @endif
 
   // Auto-open add-truck modal if server returned a truck_reg or trailer_reg validation error (add form only)
