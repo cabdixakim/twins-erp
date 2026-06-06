@@ -920,6 +920,7 @@
             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span id="wiOverNomMsg"></span>
           </span>
+          <span id="wiConflictCount" class="hidden" style="color:#f59e0b"></span>
           <span id="wiErrorCount" class="hidden" style="color:#f87171"></span>
         </div>
       </div>
@@ -1100,6 +1101,7 @@
   const reviewBody      = document.getElementById('wiReviewBody');
   const summaryBar      = document.getElementById('wiSummaryBar');
   const readyEl         = document.getElementById('wiReadyCount');
+  const conflictEl      = document.getElementById('wiConflictCount');
   const errorEl         = document.getElementById('wiErrorCount');
   const successEl       = document.getElementById('wiSuccessMsg');
   const skippedEl       = document.getElementById('wiSkippedMsg');
@@ -1693,10 +1695,48 @@
     ).length;
   }
 
+  function countConflicts() {
+    if (!reviewBody) return 0;
+    const checks = [
+      ['truck_reg',   EXISTING_TRUCK_REGS],
+      ['trailer_reg', EXISTING_TRAILER_REGS],
+    ];
+    const fieldCounts = {};
+    checks.forEach(([fieldName]) => {
+      const inputs = Array.from(reviewBody.querySelectorAll('[data-field="' + fieldName + '"]'));
+      const counts = {};
+      inputs.forEach(inp => {
+        const key = inp.value.trim().toLowerCase();
+        if (key) counts[key] = (counts[key] || 0) + 1;
+      });
+      fieldCounts[fieldName] = counts;
+    });
+    let total = 0;
+    Array.from(reviewBody.querySelectorAll('tr')).forEach(tr => {
+      const conflicted = checks.some(([fieldName, existingSet]) => {
+        const inp = tr.querySelector('[data-field="' + fieldName + '"]');
+        if (!inp) return false;
+        const key = inp.value.trim().toLowerCase();
+        return key && (fieldCounts[fieldName][key] > 1 || existingSet.has(key));
+      });
+      if (conflicted) total++;
+    });
+    return total;
+  }
+
   function updateSummaryBar() {
-    const ready  = countReady();
-    const errors = importRows.length - ready;
+    const ready     = countReady();
+    const conflicts = countConflicts();
+    const errors    = importRows.length - ready - conflicts;
     if (readyEl)  readyEl.textContent = ready + ' row' + (ready !== 1 ? 's' : '') + ' ready';
+    if (conflictEl) {
+      if (conflicts > 0) {
+        conflictEl.textContent = '· ' + conflicts + ' conflict' + (conflicts !== 1 ? 's' : '') + ' will be skipped';
+        conflictEl.classList.remove('hidden');
+      } else {
+        conflictEl.classList.add('hidden');
+      }
+    }
     if (errorEl) {
       if (errors > 0) {
         errorEl.textContent = '· ' + errors + ' with missing required fields';
