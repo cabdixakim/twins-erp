@@ -7,6 +7,8 @@ use App\Models\Client;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Models\Transporter;
+use App\Models\TransporterLedgerEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -178,7 +180,13 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('purchases.create', compact('suppliers', 'products', 'depots'));
+        $transporters = Transporter::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.create', compact('suppliers', 'products', 'depots', 'transporters'));
     }
 
     public function store(Request $request)
@@ -187,16 +195,19 @@ class PurchaseController extends Controller
         $cid = (int) ($u?->active_company_id ?? 0);
 
         $data = $request->validate([
-            'type' => 'required|in:import,local_depot,cross_dock',
-            'supplier_id' => 'nullable|integer',
-            'product_id' => 'required|integer',
-            'depot_id' => 'nullable|integer', // required only for local_depot (validated below)
-            'purchase_date' => 'nullable|date',
-            'qty' => 'required|numeric|min:0.001',
-            'unit_price' => 'required|numeric|min:0',
-            'currency' => 'required|string|max:8',
-            'notes' => 'nullable|string',
-            'reference' => 'nullable|string|max:64',
+            'type'             => 'required|in:import,local_depot,cross_dock',
+            'supplier_id'      => 'nullable|integer',
+            'product_id'       => 'required|integer',
+            'depot_id'         => 'nullable|integer',
+            'purchase_date'    => 'nullable|date',
+            'qty'              => 'required|numeric|min:0.001',
+            'unit_price'       => 'required|numeric|min:0',
+            'currency'         => 'required|string|max:8',
+            'notes'            => 'nullable|string',
+            'reference'        => 'nullable|string|max:64',
+            'transporter_id'   => 'nullable|integer',
+            'freight_amount'   => 'nullable|numeric|min:0',
+            'freight_currency' => 'nullable|string|max:8',
         ]);
 
         // Check for duplicate purchase reference (company_id + reference)
@@ -294,22 +305,25 @@ class PurchaseController extends Controller
             }
 
             return Purchase::create([
-                'company_id'    => $cid,
-                'sequence_no'   => $nextSeq,
-                'reference'     => $reference,
+                'company_id'       => $cid,
+                'sequence_no'      => $nextSeq,
+                'reference'        => $reference,
 
-                'type'          => $data['type'],
-                'supplier_id'   => $data['supplier_id'] ?? null,
-                'product_id'    => (int) $data['product_id'],
-                'depot_id'      => $data['depot_id'] ?? null,
-                'purchase_date' => $purchaseDate,
-                'qty'           => $data['qty'],
-                'unit_price'    => $data['unit_price'],
-                'currency'      => $data['currency'],
-                'status'        => 'draft',
-                'notes'         => $data['notes'] ?? null,
-                'created_by'    => $u?->id,
-                'updated_by'    => $u?->id,
+                'type'             => $data['type'],
+                'supplier_id'      => $data['supplier_id'] ?? null,
+                'product_id'       => (int) $data['product_id'],
+                'depot_id'         => $data['depot_id'] ?? null,
+                'purchase_date'    => $purchaseDate,
+                'qty'              => $data['qty'],
+                'unit_price'       => $data['unit_price'],
+                'currency'         => $data['currency'],
+                'status'           => 'draft',
+                'notes'            => $data['notes'] ?? null,
+                'transporter_id'   => !empty($data['transporter_id']) ? (int)$data['transporter_id'] : null,
+                'freight_amount'   => !empty($data['freight_amount']) ? (float)$data['freight_amount'] : null,
+                'freight_currency' => $data['freight_currency'] ?? null,
+                'created_by'       => $u?->id,
+                'updated_by'       => $u?->id,
             ]);
         });
 
@@ -550,10 +564,38 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         $purchase->status = 'received';
         $purchase->updated_by = $u?->id;
         $purchase->save();
+
+        // Post freight charge to transporter ledger if a transporter + amount is set
+        if ($purchase->transporter_id && (float) $purchase->freight_amount > 0) {
+            $alreadyPosted = TransporterLedgerEntry::query()
+                ->where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('type', 'freight_charge')
+                ->exists();
+
+            if (!$alreadyPosted) {
+                $ledgerCurrency = $purchase->freight_currency
+                    ?? DB::table('transporters')->where('id', $purchase->transporter_id)->value('default_currency')
+                    ?? 'USD';
+
+                TransporterLedgerEntry::create([
+                    'company_id'     => $purchase->company_id,
+                    'transporter_id' => $purchase->transporter_id,
+                    'type'           => 'freight_charge',
+                    'amount'         => (float) $purchase->freight_amount,
+                    'currency'       => $ledgerCurrency,
+                    'description'    => "Freight for {$purchase->reference} — local depot receipt",
+                    'entry_date'     => now()->toDateString(),
+                    'ref_type'       => 'purchase',
+                    'ref_id'         => $purchase->id,
+                    'created_by'     => $u?->id,
+                ]);
+            }
+        }
     });
 
     return redirect()->route('purchases.show', $purchase)
-        ->with('status', "Purchase received into depot.\nDepot stock updated (FIFO-ready).");
+        ->with('status', 'Purchase received into depot. Depot stock updated.');
 }
 
     /**
@@ -802,7 +844,13 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ->orderBy('name')
             ->get();
 
-        return view('purchases.edit', compact('purchase', 'suppliers', 'products', 'depots'));
+        $transporters = Transporter::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('purchases.edit', compact('purchase', 'suppliers', 'products', 'depots', 'transporters'));
     }
 
     /**
@@ -818,15 +866,18 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         }
 
         $data = $request->validate([
-            'supplier_id'   => 'nullable|integer',
-            'product_id'    => 'required|integer',
-            'depot_id'      => 'nullable|integer',
-            'purchase_date' => 'nullable|date',
-            'qty'           => 'required|numeric|min:0.001',
-            'unit_price'    => 'required|numeric|min:0',
-            'currency'      => 'required|string|max:8',
-            'notes'         => 'nullable|string',
-            'reference'     => 'nullable|string|max:64',
+            'supplier_id'      => 'nullable|integer',
+            'product_id'       => 'required|integer',
+            'depot_id'         => 'nullable|integer',
+            'purchase_date'    => 'nullable|date',
+            'qty'              => 'required|numeric|min:0.001',
+            'unit_price'       => 'required|numeric|min:0',
+            'currency'         => 'required|string|max:8',
+            'notes'            => 'nullable|string',
+            'reference'        => 'nullable|string|max:64',
+            'transporter_id'   => 'nullable|integer',
+            'freight_amount'   => 'nullable|numeric|min:0',
+            'freight_currency' => 'nullable|string|max:8',
         ]);
 
         // Allow same reference on this purchase, but block collision with others

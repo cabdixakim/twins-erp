@@ -226,6 +226,36 @@
         @enderror
       </div>
 
+      {{-- Transporter & Freight (local depot only) --}}
+      <div id="transporter-wrap" class="hidden space-y-4">
+        <div>
+          <label class="text-xs font-semibold {{ $muted }}">Transporter <span class="{{ $hintText }} font-normal">(optional)</span></label>
+          <select name="transporter_id" id="transporterSelect"
+                  class="{{ $fieldBase }}">
+            <option value="">No transporter / self-delivery</option>
+            @foreach($transporters as $t)
+              <option value="{{ $t->id }}" {{ (string)old('transporter_id')===(string)$t->id ? 'selected' : '' }}>
+                {{ $t->name }}
+              </option>
+            @endforeach
+          </select>
+          <div class="mt-1 text-xs {{ $hintText }}">Freight charge posts to their ledger when you receive the purchase.</div>
+        </div>
+        <div id="freight-wrap" class="{{ old('transporter_id') ? '' : 'hidden' }}">
+          <label class="text-xs font-semibold {{ $muted }}">Freight amount <span class="{{ $hintText }} font-normal">(optional)</span></label>
+          <div class="flex gap-2">
+            <input name="freight_amount" value="{{ old('freight_amount') }}" inputmode="decimal"
+                   class="{{ $fieldBase }} flex-1" placeholder="e.g. 450.00">
+            <input name="freight_currency" value="{{ old('freight_currency', 'USD') }}"
+                   class="{{ $fieldBase }} w-24" placeholder="USD" maxlength="8">
+          </div>
+          <div class="mt-1 text-xs {{ $hintText }}">Total freight cost · Currency (defaults to USD).</div>
+          @error('freight_amount')
+            <div class="mt-1 text-xs {{ $errText }}">{{ $message }}</div>
+          @enderror
+        </div>
+      </div>
+
       {{-- Quantity --}}
       <div>
         <label class="text-xs font-semibold {{ $muted }}">Quantity</label>
@@ -336,24 +366,33 @@
   function syncPurchaseTypeUI() {
     const val = document.querySelector('input[name="type"]:checked')?.value || 'import';
 
-    const ctx = document.getElementById('type-context');
-    const depotWrap = document.getElementById('depot-wrap');
+    const ctx             = document.getElementById('type-context');
+    const depotWrap       = document.getElementById('depot-wrap');
+    const transporterWrap = document.getElementById('transporter-wrap');
 
     applySelectedTypeStyles(val);
 
     if (val === 'import') {
       ctx.textContent = "This purchase will enter nominations and transport workflow after confirmation.";
       depotWrap.classList.add('hidden');
+      transporterWrap.classList.add('hidden');
     } else if (val === 'local_depot') {
       ctx.textContent = "This is a local depot ownership change. After confirmation, receive it into the selected depot.";
       depotWrap.classList.remove('hidden');
+      transporterWrap.classList.remove('hidden');
     } else {
       ctx.textContent = "Cross dock: on confirmation we receipt into CROSS DOCK and you can sell directly.";
       depotWrap.classList.add('hidden');
+      transporterWrap.classList.add('hidden');
     }
   }
 
   document.querySelectorAll('.js-type').forEach(r => r.addEventListener('change', syncPurchaseTypeUI));
   syncPurchaseTypeUI();
+
+  // Show/hide freight fields based on transporter selection
+  document.getElementById('transporterSelect')?.addEventListener('change', function () {
+    document.getElementById('freight-wrap')?.classList.toggle('hidden', !this.value);
+  });
 </script>
 @endsection

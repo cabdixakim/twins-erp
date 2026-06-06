@@ -55,6 +55,37 @@ class PeriodResolver
     }
 
     /**
+     * Resolve or auto-create a period — used when periods are not enforced.
+     * Never throws; always returns an open period.
+     */
+    public function resolveOrCreate(Company $company): InventoryPeriod
+    {
+        $period = $this->resolve($company->id);
+        if ($period) {
+            return $period;
+        }
+
+        // All periods are closed but enforcement is off — open a continuation
+        $last = InventoryPeriod::query()
+            ->where('company_id', $company->id)
+            ->orderByDesc('id')
+            ->first();
+
+        $num    = $last ? (((int) filter_var($last->name, FILTER_SANITIZE_NUMBER_INT)) + 1) : 1;
+        $method = $last?->costing_method ?? $company->costing_method ?? 'weighted_average';
+
+        return InventoryPeriod::create([
+            'company_id'     => $company->id,
+            'name'           => 'Period ' . $num,
+            'costing_method' => $method,
+            'starts_at'      => now(),
+            'ends_at'        => null,
+            'status'         => 'open',
+            'created_by'     => null,
+        ]);
+    }
+
+    /**
      * Get the open period or throw if none found.
      */
     public function resolveOrFail(int $companyId): InventoryPeriod

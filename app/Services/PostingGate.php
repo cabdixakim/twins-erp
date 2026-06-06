@@ -26,6 +26,11 @@ class PostingGate
             );
         }
 
+        // When inventory periods are not enforced, auto-resolve or silently create one
+        if (!$company->inventory_periods_enabled) {
+            return $this->periodResolver->resolveOrCreate($company);
+        }
+
         return $this->periodResolver->resolveOrFail($companyId);
     }
 

@@ -157,6 +157,43 @@
         </div>
       @endif
 
+      {{-- Transporter & Freight (local depot only) --}}
+      @if($purchase->type === 'local_depot')
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-semibold {{ $muted }}">Transporter <span class="{{ $hintText ?? 'text-slate-400' }} font-normal">(optional)</span></label>
+            <select name="transporter_id" id="editTransporterSelect"
+                    class="{{ $fieldBase }}">
+              <option value="">No transporter / self-delivery</option>
+              @foreach($transporters as $t)
+                <option value="{{ $t->id }}"
+                  {{ (string)old('transporter_id', $purchase->transporter_id) === (string)$t->id ? 'selected' : '' }}>
+                  {{ $t->name }}
+                </option>
+              @endforeach
+            </select>
+            <div class="mt-1 text-xs {{ $hintText ?? 'text-slate-400' }}">Freight charge posts to their ledger when you receive the purchase.</div>
+          </div>
+          <div id="edit-freight-wrap"
+               class="{{ old('transporter_id', $purchase->transporter_id) ? '' : 'hidden' }}">
+            <label class="text-xs font-semibold {{ $muted }}">Freight amount <span class="{{ $hintText ?? 'text-slate-400' }} font-normal">(optional)</span></label>
+            <div class="flex gap-2">
+              <input name="freight_amount"
+                     value="{{ old('freight_amount', $purchase->freight_amount) }}"
+                     inputmode="decimal"
+                     class="{{ $fieldBase }} flex-1" placeholder="e.g. 450.00">
+              <input name="freight_currency"
+                     value="{{ old('freight_currency', $purchase->freight_currency ?? 'USD') }}"
+                     class="{{ $fieldBase }} w-24" placeholder="USD" maxlength="8">
+            </div>
+            <div class="mt-1 text-xs {{ $hintText ?? 'text-slate-400' }}">Total freight cost · Currency.</div>
+            @error('freight_amount')
+              <div class="mt-1 text-xs {{ $errText ?? 'text-red-400' }}">{{ $message }}</div>
+            @enderror
+          </div>
+        </div>
+      @endif
+
       {{-- Quantity --}}
       <div>
         <label class="text-xs font-semibold {{ $muted }}">Quantity</label>
@@ -229,5 +266,11 @@
 
   </div>
 </form>
+
+<script>
+  document.getElementById('editTransporterSelect')?.addEventListener('change', function () {
+    document.getElementById('edit-freight-wrap')?.classList.toggle('hidden', !this.value);
+  });
+</script>
 
 @endsection
