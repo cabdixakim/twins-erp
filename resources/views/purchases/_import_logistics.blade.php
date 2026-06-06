@@ -974,7 +974,14 @@
                 style="background:var(--tw-accent)">
           Done
         </button>
-        <p class="text-xs" id="wiCountdownMsg" style="color:var(--tw-muted)">Page will reload automatically…</p>
+        <div class="flex items-center gap-2">
+          <p class="text-xs" id="wiCountdownMsg" style="color:var(--tw-muted)">Page will reload automatically…</p>
+          <button type="button" id="wiPauseBtn"
+                  class="hidden h-6 px-2 rounded-lg border text-xs font-medium transition hover:opacity-80"
+                  style="background:var(--tw-surface);border-color:var(--tw-border);color:var(--tw-muted)">
+            Pause
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1805,24 +1812,112 @@
         ? '?imported=' + result.importedIds.join(',')
         : '';
       const reloadUrl = window.location.pathname + importedParam + '#truck-table-section';
-      const doneBtn = document.getElementById('wiDoneBtn');
+      const doneBtn    = document.getElementById('wiDoneBtn');
       const countdownEl = document.getElementById('wiCountdownMsg');
+      const pauseBtn   = document.getElementById('wiPauseBtn');
+      const errorsWrap2 = document.getElementById('wiSkippedErrors');
+      const hasErrors  = result.errors && result.errors.length > 0;
+      const reloadDelay = hasErrors ? 6000 : 1800;
+
+      // Show the Pause button only when there are errors worth pausing for
+      if (hasErrors && pauseBtn) pauseBtn.classList.remove('hidden');
+
+      // Single deadline-based timing model — no double subtraction
+      // `deadline` = the absolute Date.now() ms when the page should reload.
+      // On pause we snapshot `msLeft = deadline - Date.now()` then stop timers.
+      // On resume we recompute `deadline = Date.now() + msLeft` then restart.
+      let msLeft       = reloadDelay;
+      let deadline     = Date.now() + msLeft;
+      let hoverPaused  = false;
+      let buttonPaused = false;
       let reloadTimer;
-      const reloadDelay = (result.errors && result.errors.length > 0) ? 6000 : 1800;
-      let secondsLeft = Math.round(reloadDelay / 1000);
-      if (countdownEl) countdownEl.textContent = 'Closing in ' + secondsLeft + ' s\u2026';
-      const countdownInterval = setInterval(() => {
-        secondsLeft--;
-        if (secondsLeft <= 0) {
-          clearInterval(countdownInterval);
-        } else if (countdownEl) {
-          countdownEl.textContent = 'Closing in ' + secondsLeft + ' s\u2026';
+      let countdownInterval;
+
+      function isPaused() { return hoverPaused || buttonPaused; }
+
+      function updateMsg() {
+        if (!countdownEl) return;
+        if (isPaused()) {
+          countdownEl.textContent = 'Paused \u2014 click Done when ready';
+        } else {
+          const s = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
+          countdownEl.textContent = 'Closing in ' + s + ' s\u2026';
         }
-      }, 1000);
-      if (doneBtn) {
-        doneBtn.addEventListener('click', () => { clearTimeout(reloadTimer); clearInterval(countdownInterval); closeWizard(); window.location.href = reloadUrl; });
       }
-      reloadTimer = setTimeout(() => { clearInterval(countdownInterval); closeWizard(); window.location.href = reloadUrl; }, reloadDelay);
+
+      function applyPause() {
+        // Snapshot accurate remaining time from the absolute deadline, stop timers
+        msLeft = Math.max(0, deadline - Date.now());
+        clearTimeout(reloadTimer);
+        clearInterval(countdownInterval);
+        updateMsg();
+      }
+
+      function applyResume() {
+        // Reanchor deadline from now + remaining, restart timers
+        deadline = Date.now() + msLeft;
+        updateMsg();
+        countdownInterval = setInterval(() => {
+          updateMsg();
+          if (Date.now() >= deadline) clearInterval(countdownInterval);
+        }, 500);
+        clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(() => {
+          clearInterval(countdownInterval);
+          closeWizard();
+          window.location.href = reloadUrl;
+        }, msLeft);
+      }
+
+      // Start the countdown
+      updateMsg();
+      countdownInterval = setInterval(() => {
+        updateMsg();
+        if (Date.now() >= deadline) clearInterval(countdownInterval);
+      }, 500);
+      reloadTimer = setTimeout(() => {
+        clearInterval(countdownInterval);
+        closeWizard();
+        window.location.href = reloadUrl;
+      }, msLeft);
+
+      // Hover over error list → pause while hovering
+      if (errorsWrap2) {
+        errorsWrap2.addEventListener('mouseenter', () => {
+          if (!hoverPaused) {
+            hoverPaused = true;
+            applyPause();
+          }
+        });
+        errorsWrap2.addEventListener('mouseleave', () => {
+          if (hoverPaused) {
+            hoverPaused = false;
+            if (!isPaused()) applyResume();
+          }
+        });
+      }
+
+      // Pause/Resume button — independent of hover state
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+          buttonPaused = !buttonPaused;
+          pauseBtn.textContent = buttonPaused ? 'Resume' : 'Pause';
+          if (buttonPaused) {
+            applyPause();
+          } else if (!isPaused()) {
+            applyResume();
+          }
+        });
+      }
+
+      if (doneBtn) {
+        doneBtn.addEventListener('click', () => {
+          clearTimeout(reloadTimer);
+          clearInterval(countdownInterval);
+          closeWizard();
+          window.location.href = reloadUrl;
+        });
+      }
     } catch (err) {
       nextBtn.disabled = false;
       updateImportButton();
