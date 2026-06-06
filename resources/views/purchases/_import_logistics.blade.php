@@ -1171,6 +1171,29 @@
   const EXISTING_TRUCK_REGS   = new Set(@json($trucks->pluck('truck_reg')->filter()->map(fn($r) => strtolower(trim($r)))->values()->all()));
   const EXISTING_TRAILER_REGS = new Set(@json($trucks->pluck('trailer_reg')->filter(fn($r) => $r !== null && trim($r) !== '')->map(fn($r) => strtolower(trim($r)))->values()->all()));
 
+  // ── Live duplicate detection for the Add Truck modal ──────────────────────
+  (function () {
+    const truckInput    = document.getElementById('addTruckRegInput');
+    const trailerInput  = document.getElementById('addTrailerRegInput');
+    const truckWarn     = document.getElementById('addTruckRegConflict');
+    const trailerWarn   = document.getElementById('addTrailerRegConflict');
+
+    function checkReg(input, warn, set, label) {
+      if (!input || !warn) return;
+      const val = input.value.trim().toLowerCase();
+      if (val && set.has(val)) {
+        warn.textContent = `⚠ This ${label} is already in this nomination`;
+        warn.classList.remove('hidden');
+      } else {
+        warn.textContent = '';
+        warn.classList.add('hidden');
+      }
+    }
+
+    if (truckInput)   truckInput.addEventListener('input',   () => checkReg(truckInput,   truckWarn,   EXISTING_TRUCK_REGS,   'truck reg'));
+    if (trailerInput) trailerInput.addEventListener('input', () => checkReg(trailerInput, trailerWarn, EXISTING_TRAILER_REGS, 'trailer reg'));
+  })();
+
   const sectionPicker = document.getElementById('wiSectionPicker');
   const sectionList   = document.getElementById('wiSectionList');
   const columnPicker  = document.getElementById('wiColumnPicker');
