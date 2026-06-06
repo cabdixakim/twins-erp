@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 use App\Models\Purchase;
 use App\Models\ImportNomination;
 use App\Models\ImportTruck;
+use App\Models\TransporterLedgerEntry;
 
 class ImportNominationController extends Controller
 {
@@ -31,13 +32,15 @@ class ImportNominationController extends Controller
         ]);
 
         if ($purchase->importNomination) {
-            $purchase->importNomination->update(array_merge($data, [
+            $nom = $purchase->importNomination;
+            $nom->update(array_merge($data, [
                 'advances' => $data['advances'] ?? 0,
             ]));
+            $this->syncAdvanceEntry($cid, $nom, $data);
             return back()->with('status', 'Nomination updated.');
         }
 
-        ImportNomination::create(array_merge($data, [
+        $nom = ImportNomination::create(array_merge($data, [
             'company_id'  => $cid,
             'purchase_id' => $purchase->id,
             'advances'    => $data['advances'] ?? 0,
@@ -48,6 +51,7 @@ class ImportNominationController extends Controller
             $purchase->update(['status' => 'nominated']);
         }
 
+        $this->syncAdvanceEntry($cid, $nom, $data);
         return back()->with('status', 'Import nomination created. You can now add trucks.');
     }
 
@@ -55,7 +59,7 @@ class ImportNominationController extends Controller
 
     public function update(Request $request, Purchase $purchase, ImportNomination $nomination)
     {
-        $this->authorise($purchase);
+        $cid = $this->authorise($purchase);
         abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
 
         $data = $request->validate([
@@ -74,6 +78,7 @@ class ImportNominationController extends Controller
             'advances' => $data['advances'] ?? 0,
         ]));
 
+        $this->syncAdvanceEntry($cid, $nomination, $data);
         return back()->with('status', 'Nomination updated.');
     }
 
@@ -266,6 +271,43 @@ class ImportNominationController extends Controller
             'shortfall_charge' => $shortfallCharge,
         ]));
 
+        // Post ledger entries for freight earned + short charge (idempotent per truck)
+        if ($nomination->transporter_id) {
+            $freightAmt = round($qtyDelivered * ((float) $nomination->rate_per_1000l / 1000), 2);
+
+            if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)
+                    ->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
+                TransporterLedgerEntry::create([
+                    'company_id'     => $cid,
+                    'transporter_id' => $nomination->transporter_id,
+                    'type'           => 'freight_charge',
+                    'amount'         => $freightAmt,
+                    'currency'       => $nomination->currency,
+                    'description'    => "Freight for truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
+                    'entry_date'     => $data['delivery_date'],
+                    'ref_type'       => ImportTruck::class,
+                    'ref_id'         => $truck->id,
+                    'created_by'     => auth()->id(),
+                ]);
+            }
+
+            if ($shortfallCharge > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)
+                    ->where('ref_id', $truck->id)->where('type', 'short_charge')->exists()) {
+                TransporterLedgerEntry::create([
+                    'company_id'     => $cid,
+                    'transporter_id' => $nomination->transporter_id,
+                    'type'           => 'short_charge',
+                    'amount'         => -$shortfallCharge,
+                    'currency'       => $nomination->short_charge_currency,
+                    'description'    => "Shortfall charge for truck {$truck->truck_reg} — {$excessLossQty} L excess loss",
+                    'entry_date'     => $data['delivery_date'],
+                    'ref_type'       => ImportTruck::class,
+                    'ref_id'         => $truck->id,
+                    'created_by'     => auth()->id(),
+                ]);
+            }
+        }
+
         $msg = "Delivery recorded: {$qtyDelivered} L.";
         if ($excessLossQty > 0) {
             $msg .= " Chargeable shortfall: {$excessLossQty} L → {$nomination->short_charge_currency} "
@@ -411,6 +453,38 @@ class ImportNominationController extends Controller
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * Sync the advance ledger entry for a nomination.
+     * Deletes any existing advance entry for this nomination and re-posts
+     * with the current amount (idempotent on update).
+     */
+    private function syncAdvanceEntry(int $cid, ImportNomination $nom, array $data): void
+    {
+        TransporterLedgerEntry::where('company_id', $cid)
+            ->where('ref_type', ImportNomination::class)
+            ->where('ref_id', $nom->id)
+            ->where('type', 'advance')
+            ->delete();
+
+        $tid      = (int) ($data['transporter_id'] ?? 0);
+        $advances = (float) ($data['advances'] ?? 0);
+
+        if ($tid && $advances > 0) {
+            TransporterLedgerEntry::create([
+                'company_id'     => $cid,
+                'transporter_id' => $tid,
+                'type'           => 'advance',
+                'amount'         => -$advances,
+                'currency'       => $data['advances_currency'],
+                'description'    => "Advance for import nomination (Purchase #{$nom->purchase_id})",
+                'entry_date'     => now()->toDateString(),
+                'ref_type'       => ImportNomination::class,
+                'ref_id'         => $nom->id,
+                'created_by'     => auth()->id(),
+            ]);
+        }
+    }
 
     /**
      * Verify the current user owns this purchase's company.

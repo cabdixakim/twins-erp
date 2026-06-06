@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\TransporterLedgerController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
@@ -217,6 +218,14 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('purchases.import-nomination.trucks.import');
 
         // Clients moved to settings group above
+
+        // Transporter ledger (balance, entries, payments)
+        Route::get('/transporters', [TransporterLedgerController::class, 'index'])
+            ->name('transporters.index');
+        Route::get('/transporters/{transporter}', [TransporterLedgerController::class, 'show'])
+            ->name('transporters.show');
+        Route::post('/transporters/{transporter}/payments', [TransporterLedgerController::class, 'recordPayment'])
+            ->name('transporters.payments.store');
 
         // Sales (company-scoped)
         Route::resource('sales', SalesController::class)->only(['index','store','update']);
