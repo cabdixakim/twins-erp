@@ -1997,6 +1997,15 @@
         errorsWrap.classList.add('hidden');
       }
 
+      // Keep the duplicate-warning sets current for the remainder of this page
+      // session (before the countdown reload fires). Any reg that was submitted
+      // is either now saved (needs to be blocked) or was already a duplicate
+      // (already in the set). Either way, adding it is safe.
+      allRows.forEach(r => {
+        if (r.truck_reg)   EXISTING_TRUCK_REGS.add(r.truck_reg.trim().toLowerCase());
+        if (r.trailer_reg) EXISTING_TRAILER_REGS.add(r.trailer_reg.trim().toLowerCase());
+      });
+
       goToStep(3);
       const importedParam = (result.importedIds && result.importedIds.length > 0)
         ? '?imported=' + result.importedIds.join(',')
