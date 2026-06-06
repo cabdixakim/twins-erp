@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Validation\Rule;
 use App\Models\Purchase;
 use App\Models\ImportNomination;
@@ -89,34 +88,40 @@ class ImportNominationController extends Controller
         $cid = $this->authorise($purchase);
         abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
 
-        $data = $request->validate([
-            'truck_reg'       => 'nullable|string|max:40',
-            'trailer_reg'     => 'nullable|string|max:40',
+        $validator = validator($request->all(), [
+            'truck_reg'       => [
+                'nullable', 'string', 'max:40',
+                Rule::unique('import_trucks')
+                    ->where('nomination_id', $nomination->id),
+            ],
+            'trailer_reg'     => [
+                'nullable', 'string', 'max:40',
+                Rule::unique('import_trucks')
+                    ->where('nomination_id', $nomination->id),
+            ],
             'driver_name'     => 'nullable|string|max:150',
             'driver_passport' => 'nullable|string|max:60',
             'driver_license'  => 'nullable|string|max:60',
             'driver_phone'    => 'nullable|string|max:30',
             'capacity'        => 'required|numeric|min:1',
             'notes'           => 'nullable|string|max:1000',
+        ], [
+            'truck_reg.unique'   => "Truck registration ':input' is already added to this nomination.",
+            'trailer_reg.unique' => "Trailer registration ':input' is already added to this nomination.",
         ]);
 
-        try {
-            ImportTruck::create(array_merge($data, [
-                'company_id'    => $cid,
-                'nomination_id' => $nomination->id,
-                'status'        => 'nominated',
-                'created_by'    => auth()->id(),
-            ]));
-        } catch (UniqueConstraintViolationException $e) {
-            if (str_contains($e->getMessage(), 'trailer_reg')) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['trailer_reg' => "Trailer registration '{$data['trailer_reg']}' is already added to this nomination."]);
-            }
-            return back()
-                ->withInput()
-                ->withErrors(['truck_reg' => "Truck registration '{$data['truck_reg']}' is already added to this nomination."]);
+        if ($validator->fails()) {
+            return back()->withInput()->withErrors($validator);
         }
+
+        $data = $validator->validated();
+
+        ImportTruck::create(array_merge($data, [
+            'company_id'    => $cid,
+            'nomination_id' => $nomination->id,
+            'status'        => 'nominated',
+            'created_by'    => auth()->id(),
+        ]));
 
         return back()->with('status', "Truck {$data['truck_reg']} added.");
     }
