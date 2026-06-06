@@ -121,7 +121,7 @@
 <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
     <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-sm font-semibold {{ $fg }}">Ledger entries</div>
-        <div class="text-xs {{ $muted }}">{{ $entries->total() }} {{ Str::plural('entry', $entries->total()) }}</div>
+        <div class="text-xs {{ $muted }}">{{ $entries->total() }} {{ $entries->total() === 1 ? 'entry' : 'entries' }}</div>
     </div>
 
     @if($entries->isEmpty())
