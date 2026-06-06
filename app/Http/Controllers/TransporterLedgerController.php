@@ -114,22 +114,24 @@ class TransporterLedgerController extends Controller
         $data = $request->validate([
             'amount'      => 'required|numeric|min:0.01',
             'entry_date'  => 'required|date',
-            'currency'    => 'required|string|max:8',
             'description' => 'nullable|string|max:500',
         ]);
+
+        // Enforce transporter's default_currency — keeps ledger single-currency
+        $currency = $transporter->default_currency ?: 'USD';
 
         TransporterLedgerEntry::create([
             'company_id'     => $cid,
             'transporter_id' => $transporter->id,
             'type'           => 'payment',
             'amount'         => -(float) $data['amount'],
-            'currency'       => $data['currency'],
+            'currency'       => $currency,
             'description'    => $data['description'] ?: 'Payment to transporter',
             'entry_date'     => $data['entry_date'],
             'created_by'     => auth()->id(),
         ]);
 
-        $sym    = self::currencySymbol($data['currency']);
+        $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
             ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
     }

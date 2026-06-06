@@ -273,6 +273,11 @@ class ImportNominationController extends Controller
 
         // Post ledger entries for freight earned + short charge (idempotent per truck)
         if ($nomination->transporter_id) {
+            // Always use transporter's default_currency — keeps the ledger single-currency
+            $ledgerCurrency = DB::table('transporters')
+                ->where('id', $nomination->transporter_id)
+                ->value('default_currency') ?? 'USD';
+
             $freightAmt = round($qtyDelivered * ((float) $nomination->rate_per_1000l / 1000), 2);
 
             if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)
@@ -282,7 +287,7 @@ class ImportNominationController extends Controller
                     'transporter_id' => $nomination->transporter_id,
                     'type'           => 'freight_charge',
                     'amount'         => $freightAmt,
-                    'currency'       => $nomination->currency,
+                    'currency'       => $ledgerCurrency,
                     'description'    => "Freight for truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
                     'entry_date'     => $data['delivery_date'],
                     'ref_type'       => ImportTruck::class,
@@ -298,7 +303,7 @@ class ImportNominationController extends Controller
                     'transporter_id' => $nomination->transporter_id,
                     'type'           => 'short_charge',
                     'amount'         => -$shortfallCharge,
-                    'currency'       => $nomination->short_charge_currency,
+                    'currency'       => $ledgerCurrency,
                     'description'    => "Shortfall charge for truck {$truck->truck_reg} — {$excessLossQty} L excess loss",
                     'entry_date'     => $data['delivery_date'],
                     'ref_type'       => ImportTruck::class,
@@ -476,12 +481,15 @@ class ImportNominationController extends Controller
             return;
         }
 
+        // Always use the transporter's default currency — keeps ledger single-currency
+        $ledgerCurrency = DB::table('transporters')->where('id', $tid)->value('default_currency') ?? 'USD';
+
         if ($existing) {
             // Update in-place — preserve created_at and audit trail
             $existing->update([
                 'transporter_id' => $tid,
                 'amount'         => -$advances,
-                'currency'       => $data['advances_currency'],
+                'currency'       => $ledgerCurrency,
             ]);
         } else {
             TransporterLedgerEntry::create([
@@ -489,7 +497,7 @@ class ImportNominationController extends Controller
                 'transporter_id' => $tid,
                 'type'           => 'advance',
                 'amount'         => -$advances,
-                'currency'       => $data['advances_currency'],
+                'currency'       => $ledgerCurrency,
                 'description'    => "Advance for import nomination (Purchase #{$nom->purchase_id})",
                 'entry_date'     => now()->toDateString(),
                 'ref_type'       => ImportNomination::class,

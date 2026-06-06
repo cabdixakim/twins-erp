@@ -215,22 +215,17 @@
         <form method="POST" action="{{ route('transporters.payments.store', $transporter) }}" class="p-5 space-y-4">
             @csrf
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
-                    <select name="currency"
-                            class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-                        @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
-                            <option value="{{ $cur }}" {{ $currency === $cur ? 'selected' : '' }}>{{ $cur }} ({{ $sym($cur) }})</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
+                <div class="flex items-center gap-2">
+                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none">
+                        {{ $sym($currency) }}{{ $currency }}
+                    </span>
                     <input type="number" name="amount" step="0.01" min="0.01" required
                            placeholder="0.00"
-                           class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                           class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
                 </div>
+                <p class="text-[10px] {{ $muted }} mt-1">Currency locked to this transporter's default ({{ $currency }}).</p>
             </div>
 
             <div>
