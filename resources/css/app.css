@@ -110,6 +110,15 @@ textarea:focus {
 }
 
 /* =========================
+   Token color helpers
+   (Use these instead of Tailwind arbitrary [color:var(--tw-*)] classes
+    which do not compile in Tailwind 4 JIT builds)
+   ========================= */
+.tw-fg        { color: var(--tw-fg); }
+.tw-text-muted { color: var(--tw-muted); }   /* alias — .tw-muted already exists below */
+.tw-bg        { background: var(--tw-bg); }
+
+/* =========================
    Surface utilities
    ========================= */
 .tw-surface {
@@ -132,8 +141,92 @@ textarea:focus {
   transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
 }
 .tw-card:hover {
-  border-color: rgba(16, 185, 129, .30);
-  box-shadow: 0 8px 24px rgba(2, 6, 23, .10);
+  border-color: rgba(16, 185, 129, .25);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, .08);
+}
+
+/* =========================
+   Sidebar nav item system
+   (replaces broken [color:var()] Tailwind arbitrary classes)
+   ========================= */
+.tw-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;            /* gap-2.5 */
+  border-radius: 0.75rem;  /* rounded-xl */
+  padding: 0.5rem 0.625rem; /* py-2 px-2.5 */
+  border: 1px solid var(--tw-border);
+  background: var(--tw-surface);
+  color: var(--tw-fg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease, transform .1s ease,
+              box-shadow .15s ease;
+  outline: none;
+}
+.tw-nav-item:hover {
+  background: var(--tw-surface-2);
+  transform: translateY(-1px);
+}
+.tw-nav-item:focus-visible {
+  box-shadow: 0 0 0 2px var(--tw-accent-soft);
+}
+.tw-nav-item:active { transform: translateY(0); }
+
+.tw-nav-item.active {
+  background: linear-gradient(90deg, var(--tw-accent-soft) 0%, transparent 100%);
+  border-color: rgba(34, 197, 94, .45);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, .08);
+}
+
+/* Left pip accent bar */
+.tw-nav-pip {
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 3px;
+  border-radius: 9999px;
+  background: transparent;
+}
+.tw-nav-item.active .tw-nav-pip {
+  background: var(--tw-accent);
+}
+
+/* Icon box */
+.tw-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;   /* 28px */
+  height: 1.75rem;
+  border-radius: 0.5rem; /* rounded-lg */
+  border: 1px solid var(--tw-border);
+  background: var(--tw-surface-2);
+  flex-shrink: 0;
+  transition: background .15s ease, border-color .15s ease;
+}
+.tw-nav-item:hover .tw-nav-icon  { background: var(--tw-btn-hover); }
+.tw-nav-item.active .tw-nav-icon {
+  background: var(--tw-accent-soft);
+  border-color: rgba(34, 197, 94, .35);
+}
+
+/* Label — hidden when sidebar is collapsed */
+.tw-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Section divider inside nav */
+.tw-nav-divider {
+  height: 1px;
+  background: var(--tw-border);
+  margin: 0.25rem 0;
 }
 
 /* =========================
