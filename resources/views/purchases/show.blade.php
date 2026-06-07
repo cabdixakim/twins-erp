@@ -418,6 +418,9 @@
               <td class="py-2.5 pl-5 pr-3 text-xs text-[color:var(--tw-muted)] whitespace-nowrap">{{ $bc->entry_date->format('d M Y') }}</td>
               <td class="py-2.5 pr-3">
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $catColor }}">{{ $catLabel }}</span>
+                @if($bc->auto_posted ?? false)
+                  <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.25)">auto</span>
+                @endif
               </td>
               <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-fg)]">{{ $bc->description }}</td>
               <td class="py-2.5 pr-3 text-right text-xs font-semibold text-[color:var(--tw-fg)]">
@@ -427,16 +430,20 @@
                 @endif
               </td>
               <td class="py-2.5 pr-5 text-right">
-                <button type="button"
-                        data-cost-id="{{ $bc->id }}"
-                        data-cost-desc="{{ $bc->description }}"
-                        data-cost-action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
-                        onclick="openDeleteCostModal(this)"
-                        class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
-                  </svg>
-                </button>
+                @if($bc->auto_posted ?? false)
+                  <span class="text-[10px] text-[color:var(--tw-muted)] italic">system</span>
+                @else
+                  <button type="button"
+                          data-cost-id="{{ $bc->id }}"
+                          data-cost-desc="{{ $bc->description }}"
+                          data-cost-action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
+                          onclick="openDeleteCostModal(this)"
+                          class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                    </svg>
+                  </button>
+                @endif
               </td>
             </tr>
           @endforeach

@@ -962,6 +962,19 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             return back()->with('error', 'This purchase cannot be cancelled in its current status.');
         }
 
+        // Block import with any truck past nominated stage (loaded / in_transit / border_cleared / delivered)
+        if ($purchase->type === 'import' && $purchase->status === 'nominated') {
+            $activeStatuses = ['loaded', 'in_transit', 'border_cleared', 'delivered'];
+            $hasActiveTruck = DB::table('import_trucks')
+                ->join('import_nominations', 'import_nominations.id', '=', 'import_trucks.nomination_id')
+                ->where('import_nominations.purchase_id', $purchase->id)
+                ->whereIn('import_trucks.status', $activeStatuses)
+                ->exists();
+            if ($hasActiveTruck) {
+                return back()->with('error', 'Cannot cancel: one or more trucks have already been loaded or are in transit. Use Void to reverse a completed purchase.');
+            }
+        }
+
         // Block nominated import with posted deliveries
         if ($purchase->type === 'import' && $purchase->status === 'nominated'
             && ((float) $purchase->qty_delivered) > 0) {
@@ -1002,6 +1015,29 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                         ]);
 
                     $movement->update(['notes' => trim(($movement->notes ?? '') . ' | CANCELLED: ' . $reason)]);
+                }
+            }
+
+            // Reverse provisional supplier invoice for import nominations (posted at nomination time)
+            if ($purchase->type === 'import' && $purchase->supplier_id && $purchase->importNomination) {
+                $nom = $purchase->importNomination;
+                $provisionalEntry = \App\Models\SupplierLedgerEntry::where('ref_type', \App\Models\ImportNomination::class)
+                    ->where('ref_id', $nom->id)
+                    ->where('type', 'purchase_invoice')
+                    ->first();
+                if ($provisionalEntry) {
+                    \App\Models\SupplierLedgerEntry::create([
+                        'company_id'  => $purchase->company_id,
+                        'supplier_id' => (int) $purchase->supplier_id,
+                        'type'        => 'credit_note',
+                        'amount'      => -abs((float) $provisionalEntry->amount),
+                        'currency'    => $provisionalEntry->currency,
+                        'description' => "Cancellation reversal of provisional invoice — {$purchase->reference}",
+                        'entry_date'  => now()->toDateString(),
+                        'ref_type'    => \App\Models\ImportNomination::class,
+                        'ref_id'      => $nom->id,
+                        'created_by'  => $u?->id,
+                    ]);
                 }
             }
 

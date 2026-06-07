@@ -56,6 +56,10 @@ class BatchCostController extends Controller
         abort_if((int) $purchase->company_id !== $cid, 403);
         abort_if((int) $batchCost->purchase_id !== $purchase->id, 403);
 
+        if ($batchCost->auto_posted) {
+            return back()->with('error', 'Auto-posted costs (freight, shortfall) cannot be deleted. They are system records from truck deliveries.');
+        }
+
         $batchCost->delete();
 
         return redirect()->route('purchases.show', $purchase)

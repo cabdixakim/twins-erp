@@ -52,7 +52,27 @@ class ImportNominationController extends Controller
         }
 
         $this->syncAdvanceEntry($cid, $nom, $data);
-        return back()->with('status', 'Import nomination created. You can now add trucks.');
+
+        // Post provisional supplier invoice for the full committed purchase value
+        // This reflects AP immediately at nomination — adjusted by actual delivery quantities per truck
+        if ($purchase->supplier_id) {
+            $provisionalAmt = round((float) $purchase->qty * (float) $purchase->unit_price, 4);
+            if ($provisionalAmt > 0) {
+                SupplierLedgerController::postInvoice(
+                    companyId:   $cid,
+                    supplierId:  (int) $purchase->supplier_id,
+                    amount:      $provisionalAmt,
+                    currency:    $purchase->currency ?? 'USD',
+                    description: "Provisional invoice — import PO {$purchase->reference} ({$purchase->qty} L × {$purchase->unit_price} {$purchase->currency})",
+                    entryDate:   now()->toDateString(),
+                    refType:     ImportNomination::class,
+                    refId:       $nom->id,
+                    createdBy:   auth()->id(),
+                );
+            }
+        }
+
+        return back()->with('status', 'Import nomination created. Provisional supplier invoice posted. You can now add trucks.');
     }
 
     // ── Update nomination ────────────────────────────────────────────────────
@@ -323,7 +343,72 @@ class ImportNominationController extends Controller
             }
         }
 
-        // Post supplier invoice for qty delivered (idempotent per truck)
+        // Auto-post freight as a batch cost (idempotent per truck)
+        if ($purchase->batch_id && isset($freightAmt) && $freightAmt > 0) {
+            $freightCostExists = DB::table('batch_costs')
+                ->where('batch_id', $purchase->batch_id)
+                ->where('truck_id', $truck->id)
+                ->where('category', 'freight')
+                ->exists();
+            if (!$freightCostExists) {
+                $freightCurrency = ($nomination->transporter_id)
+                    ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD')
+                    : ($nomination->currency ?? 'USD');
+                DB::table('batch_costs')->insert([
+                    'batch_id'           => $purchase->batch_id,
+                    'purchase_id'        => $purchase->id,
+                    'nomination_id'      => $nomination->id,
+                    'truck_id'           => $truck->id,
+                    'company_id'         => $cid,
+                    'category'           => 'freight',
+                    'description'        => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
+                    'amount'             => $freightAmt,
+                    'currency'           => $freightCurrency,
+                    'exchange_rate'      => 1,
+                    'amount_base'        => $freightAmt,
+                    'entry_date'         => $data['delivery_date'],
+                    'is_included_in_cost'=> false,
+                    'auto_posted'        => true,
+                    'created_by'         => auth()->id(),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ]);
+            }
+        }
+
+        // Auto-post shortfall charge as a batch cost (idempotent per truck)
+        if ($purchase->batch_id && $shortfallCharge > 0) {
+            $shortCostExists = DB::table('batch_costs')
+                ->where('batch_id', $purchase->batch_id)
+                ->where('truck_id', $truck->id)
+                ->where('category', 'penalty')
+                ->exists();
+            if (!$shortCostExists) {
+                DB::table('batch_costs')->insert([
+                    'batch_id'           => $purchase->batch_id,
+                    'purchase_id'        => $purchase->id,
+                    'nomination_id'      => $nomination->id,
+                    'truck_id'           => $truck->id,
+                    'company_id'         => $cid,
+                    'category'           => 'penalty',
+                    'description'        => "Shortfall charge — truck {$truck->truck_reg} ({$excessLossQty} L excess loss)",
+                    'amount'             => $shortfallCharge,
+                    'currency'           => $nomination->short_charge_currency ?? 'USD',
+                    'exchange_rate'      => 1,
+                    'amount_base'        => $shortfallCharge,
+                    'entry_date'         => $data['delivery_date'],
+                    'is_included_in_cost'=> false,
+                    'auto_posted'        => true,
+                    'created_by'         => auth()->id(),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ]);
+            }
+        }
+
+        // Post actual delivery invoice per truck (idempotent)
+        // The provisional invoice posted at nomination covers the full PO value.
+        // Per-truck delivery entries allow reconciliation: sum of truck invoices vs provisional.
         if ($purchase->supplier_id && $qtyDelivered > 0) {
             $invoiceAmt = round($qtyDelivered * (float) $purchase->unit_price, 4);
             if ($invoiceAmt > 0) {
@@ -332,7 +417,7 @@ class ImportNominationController extends Controller
                     supplierId:  (int) $purchase->supplier_id,
                     amount:      $invoiceAmt,
                     currency:    $purchase->currency ?? 'USD',
-                    description: "Import delivery: truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
+                    description: "Delivery invoice: truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
                     entryDate:   $data['delivery_date'],
                     refType:     ImportTruck::class,
                     refId:       (int) $truck->id,
@@ -345,6 +430,9 @@ class ImportNominationController extends Controller
         if ($excessLossQty > 0) {
             $msg .= " Chargeable shortfall: {$excessLossQty} L → {$nomination->short_charge_currency} "
                   . number_format($shortfallCharge, 2) . '.';
+        }
+        if (isset($freightAmt) && $freightAmt > 0) {
+            $msg .= " Freight cost auto-posted: " . number_format($freightAmt, 2) . ".";
         }
 
         return back()->with('status', $msg);
