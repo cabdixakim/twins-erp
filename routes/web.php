@@ -95,6 +95,8 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
         Route::prefix('settings')->name('settings.')->group(function () {
 
+            Route::get('/', fn() => view('settings.hub'))->name('hub');
+
             Route::get('/company', [CompanySettingsController::class, 'edit'])
                 ->name('company.edit');
 

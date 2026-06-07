@@ -124,6 +124,18 @@ textarea:focus {
   box-shadow: var(--tw-shadow);
 }
 
+.tw-card {
+  background: var(--tw-surface);
+  border: 1px solid var(--tw-border);
+  border-radius: 1rem;
+  box-shadow: var(--tw-shadow);
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.tw-card:hover {
+  border-color: rgba(16, 185, 129, .30);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, .10);
+}
+
 /* =========================
    Buttons
    ========================= */
