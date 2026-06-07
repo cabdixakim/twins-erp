@@ -115,6 +115,74 @@
     </div>
 </div>
 
+{{-- Open purchase commitments (fuel bought but not yet invoiced) --}}
+@if($openPurchases->isNotEmpty())
+<div class="rounded-2xl border mb-5 overflow-hidden" style="border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.05)">
+    <div class="px-5 py-3 border-b flex items-center justify-between" style="border-color:rgba(245,158,11,.25)">
+        <div class="flex items-center gap-2">
+            <svg class="w-4 h-4" style="color:#f59e0b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            <span class="text-xs font-semibold" style="color:#f59e0b">Open purchases — not yet invoiced</span>
+        </div>
+        <div class="flex items-center gap-3">
+            @foreach($openCommitmentByCurrency as $c => $amt)
+                <span class="text-sm font-bold" style="color:#f59e0b">{{ $sym($c) }}{{ number_format($amt, 2) }} <span class="text-[10px] font-normal" style="color:#f59e0b;opacity:.7">{{ $c }}</span></span>
+            @endforeach
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead>
+                <tr class="border-b" style="border-color:rgba(245,158,11,.2)">
+                    <th class="text-left py-2 pl-5 pr-3 font-semibold tw-muted">Reference</th>
+                    <th class="text-left py-2 pr-3 font-semibold tw-muted">Type</th>
+                    <th class="text-left py-2 pr-3 font-semibold tw-muted">Status</th>
+                    <th class="text-right py-2 pr-3 font-semibold tw-muted">Qty (L)</th>
+                    <th class="text-right py-2 pr-5 font-semibold tw-muted">Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($openPurchases as $op)
+                    @php
+                        $opValue = (float)$op->qty * (float)$op->unit_price;
+                        $opStatusColor = match($op->status) {
+                            'confirmed'  => '#10b981',
+                            'nominated'  => '#f59e0b',
+                            'received'   => '#10b981',
+                            'transferred'=> '#0ea5e9',
+                            'dispatched' => '#a855f7',
+                            default      => '#94a3b8',
+                        };
+                    @endphp
+                    <tr class="border-b last:border-0" style="border-color:rgba(245,158,11,.15)">
+                        <td class="py-2 pl-5 pr-3 tw-fg">
+                            <a href="{{ route('purchases.show', $op->id) }}" class="font-mono hover:underline" style="color:#f59e0b">
+                                {{ $op->reference ?: '#'.$op->id }}
+                            </a>
+                        </td>
+                        <td class="py-2 pr-3 tw-muted capitalize">{{ str_replace('_', ' ', $op->type) }}</td>
+                        <td class="py-2 pr-3">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                  style="background:{{ $opStatusColor }}20; color:{{ $opStatusColor }}; border:1px solid {{ $opStatusColor }}40">
+                                {{ ucfirst($op->status) }}
+                            </span>
+                        </td>
+                        <td class="py-2 pr-3 text-right tw-fg font-semibold">{{ number_format($op->qty, 0) }}</td>
+                        <td class="py-2 pr-5 text-right font-semibold" style="color:#f59e0b">
+                            {{ $sym($op->currency) }}{{ number_format($opValue, 2) }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    <div class="px-5 py-2.5 text-[10px] tw-muted" style="border-top:1px solid rgba(245,158,11,.15)">
+        Invoices are posted automatically as deliveries are recorded. Import purchases post per truck delivery.
+    </div>
+</div>
+@endif
+
 {{-- Ledger entries --}}
 <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-6">
     <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">

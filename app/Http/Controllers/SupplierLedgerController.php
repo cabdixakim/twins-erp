@@ -32,7 +32,19 @@ class SupplierLedgerController extends Controller
             ->groupBy('supplier_id')
             ->pluck('total', 'supplier_id');
 
-        return view('suppliers.index', compact('suppliers', 'balances', 'invoicedTotals'));
+        // Pending purchase commitments (not yet invoiced / partially invoiced)
+        // Groups all non-draft, non-cancelled, non-voided purchases by supplier + currency
+        $pendingCommitments = DB::table('purchases')
+            ->where('company_id', $cid)
+            ->whereNotNull('supplier_id')
+            ->whereNotIn('status', ['draft', 'cancelled', 'voided'])
+            ->selectRaw('supplier_id, currency, SUM(qty * unit_price) as committed')
+            ->groupBy('supplier_id', 'currency')
+            ->get()
+            ->groupBy('supplier_id')
+            ->map(fn($rows) => $rows->pluck('committed', 'currency'));
+
+        return view('suppliers.index', compact('suppliers', 'balances', 'invoicedTotals', 'pendingCommitments'));
     }
 
     public function show(Supplier $supplier)
@@ -63,9 +75,22 @@ class SupplierLedgerController extends Controller
         $purchaseIds = $allEntries->where('ref_type', 'purchase')->pluck('ref_id')->unique()->filter();
         $purchaseRefs = Purchase::whereIn('id', $purchaseIds)->pluck('reference', 'id');
 
+        // Open purchase commitments (confirmed/nominated/received — not yet fully invoiced)
+        $openPurchases = DB::table('purchases')
+            ->where('company_id', $cid)
+            ->where('supplier_id', $supplier->id)
+            ->whereNotIn('status', ['draft', 'cancelled', 'voided'])
+            ->orderByDesc('id')
+            ->get(['id', 'reference', 'type', 'status', 'qty', 'unit_price', 'currency', 'purchase_date']);
+
+        $openCommitmentByCurrency = $openPurchases
+            ->groupBy('currency')
+            ->map(fn($rows) => $rows->sum(fn($r) => (float) $r->qty * (float) $r->unit_price));
+
         return view('suppliers.show', compact(
             'supplier', 'entries', 'purchaseRefs',
-            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netPayable', 'currency'
+            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netPayable', 'currency',
+            'openPurchases', 'openCommitmentByCurrency'
         ));
     }
 

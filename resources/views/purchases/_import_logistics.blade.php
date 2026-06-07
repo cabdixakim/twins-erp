@@ -259,15 +259,13 @@
                       </button>
                     @endif
                     @if(in_array('mark_in_transit', $truckActions))
-                      <form method="POST"
-                            action="{{ route('purchases.import-nomination.trucks.mark-in-transit', [$purchase, $nom, $truck]) }}"
-                            onsubmit="return confirm('Mark {{ $truck->truck_reg }} as in transit?')">
-                        @csrf
-                        <button type="submit"
-                                class="h-7 px-2 rounded-lg border border-amber-500/40 bg-amber-600/10 text-[11px] font-semibold s-amber hover:bg-amber-600/20 transition">
-                          In transit
-                        </button>
-                      </form>
+                      <button type="button"
+                              data-truck-reg="{{ $truck->truck_reg }}"
+                              data-transit-action="{{ route('purchases.import-nomination.trucks.mark-in-transit', [$purchase, $nom, $truck]) }}"
+                              onclick="openInTransitModal(this)"
+                              class="h-7 px-2 rounded-lg border border-amber-500/40 bg-amber-600/10 text-[11px] font-semibold s-amber hover:bg-amber-600/20 transition">
+                        In transit
+                      </button>
                     @endif
                     @if(in_array('record_border', $truckActions))
                       <button type="button"
@@ -2197,3 +2195,59 @@
 })();
 </script>
 @endpush
+
+{{-- ── In-Transit Confirmation Modal (shared, JS-populated) ── --}}
+@php $border = $border ?? 'border-[color:var(--tw-border)]'; $surface = $surface ?? 'bg-[color:var(--tw-surface)]'; $surface2 = $surface2 ?? 'bg-[color:var(--tw-surface-2)]'; $fg = $fg ?? 'text-[color:var(--tw-fg)]'; $muted = $muted ?? 'text-[color:var(--tw-muted)]'; @endphp
+<div id="inTransitModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.6)">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }}" style="background:rgba(245,158,11,.08)">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3)">
+          <svg class="w-4 h-4" style="color:#f59e0b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414A1 1 0 0121 11.414V16a1 1 0 01-1 1h-1"/>
+          </svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold tw-fg">Mark as in transit?</div>
+          <div class="text-xs tw-muted mt-0.5" id="inTransitTruckReg">Truck</div>
+        </div>
+      </div>
+    </div>
+    <div class="px-5 py-4">
+      <p class="text-sm tw-muted">This will move the truck to <strong class="tw-fg">In transit</strong> status. The truck has been loaded and is now on its way to the destination.</p>
+    </div>
+    <form id="inTransitForm" method="POST" action="">
+      @csrf
+      <div class="px-5 py-4 border-t {{ $border }} flex items-center gap-2 justify-end">
+        <button type="button" onclick="closeInTransitModal()"
+                class="h-9 px-4 rounded-xl border {{ $border }} text-sm font-semibold tw-fg hover:opacity-80 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="h-9 px-4 rounded-xl border text-sm font-semibold text-white transition hover:opacity-90"
+                style="background:#f59e0b; border-color:rgba(245,158,11,.5)">
+          Yes, in transit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openInTransitModal(btn) {
+  const reg    = btn.dataset.truckReg || 'Truck';
+  const action = btn.dataset.transitAction;
+  document.getElementById('inTransitTruckReg').textContent = reg;
+  document.getElementById('inTransitForm').action = action;
+  document.getElementById('inTransitModal').classList.remove('hidden');
+  document.documentElement.classList.add('overflow-hidden');
+}
+function closeInTransitModal() {
+  document.getElementById('inTransitModal').classList.add('hidden');
+  document.documentElement.classList.remove('overflow-hidden');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeInTransitModal();
+});
+</script>

@@ -181,95 +181,76 @@
     </div>
   @endif
 
-  {{-- Main card --}}
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
-    <div class="grid gap-4 sm:grid-cols-2">
+  {{-- ── Main purchase card ── --}}
+  <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
 
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Supplier</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $supplierName }}</div>
-      </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Product</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $productName }}</div>
-      </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Type</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $typeLabel }}</div>
-      </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Date</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->purchase_date?->format('Y-m-d') ?? '—' }}</div>
-      </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Quantity</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }}">
-          {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span>
+    {{-- Hero row: supplier + value --}}
+    <div class="px-6 py-5 flex flex-wrap items-start justify-between gap-4 border-b {{ $border }}" style="background:linear-gradient(135deg,var(--tw-surface-2) 0%,var(--tw-surface) 100%)">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 flex-wrap mb-1">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-semibold {{ $statusPill }}">{{ ucfirst((string)$purchase->status) }}</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider tw-muted">{{ $typeLabel }}</span>
+          @if($purchase->batch_id)
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $border }} text-[10px] font-semibold tw-muted" style="background:var(--tw-surface)">Batch #{{ $purchase->batch_id }}</span>
+          @endif
         </div>
+        <div class="text-lg font-bold tw-fg truncate">{{ $supplierName }}</div>
+        <div class="text-xs tw-muted mt-0.5">{{ $productName }}</div>
       </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Unit price</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }}">
-          <span class="{{ $muted }}">{{ $currency }}</span>
-          {{ number_format($unit, 6) }}
-        </div>
-      </div>
-
-      <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Estimated total</div>
-        <div class="mt-1 text-sm font-semibold {{ $fg }}">
-          <span class="{{ $muted }}">{{ $currency }}</span>
+      <div class="text-right flex-shrink-0">
+        <div class="text-[10px] tw-muted uppercase tracking-wide mb-1">Purchase value</div>
+        <div class="text-2xl font-bold tw-fg leading-none">
           {{ number_format($total, 2) }}
+          <span class="text-sm font-semibold ml-1 tw-muted">{{ $currency }}</span>
         </div>
+        <div class="text-[11px] tw-muted mt-1">{{ number_format($qty, 0) }} L · {{ $currency }} {{ number_format($unit, 4) }}/L</div>
       </div>
+    </div>
 
-      @if($purchase->type === 'local_depot')
-        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-          <div class="text-[11px] {{ $muted }}">Depot</div>
-          <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $depotName }}</div>
+    {{-- Metadata strip --}}
+    <div class="px-6 py-3 flex flex-wrap gap-x-6 gap-y-2 border-b {{ $border }} text-xs">
+      <div>
+        <span class="tw-muted">Date </span>
+        <span class="tw-fg font-medium">{{ $purchase->purchase_date?->format('d M Y') ?? '—' }}</span>
+      </div>
+      @if($purchase->type === 'local_depot' && $depotName !== '—')
+        <div>
+          <span class="tw-muted">Depot </span>
+          <span class="tw-fg font-medium">{{ $depotName }}</span>
         </div>
       @endif
-
-      <div class="sm:col-span-2 rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-        <div class="text-[11px] {{ $muted }}">Notes</div>
-        <div class="mt-1 text-sm {{ $fg }}">{{ $purchase->notes ?: '—' }}</div>
+      <div>
+        <span class="tw-muted">Ref </span>
+        <span class="tw-fg font-mono font-medium">{{ $ref }}</span>
       </div>
+      @if($purchase->notes)
+        <div class="w-full">
+          <span class="tw-muted">Notes </span>
+          <span class="tw-fg">{{ $purchase->notes }}</span>
+        </div>
+      @endif
     </div>
 
     {{-- Workflow hint --}}
-    <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
-      @if($purchase->type === 'import')
-        @if($purchase->status === 'draft')
-          <span class="{{ $muted }}">Next:</span> confirm to create a batch, then set up the import nomination below.
-        @elseif($purchase->status === 'confirmed')
-          <span class="{{ $muted }}">Next:</span> set up the import nomination (transporter, rate, allowed loss) below, then add trucks.
-        @elseif($purchase->status === 'nominated')
-          <span class="{{ $muted }}">Next:</span> add trucks, record loadings, track transit → border clearance → depot delivery.
+    <div class="px-6 py-3 text-xs flex items-start gap-2">
+      <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="tw-muted">
+        @if($purchase->type === 'import')
+          @if($purchase->status === 'draft') Confirm to create a batch, then set up the import nomination below.
+          @elseif($purchase->status === 'confirmed') Set up the transporter nomination below, then add trucks to begin tracking.
+          @elseif($purchase->status === 'nominated') Record truck loadings, track transit → border clearance → delivery to depot.
+          @else All trucks delivered. Purchase complete.
+          @endif
+        @elseif($purchase->type === 'local_depot')
+          After confirmation, receive into <strong class="tw-fg">{{ $depotName }}</strong>.
         @else
-          <span class="{{ $muted }}">Status:</span> {{ ucfirst($purchase->status) }}. All trucks delivered.
+          After confirmation, stock goes directly into <strong class="tw-fg">Cross Dock</strong> and is ready for dispatch.
         @endif
-      @elseif($purchase->type === 'local_depot')
-        <span class="{{ $muted }}">After confirmation:</span>
-        receive it into the selected depot from Depot Stock.
-      @else
-        <span class="{{ $muted }}">After confirmation:</span>
-        receipt into <span class="font-semibold">CROSS DOCK</span> immediately, ready for direct sale.
-      @endif
+      </span>
     </div>
 
-    {{-- Secondary actions --}}
-    <div class="mt-4 flex flex-wrap items-center gap-2">
-      <a href="{{ route('purchases.index') }}"
-         class="inline-flex items-center h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-xs font-semibold {{ $fg }}
-                hover:bg-[color:var(--tw-surface)]">
-        ← Back to list
-      </a>
-    </div>
   </div>
 
   {{-- ================================================================
@@ -446,17 +427,16 @@
                 @endif
               </td>
               <td class="py-2.5 pr-5 text-right">
-                <form method="POST"
-                      action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
-                      onsubmit="return confirm('Remove this cost?')"
-                      class="inline">
-                  @csrf @method('DELETE')
-                  <button type="submit" class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
-                    </svg>
-                  </button>
-                </form>
+                <button type="button"
+                        data-cost-id="{{ $bc->id }}"
+                        data-cost-desc="{{ $bc->description }}"
+                        data-cost-action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
+                        onclick="openDeleteCostModal(this)"
+                        class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                  </svg>
+                </button>
               </td>
             </tr>
           @endforeach
@@ -1395,6 +1375,27 @@
       voidModal.querySelectorAll('[data-close="void-purchase"]').forEach(el => on(el, 'click', closeVoid));
     }
 
+    // Delete cost modal
+    const deleteCostModal = document.getElementById('deleteCostModal');
+    const deleteCostForm  = document.getElementById('deleteCostForm');
+    const deleteCostDesc  = document.getElementById('deleteCostDesc');
+
+    window.openDeleteCostModal = function(btn) {
+      if (!deleteCostModal) return;
+      deleteCostForm.action = btn.dataset.costAction;
+      deleteCostDesc.textContent = btn.dataset.costDesc || 'this cost';
+      deleteCostModal.classList.remove('hidden');
+      document.documentElement.classList.add('overflow-hidden');
+    };
+    window.closeDeleteCostModal = function() {
+      if (!deleteCostModal) return;
+      deleteCostModal.classList.add('hidden');
+      document.documentElement.classList.remove('overflow-hidden');
+    };
+    if (deleteCostModal) {
+      deleteCostModal.querySelectorAll('[data-close="delete-cost"]').forEach(el => on(el, 'click', closeDeleteCostModal));
+    }
+
     // ESC closes any open modal
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
@@ -1407,8 +1408,43 @@
       closeImportDeliver();
       closeCancel();
       closeVoid();
+      if (window.closeDeleteCostModal) closeDeleteCostModal();
     });
   })();
 </script>
+
+{{-- DELETE COST MODAL --}}
+<div id="deleteCostModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.6)">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 flex items-center gap-3 border-b {{ $border }}">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)">
+        <svg class="w-4 h-4" style="color:#ef4444" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold tw-fg">Remove landed cost?</div>
+        <div class="text-xs tw-muted mt-0.5" id="deleteCostDesc"></div>
+      </div>
+    </div>
+    <div class="px-5 py-4">
+      <p class="text-sm tw-muted">This will permanently delete this cost entry. The batch cost total will be updated.</p>
+    </div>
+    <form id="deleteCostForm" method="POST" action="">
+      @csrf @method('DELETE')
+      <div class="px-5 py-4 border-t {{ $border }} flex items-center gap-2 justify-end">
+        <button type="button" data-close="delete-cost"
+                class="h-9 px-4 rounded-xl border {{ $border }} text-sm font-semibold tw-fg hover:opacity-80 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="h-9 px-4 rounded-xl border text-sm font-semibold text-white transition hover:opacity-90"
+                style="background:#ef4444; border-color:rgba(239,68,68,.5)">
+          Remove
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
 @endsection
