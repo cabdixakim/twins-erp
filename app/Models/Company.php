@@ -19,6 +19,13 @@ class Company extends Model
         'logo_path',
         'country',
         'timezone',
+        'address',
+        'phone',
+        'email',
+        'website',
+        'rccm',
+        'id_nat',
+        'nif',
         'costing_method',
         'weighted_avg_cost',
         'accounting_enabled',
@@ -27,6 +34,12 @@ class Company extends Model
         'posting_paused_at',
         'posting_paused_by',
         'posting_paused_reason',
+        'invoice_accent_color',
+        'invoice_payment_days',
+        'invoice_prefix',
+        'invoice_tax_rate',
+        'invoice_footer_notes',
+        'invoice_bank_details',
     ];
 
     protected $casts = [

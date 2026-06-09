@@ -168,6 +168,84 @@
                 </div>
             </div>
 
+            {{-- Contact & Address --}}
+            <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
+                <div class="text-sm font-semibold {{ $fg }} mb-1">Contact &amp; Address</div>
+                <div class="text-[11px] {{ $muted }} mb-4">Printed on delivery notes and invoices.</div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="{{ $label }}">Street address</label>
+                        <textarea name="address" rows="2"
+                                  placeholder="123 Avenue Sendwe, Lubumbashi"
+                                  class="{{ $input }} resize-none leading-relaxed">{{ old('address', $company->address ?? '') }}</textarea>
+                        @error('address')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="{{ $label }}">Phone</label>
+                            <input type="text" name="phone"
+                                   placeholder="+243 99 000 0000"
+                                   value="{{ old('phone', $company->phone ?? '') }}"
+                                   class="{{ $input }}">
+                            @error('phone')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                        </div>
+                        <div>
+                            <label class="{{ $label }}">Email</label>
+                            <input type="email" name="email"
+                                   placeholder="info@company.com"
+                                   value="{{ old('email', $company->email ?? '') }}"
+                                   class="{{ $input }}">
+                            @error('email')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">Website</label>
+                        <input type="text" name="website"
+                               placeholder="www.company.com"
+                               value="{{ old('website', $company->website ?? '') }}"
+                               class="{{ $input }}">
+                        @error('website')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+            </div>
+
+            {{-- Legal Identifiers --}}
+            <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
+                <div class="text-sm font-semibold {{ $fg }} mb-1">Legal Identifiers</div>
+                <div class="text-[11px] {{ $muted }} mb-4">Regulatory registration numbers — printed on invoices and delivery notes.</div>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div>
+                        <label class="{{ $label }}">RCCM</label>
+                        <input type="text" name="rccm"
+                               placeholder="CD/LSH/RCCM/14-B-00000"
+                               value="{{ old('rccm', $company->rccm ?? '') }}"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">Registre du Commerce</div>
+                        @error('rccm')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">ID Nat</label>
+                        <input type="text" name="id_nat"
+                               placeholder="01-F3200-N12345X"
+                               value="{{ old('id_nat', $company->id_nat ?? '') }}"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">Identification Nationale</div>
+                        @error('id_nat')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">NIF</label>
+                        <input type="text" name="nif"
+                               placeholder="A 2000041"
+                               value="{{ old('nif', $company->nif ?? '') }}"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">Numéro d'Identification Fiscale</div>
+                        @error('nif')<div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+            </div>
+
             {{-- Volume unit --}}
             <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
                 <div class="mb-3">

@@ -344,6 +344,9 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::get('/sales/export', [SalesController::class, 'exportCsv'])->name('sales.export');
         Route::resource('sales', SalesController::class)->only(['index','store','update']);
         Route::post('sales/{sale}/post', [SalesController::class, 'post'])->name('sales.post');
+        Route::get('sales/{sale}/delivery-note', [SalesController::class, 'deliveryNote'])->name('sales.delivery-note');
+        Route::post('sales/{sale}/pod', [SalesController::class, 'confirmPod'])->name('sales.pod');
+        Route::post('sales/{sale}/cancel', [SalesController::class, 'cancelSale'])->name('sales.cancel');
 
         // Invoices
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');

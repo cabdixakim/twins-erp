@@ -33,6 +33,17 @@ class CompanySettingsController extends Controller
             'country'       => ['nullable', 'string', 'max:255'],
             'timezone'      => ['nullable', 'string', 'max:255'],
 
+            // Contact & address
+            'address' => ['nullable', 'string', 'max:500'],
+            'phone'   => ['nullable', 'string', 'max:50'],
+            'email'   => ['nullable', 'email', 'max:150'],
+            'website' => ['nullable', 'string', 'max:255'],
+
+            // Legal identifiers
+            'rccm'   => ['nullable', 'string', 'max:100'],
+            'id_nat' => ['nullable', 'string', 'max:100'],
+            'nif'    => ['nullable', 'string', 'max:100'],
+
             // Invoice defaults
             'invoice_prefix'       => ['nullable', 'string', 'max:20'],
             'invoice_payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],

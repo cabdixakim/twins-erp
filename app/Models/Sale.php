@@ -21,6 +21,10 @@ class Sale extends Model
         'cogs_total'    => 'float',
         'gross_profit'   => 'float',
         'freight_amount' => 'float',
+        'temperature'    => 'float',
+        'density'        => 'float',
+        'qty_delivered'  => 'float',
+        'pod_received_at' => 'date',
         'posted_at'      => 'datetime',
     ];
 

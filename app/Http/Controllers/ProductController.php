@@ -26,9 +26,11 @@ class ProductController extends Controller
         $cid = (int) ($u?->active_company_id ?? 0);
 
         $data = $request->validate([
-            'name'     => 'required|string|max:120',
-            'code'     => 'nullable|string|max:32',
-            'base_uom' => 'nullable|string|max:16',
+            'name'            => 'required|string|max:120',
+            'code'            => 'nullable|string|max:32',
+            'base_uom'        => 'nullable|string|max:16',
+            'allowed_loss_pct'=> 'nullable|numeric|min:0|max:100',
+            'default_density' => 'nullable|numeric|min:0|max:2',
         ]);
 
         // Check for duplicate product (company_id + name)
@@ -41,13 +43,15 @@ class ProductController extends Controller
         }
 
         Product::create([
-            'company_id' => $cid,
-            'name'       => trim($data['name']),
-            'code'       => $data['code'] ? strtoupper(trim($data['code'])) : null,
-            'base_uom'   => $data['base_uom'] ? strtoupper(trim($data['base_uom'])) : 'L',
-            'is_active'  => true,
-            'created_by' => $u?->id,
-            'updated_by' => $u?->id,
+            'company_id'      => $cid,
+            'name'            => trim($data['name']),
+            'code'            => $data['code'] ? strtoupper(trim($data['code'])) : null,
+            'base_uom'        => $data['base_uom'] ? strtoupper(trim($data['base_uom'])) : 'L',
+            'allowed_loss_pct'=> isset($data['allowed_loss_pct']) ? (float) $data['allowed_loss_pct'] : null,
+            'default_density' => isset($data['default_density']) ? (float) $data['default_density'] : null,
+            'is_active'       => true,
+            'created_by'      => $u?->id,
+            'updated_by'      => $u?->id,
         ]);
 
         return back()->with('status', 'Product created.');
@@ -58,18 +62,22 @@ class ProductController extends Controller
         $u = auth()->user();
 
         $data = $request->validate([
-            'name'      => 'required|string|max:120',
-            'code'      => 'nullable|string|max:32',
-            'base_uom'  => 'nullable|string|max:16',
-            'is_active' => 'nullable|boolean',
+            'name'            => 'required|string|max:120',
+            'code'            => 'nullable|string|max:32',
+            'base_uom'        => 'nullable|string|max:16',
+            'is_active'       => 'nullable|boolean',
+            'allowed_loss_pct'=> 'nullable|numeric|min:0|max:100',
+            'default_density' => 'nullable|numeric|min:0|max:2',
         ]);
 
         $product->update([
-            'name'       => trim($data['name']),
-            'code'       => $data['code'] ? strtoupper(trim($data['code'])) : null,
-            'base_uom'   => $data['base_uom'] ? strtoupper(trim($data['base_uom'])) : $product->base_uom,
-            'is_active'  => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $product->is_active,
-            'updated_by' => $u?->id,
+            'name'            => trim($data['name']),
+            'code'            => $data['code'] ? strtoupper(trim($data['code'])) : null,
+            'base_uom'        => $data['base_uom'] ? strtoupper(trim($data['base_uom'])) : $product->base_uom,
+            'is_active'       => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $product->is_active,
+            'allowed_loss_pct'=> isset($data['allowed_loss_pct']) ? (float) $data['allowed_loss_pct'] : $product->allowed_loss_pct,
+            'default_density' => isset($data['default_density']) ? (float) $data['default_density'] : $product->default_density,
+            'updated_by'      => $u?->id,
         ]);
 
         return back()->with('status', 'Product updated.');

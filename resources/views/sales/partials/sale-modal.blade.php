@@ -199,6 +199,53 @@
                             class="{{ $fieldBase }} @error('delivery_notes') {{ $fieldErr }} @enderror">{{ old('delivery_notes') }}</textarea>
                   @error('delivery_notes') <div class="{{ $errText }}">{{ $message }}</div> @enderror
                 </div>
+
+                <div class="sm:col-span-2 border-t border-[color:var(--tw-border)] pt-3 mt-1">
+                  <div class="text-xs font-semibold {{ $fg }} mb-2">Delivery Note fields</div>
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-semibold {{ $muted }}">Driver / Chauffeur</label>
+                  <input id="f_driver_name" name="driver_name" value="{{ old('driver_name') }}"
+                         class="{{ $fieldBase }} @error('driver_name') {{ $fieldErr }} @enderror"
+                         placeholder="e.g. Nuur Hassan" />
+                  @error('driver_name') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-semibold {{ $muted }}">Seal numbers / Numéros de scellé</label>
+                  <textarea id="f_seal_numbers" name="seal_numbers" rows="3"
+                            class="{{ $fieldBase }} @error('seal_numbers') {{ $fieldErr }} @enderror"
+                            placeholder="One per line, or comma-separated.&#10;Use ranges: 91001-91008">{{ old('seal_numbers') }}</textarea>
+                  <details class="mt-1">
+                    <summary class="text-[11px] {{ $muted }} cursor-pointer select-none">Range syntax hint</summary>
+                    <div class="mt-1 text-[11px] {{ $muted }} rounded-lg p-2 bg-[color:var(--tw-surface)]">
+                      <code class="font-mono">91001-91008</code> → expands to 8 individual seal numbers on the printed Delivery Note.
+                      You can mix: <code class="font-mono">91001-91004, 91010, 91012</code>
+                    </div>
+                  </details>
+                  @error('seal_numbers') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Temperature (°C)</label>
+                  <input id="f_temperature" name="temperature" type="number" step="0.1" min="-20" max="100"
+                         value="{{ old('temperature', '20') }}"
+                         class="{{ $fieldBase }} @error('temperature') {{ $fieldErr }} @enderror"
+                         placeholder="20" />
+                  @error('temperature') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Density (t/m³)</label>
+                  <input id="f_density" name="density" type="number" step="0.001" min="0" max="2"
+                         value="{{ old('density') }}"
+                         class="{{ $fieldBase }} @error('density') {{ $fieldErr }} @enderror"
+                         placeholder="auto from product" />
+                  <div class="mt-1 text-[11px] {{ $muted }}">Auto-filled from product default density.</div>
+                  @error('density') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+
               </div>
             </div>
           </div>
@@ -224,6 +271,7 @@
 
 <script>
 window.salesPrefill = @json($prefill ?? ['open'=>false,'depot_id'=>0,'product_id'=>0]);
+window.productDensities = @json($products->mapWithKeys(fn($p) => [$p->id => $p->default_density]));
 </script>
 
 <script>
@@ -328,6 +376,11 @@ window.selectedSale = @json($selected);
     setVal('f_freight_currency', sale.freight_currency || 'USD');
     const notesEl = document.getElementById('f_delivery_notes');
     if (notesEl) notesEl.value = sale.delivery_notes || '';
+    setVal('f_driver_name', sale.driver_name || '');
+    const sealEl = document.getElementById('f_seal_numbers');
+    if (sealEl) sealEl.value = sale.seal_numbers || '';
+    setVal('f_temperature', sale.temperature != null ? String(sale.temperature) : '20');
+    setVal('f_density', sale.density != null ? String(sale.density) : '');
 
     paintModes();
   };
@@ -355,6 +408,17 @@ window.selectedSale = @json($selected);
 
   document.querySelectorAll('#newSaleModal .js-delivery').forEach(r => on(r, 'change', paintModes));
   paintModes();
+
+  // Auto-fill density from product default when product changes
+  const productSel = document.getElementById('f_product_id');
+  const densityInput = document.getElementById('f_density');
+  on(productSel, 'change', () => {
+    const densities = window.productDensities || {};
+    const val = densities[productSel.value];
+    if (densityInput && val != null) {
+      densityInput.value = val;
+    }
+  });
 
   // Bind buttons normally (no "arm" hacks)
   on(openBtn, 'click', () => { setCreateMode(); open(); });

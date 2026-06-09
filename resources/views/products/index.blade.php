@@ -218,6 +218,20 @@
                                                 <input name="base_uom" value="{{ $p->base_uom ?? 'L' }}" class="h-9 {{ $input }}" placeholder="L">
                                             </div>
 
+                                            <div class="sm:col-span-1">
+                                                <label class="{{ $label }}">Default density (t/m³)</label>
+                                                <input name="default_density" type="number" step="0.001" min="0" max="2"
+                                                       value="{{ $p->default_density }}" class="h-9 {{ $input }}" placeholder="0.820">
+                                            </div>
+
+                                            <div class="sm:col-span-1">
+                                                <label class="{{ $label }}">Allowed loss (%)</label>
+                                                <input name="allowed_loss_pct" type="number" step="0.01" min="0" max="100"
+                                                       value="{{ $p->allowed_loss_pct }}" class="h-9 {{ $input }}" placeholder="0.30">
+                                            </div>
+
+                                            <div class="sm:col-span-1">&nbsp;</div>
+
                                             <div class="sm:col-span-3 flex items-center justify-end gap-2 pt-1">
                                                 <button type="button"
                                                         class="btnCancelEdit {{ $btnGhost }} h-9 px-3 text-[12px]"
@@ -304,6 +318,20 @@
                     <input name="base_uom" value="L"
                            class="h-10 {{ $input }}"
                            placeholder="L">
+                </div>
+
+                <div>
+                    <label class="{{ $label }}">Default density (t/m³)</label>
+                    <input name="default_density" type="number" step="0.001" min="0" max="2"
+                           class="h-10 {{ $input }}"
+                           placeholder="0.820">
+                </div>
+
+                <div>
+                    <label class="{{ $label }}">Allowed loss (%)</label>
+                    <input name="allowed_loss_pct" type="number" step="0.01" min="0" max="100"
+                           class="h-10 {{ $input }}"
+                           placeholder="0.30">
                 </div>
             </div>
 
