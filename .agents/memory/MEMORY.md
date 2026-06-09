@@ -3,3 +3,5 @@
 - [Ledger auto-posting pattern](ledger-auto-posting.md) — supplier invoice timing: local_depot at receive(), cross_dock at confirm(), import per truck at recordDelivery(); always idempotent via ref_type+ref_id+type check.
 - [Tailwind 4 arbitrary var() classes broken](tw4-arbitrary-vars.md) — `text-[color:var(--tw-*)]` compiles to zero rules; use hand-written CSS utility classes instead.
 - [Client AR routes vs settings CRUD routes](client-routes.md) — /clients/* → ClientLedgerController (AR ledger, clients.*); /settings/clients/* → ClientController (CRUD, settings.clients.*); both coexist safely — different paths and name prefixes.
+- [Invoice document pattern](invoice-pattern.md) — standalone Blade view (no app layout), accent color from company.invoice_accent_color, auto-created in SalesController::post() idempotently via Invoice::where('sale_id',...)->exists() guard.
+- [AuditLog usage](audit-log-usage.md) — AuditLog::record($event, $description, $model, $label) static helper; never throws (try/catch inside); company_id from auth()->user()->active_company_id; model_type stored as full class name.

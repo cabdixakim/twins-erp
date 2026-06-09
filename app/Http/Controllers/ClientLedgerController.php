@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Client;
 use App\Models\ClientLedgerEntry;
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -63,7 +65,25 @@ class ClientLedgerController extends Controller
             ->selectRaw('SUM(amount) as t')
             ->get()->sum('t');
 
-        return view('clients.index', compact('clients', 'balances', 'invoicedTotals', 'totalAR'));
+        // AR Aging buckets — based on open invoices
+        $today = now()->toDateString();
+        $d30   = now()->subDays(30)->toDateString();
+        $d60   = now()->subDays(60)->toDateString();
+        $aging = Invoice::where('company_id', $cid)
+            ->whereIn('status', ['sent', 'overdue'])
+            ->selectRaw(
+                "client_id,
+                COALESCE(SUM(CASE WHEN due_date >= ? THEN total - paid_amount ELSE 0 END), 0) AS bucket_current,
+                COALESCE(SUM(CASE WHEN due_date < ? AND due_date >= ? THEN total - paid_amount ELSE 0 END), 0) AS bucket_1_30,
+                COALESCE(SUM(CASE WHEN due_date < ? AND due_date >= ? THEN total - paid_amount ELSE 0 END), 0) AS bucket_31_60,
+                COALESCE(SUM(CASE WHEN due_date < ? THEN total - paid_amount ELSE 0 END), 0) AS bucket_60_plus",
+                [$today, $today, $d30, $d30, $d60, $d60]
+            )
+            ->groupBy('client_id')
+            ->get()
+            ->keyBy('client_id');
+
+        return view('clients.index', compact('clients', 'balances', 'invoicedTotals', 'totalAR', 'aging'));
     }
 
     public function show(Client $client)
@@ -130,6 +150,13 @@ class ClientLedgerController extends Controller
             'created_by'  => auth()->id(),
         ]);
 
+        AuditLog::record(
+            'paid',
+            "Payment of {$currency} " . number_format($data['amount'], 2) . " received from client {$client->name}",
+            $client,
+            "Client {$client->name}",
+        );
+
         $sym = self::currencySymbol($currency);
         return redirect()->route('clients.show', $client)
             ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
@@ -158,6 +185,13 @@ class ClientLedgerController extends Controller
             'entry_date'  => $data['entry_date'],
             'created_by'  => auth()->id(),
         ]);
+
+        AuditLog::record(
+            'adjusted',
+            "Credit note of {$currency} " . number_format($data['amount'], 2) . " issued to client {$client->name}",
+            $client,
+            "Client {$client->name}",
+        );
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('clients.show', $client)

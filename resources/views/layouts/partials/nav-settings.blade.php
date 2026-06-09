@@ -13,4 +13,18 @@
         </span>
         <span class="tw-nav-label sidebar-label">Settings</span>
     </a>
+
+    @if(in_array($userRole ?? '', ['owner','manager'], true))
+    <a href="{{ route('admin.audit-log') }}"
+       class="tw-nav-item sidebar-label-parent"
+       style="opacity:.75">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Audit Log</span>
+    </a>
+    @endif
 </div>

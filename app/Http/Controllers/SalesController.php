@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Depot;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\Transporter;
@@ -381,7 +383,7 @@ class SalesController extends Controller
                 $sale->updated_by = $u?->id;
                 $sale->save();
 
-                // Auto-post AR invoice if client is linked
+                // Auto-post AR ledger entry + generate invoice if client is linked
                 if ($sale->client_id) {
                     ClientLedgerController::postInvoice(
                         (int) $sale->client_id,
@@ -395,7 +397,23 @@ class SalesController extends Controller
                             ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d')
                             : now()->format('Y-m-d')
                     );
+
+                    // Auto-generate invoice document (idempotent: skip if already exists)
+                    $alreadyHasInvoice = Invoice::where('sale_id', $sale->id)->exists();
+                    if (!$alreadyHasInvoice) {
+                        $company = $u?->activeCompany ?? Company::find($sale->company_id);
+                        if ($company) {
+                            Invoice::createFromSale($sale->load('product'), $company);
+                        }
+                    }
                 }
+
+                AuditLog::record(
+                    'posted',
+                    "Sale {$sale->reference} posted — {$qty} L, total {$sale->currency} " . number_format((float)$sale->total, 2),
+                    $sale,
+                    "Sale {$sale->reference}",
+                );
             });
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'Insufficient stock')) {

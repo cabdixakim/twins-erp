@@ -69,17 +69,18 @@
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
     $onSales         = request()->routeIs('sales.*');
     $onClients       = request()->routeIs('clients.*') || request()->routeIs('settings.clients.*');
+    $onInvoices      = request()->routeIs('invoices.*');
     $onTransporters  = request()->routeIs('transporters.*');
     $onSuppliers     = request()->routeIs('suppliers.*');
     $onDepotLedger   = request()->routeIs('depots.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onTransporters','onSuppliers','onDepotLedger'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onTransporters','onSuppliers','onDepotLedger'
+    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">

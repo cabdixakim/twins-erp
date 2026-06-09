@@ -28,6 +28,8 @@ use App\Http\Controllers\DepotChargeConfigController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\AuditLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -322,7 +324,20 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::get('/sales/export', [SalesController::class, 'exportCsv'])->name('sales.export');
         Route::resource('sales', SalesController::class)->only(['index','store','update']);
         Route::post('sales/{sale}/post', [SalesController::class, 'post'])->name('sales.post');
-    
+
+        // Invoices
+        Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::patch('/invoices/{invoice}/notes', [InvoiceController::class, 'updateNotes'])
+            ->middleware('role:owner,manager')
+            ->name('invoices.update-notes');
+        Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])
+            ->middleware('role:owner,manager')
+            ->name('invoices.mark-paid');
+        Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])
+            ->middleware('role:owner')
+            ->name('invoices.void');
+
     });
 });
 
@@ -348,4 +363,6 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'role:owner'])
         Route::match(['put', 'patch'], '/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
         Route::post('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->name('roles.permissions.sync');
+
+        Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log');
     });

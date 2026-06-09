@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Batch;
 use App\Models\Client;
 use App\Models\Product;
@@ -499,6 +500,13 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         default       => "Purchase confirmed.\nBatch created.\nNext: Continue import workflow (nominations/offload).",
     };
 
+    AuditLog::record(
+        'confirmed',
+        "Purchase {$purchase->reference} confirmed ({$purchase->type}) — {$purchase->qty} L × {$purchase->unit_price} {$purchase->currency}",
+        $purchase,
+        "Purchase {$purchase->reference}",
+    );
+
     return redirect()->route('purchases.show', $purchase)
         ->with('status', $msg);
 }
@@ -637,6 +645,13 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             }
         }
     });
+
+    AuditLog::record(
+        'received',
+        "Purchase {$purchase->reference} received into depot — {$purchase->qty} L",
+        $purchase,
+        "Purchase {$purchase->reference}",
+    );
 
     return redirect()->route('purchases.show', $purchase)
         ->with('status', 'Purchase received into depot. Depot stock updated.');
@@ -1052,6 +1067,13 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             $purchase->save();
         });
 
+        AuditLog::record(
+            'cancelled',
+            "Purchase {$purchase->reference} cancelled" . ($reason ? " — {$reason}" : ''),
+            $purchase,
+            "Purchase {$purchase->reference}",
+        );
+
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Purchase cancelled.' . ($reason ? ' Reason: ' . $reason : ''));
     }
@@ -1109,6 +1131,13 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             $purchase->updated_by  = $u?->id;
             $purchase->save();
         });
+
+        AuditLog::record(
+            'voided',
+            "Purchase {$purchase->reference} voided/returned to seller" . ($reason ? " — {$reason}" : ''),
+            $purchase,
+            "Purchase {$purchase->reference}",
+        );
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Purchase voided. Stock reversed and returned to seller.');

@@ -77,9 +77,13 @@
                 <tr class="border-b {{ $border }} {{ $surface2 }} text-xs {{ $muted }}">
                     <th class="text-left py-3 pl-5 pr-3 font-semibold">Client</th>
                     <th class="text-left py-3 pr-3 font-semibold hidden sm:table-cell">Type</th>
-                    <th class="text-left py-3 pr-3 font-semibold hidden md:table-cell">Country</th>
+                    <th class="text-right py-3 pr-3 font-semibold hidden lg:table-cell">Current</th>
+                    <th class="text-right py-3 pr-3 font-semibold hidden lg:table-cell">1–30d</th>
+                    <th class="text-right py-3 pr-3 font-semibold hidden lg:table-cell">31–60d</th>
+                    <th class="text-right py-3 pr-3 font-semibold hidden lg:table-cell">60d+</th>
                     <th class="text-right py-3 pr-3 font-semibold">Invoiced</th>
-                    <th class="text-right py-3 pr-5 font-semibold">Outstanding</th>
+                    <th class="text-right py-3 pr-3 font-semibold">Outstanding</th>
+                    <th class="py-3 pr-5"></th>
                 </tr>
             </thead>
             <tbody>
@@ -89,6 +93,11 @@
                         $invoiced = (float) ($invoicedTotals[$client->id] ?? 0);
                         $cur      = $client->currency ?: 'USD';
                         $s        = $sym($cur);
+                        $a        = $aging[$client->id] ?? null;
+                        $aCurrent = $a ? (float)$a->bucket_current : 0;
+                        $a1_30    = $a ? (float)$a->bucket_1_30 : 0;
+                        $a31_60   = $a ? (float)$a->bucket_31_60 : 0;
+                        $a60plus  = $a ? (float)$a->bucket_60_plus : 0;
                     @endphp
                     <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                         <td class="py-3 pl-5 pr-3">
@@ -104,11 +113,41 @@
                             @endif
                         </td>
                         <td class="py-3 pr-3 {{ $muted }} hidden sm:table-cell text-xs">{{ $client->type ?: '—' }}</td>
-                        <td class="py-3 pr-3 {{ $muted }} hidden md:table-cell text-xs">{{ $client->country ?: '—' }}</td>
+
+                        {{-- Aging buckets --}}
+                        <td class="py-3 pr-3 text-right text-xs hidden lg:table-cell">
+                            @if($aCurrent > 0.005)
+                                <span class="text-emerald-400 font-medium">{{ $s }}{{ number_format($aCurrent, 0) }}</span>
+                            @else
+                                <span class="{{ $muted }}">—</span>
+                            @endif
+                        </td>
+                        <td class="py-3 pr-3 text-right text-xs hidden lg:table-cell">
+                            @if($a1_30 > 0.005)
+                                <span class="text-amber-400 font-medium">{{ $s }}{{ number_format($a1_30, 0) }}</span>
+                            @else
+                                <span class="{{ $muted }}">—</span>
+                            @endif
+                        </td>
+                        <td class="py-3 pr-3 text-right text-xs hidden lg:table-cell">
+                            @if($a31_60 > 0.005)
+                                <span class="text-orange-400 font-medium">{{ $s }}{{ number_format($a31_60, 0) }}</span>
+                            @else
+                                <span class="{{ $muted }}">—</span>
+                            @endif
+                        </td>
+                        <td class="py-3 pr-3 text-right text-xs hidden lg:table-cell">
+                            @if($a60plus > 0.005)
+                                <span class="text-rose-400 font-bold">{{ $s }}{{ number_format($a60plus, 0) }}</span>
+                            @else
+                                <span class="{{ $muted }}">—</span>
+                            @endif
+                        </td>
+
                         <td class="py-3 pr-3 text-right text-xs {{ $muted }}">
                             @if($invoiced > 0) {{ $s }}{{ number_format($invoiced, 2) }} @else — @endif
                         </td>
-                        <td class="py-3 pr-5 text-right font-semibold text-xs whitespace-nowrap">
+                        <td class="py-3 pr-3 text-right font-semibold text-xs whitespace-nowrap">
                             @if(abs($balance) < 0.005)
                                 <span class="text-emerald-500">Settled</span>
                             @elseif($balance > 0)
@@ -116,6 +155,12 @@
                             @else
                                 <span class="text-sky-500">{{ $s }}{{ number_format(abs($balance), 2) }} cr</span>
                             @endif
+                        </td>
+                        <td class="py-3 pr-5 text-right">
+                            <a href="{{ route('invoices.index', ['client_id' => $client->id]) }}"
+                               class="text-[10px] {{ $muted }} hover:text-[color:var(--tw-accent)] transition font-medium">
+                                Invoices →
+                            </a>
                         </td>
                     </tr>
                 @endforeach
