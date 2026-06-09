@@ -39,6 +39,11 @@ class DepotChargeAutoPost
         $posted  = [];
 
         foreach ($configs as $config) {
+            // Exempt = contractually waived, post nothing
+            if ($config->paid_by_type === 'exempt') {
+                continue;
+            }
+
             // Idempotency: one auto-posted entry per (truck, config)
             $exists = DB::table('batch_costs')
                 ->where('truck_id', $truck->id)

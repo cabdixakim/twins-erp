@@ -76,6 +76,49 @@ class DepotLedgerController extends Controller
         ));
     }
 
+    public function runMonthlyStorage(Request $request, Depot $depot)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $depot->company_id !== $cid, 403);
+        abort_if($depot->is_system, 404);
+
+        $data = $request->validate([
+            'year'  => 'required|integer|min:2020|max:2099',
+            'month' => 'required|integer|min:1|max:12',
+        ]);
+
+        $posted = \App\Services\DepotStorageAccrual::postForDepot(
+            $depot,
+            (int) $data['year'],
+            (int) $data['month'],
+            $cid,
+            (int) auth()->id()
+        );
+
+        $period = sprintf('%04d-%02d', $data['year'], $data['month']);
+
+        if (empty($posted)) {
+            return redirect()->route('depots.show', $depot)
+                ->with('status', "Monthly storage for {$period}: nothing new to post (already done, no stock, or no configs).");
+        }
+
+        return redirect()->route('depots.show', $depot)
+            ->with('status', "Storage posted for {$period}: " . implode('; ', $posted));
+    }
+
+    public function previewMonthlyStorage(Request $request, Depot $depot)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $depot->company_id !== $cid, 403);
+
+        $year  = (int) ($request->query('year', now()->year));
+        $month = (int) ($request->query('month', now()->month));
+
+        $preview = \App\Services\DepotStorageAccrual::preview($depot, $year, $month, $cid);
+
+        return response()->json($preview);
+    }
+
     public function recordCharge(Request $request, Depot $depot)
     {
         $cid = (int) auth()->user()->active_company_id;

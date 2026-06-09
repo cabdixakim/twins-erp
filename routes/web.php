@@ -286,6 +286,10 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('depots.charges.store');
         Route::post('/depots/{depot}/payments', [DepotLedgerController::class, 'recordPayment'])
             ->name('depots.payments.store');
+        Route::post('/depots/{depot}/monthly-storage', [DepotLedgerController::class, 'runMonthlyStorage'])
+            ->name('depots.monthly-storage.run');
+        Route::get('/depots/{depot}/monthly-storage/preview', [DepotLedgerController::class, 'previewMonthlyStorage'])
+            ->name('depots.monthly-storage.preview');
 
         // Batch / landed costs
         Route::post('/purchases/{purchase}/batch-costs', [BatchCostController::class, 'store'])

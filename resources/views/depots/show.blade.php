@@ -114,15 +114,24 @@
     <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between gap-2 flex-wrap">
         <div>
             <span class="text-xs font-semibold {{ $fg }}">Charge rate configurations</span>
-            <span class="ml-2 text-[10px] {{ $muted }}">Auto-posted at truck delivery</span>
+            <span class="ml-2 text-[10px] {{ $muted }}">Auto-posted at truck delivery · storage accrues monthly</span>
         </div>
-        <button type="button" onclick="document.getElementById('addConfigModal').classList.remove('hidden')"
-                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-[11px] font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add rate
-        </button>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('monthlyStorageModal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-purple-500/30 bg-purple-500/10 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+                Post monthly storage
+            </button>
+            <button type="button" onclick="document.getElementById('addConfigModal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-[11px] font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add rate
+            </button>
+        </div>
     </div>
 
     @if($chargeConfigs->isEmpty())
@@ -356,10 +365,12 @@
                     <label class="text-xs font-semibold {{ $muted }}">Payable to</label>
                     <select name="paid_by_type"
                             class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
-                        <option value="self">We pay directly (no secondary AP)</option>
-                        <option value="depot">This depot (auto-post depot ledger)</option>
-                        <option value="customs_authority">Customs authority</option>
-                        <option value="other">Other third party</option>
+                        <option value="self">We pay directly (COGS only, no secondary AP)</option>
+                        <option value="depot">This depot (COGS + depot ledger payable)</option>
+                        <option value="customs_authority">Customs authority (COGS only, tracked by name)</option>
+                        <option value="transporter">Transporter (COGS + transporter advance)</option>
+                        <option value="exempt">Exempt — contractually waived (nothing posted)</option>
+                        <option value="other">Other third party (COGS only)</option>
                     </select>
                 </div>
                 <div>
@@ -406,6 +417,151 @@ function toggleStorageRules() {
     block.style.display = cat === 'storage' ? '' : 'none';
 }
 document.addEventListener('DOMContentLoaded', toggleStorageRules);
+</script>
+
+{{-- Monthly Storage Modal --}}
+<div id="monthlyStorageModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)" onclick="document.getElementById('monthlyStorageModal').classList.add('hidden')">
+    <div class="w-full max-w-lg rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6"
+         onclick="event.stopPropagation()">
+        <h3 class="text-sm font-bold {{ $fg }} mb-1">Post monthly storage — {{ $depot->name }}</h3>
+        <p class="text-xs {{ $muted }} mb-4">Posts storage charges for all batches currently held at this depot, based on closing balance (qty on hand).</p>
+
+        {{-- Period selector --}}
+        <div class="flex items-center gap-3 mb-4">
+            <div class="flex-1">
+                <label class="text-xs font-semibold {{ $muted }}">Month</label>
+                <select id="storageMonth" onchange="loadStoragePreview()"
+                        class="mt-1 w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                    @foreach(range(1,12) as $m)
+                        <option value="{{ $m }}" {{ $m == now()->month ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::createFromDate(null, $m, 1)->format('F') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="text-xs font-semibold {{ $muted }}">Year</label>
+                <select id="storageYear" onchange="loadStoragePreview()"
+                        class="mt-1 w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                    @foreach(range(now()->year - 1, now()->year + 1) as $y)
+                        <option value="{{ $y }}" {{ $y == now()->year ? 'selected' : '' }}>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mt-5">
+                <button type="button" onclick="loadStoragePreview()"
+                        class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Preview
+                </button>
+            </div>
+        </div>
+
+        {{-- Preview area --}}
+        <div id="storagePreviewArea" class="mb-4 min-h-[80px] rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $muted }}">
+            <span id="storagePreviewPlaceholder">Select a period and click Preview to see what will be charged.</span>
+            <div id="storagePreviewTable" class="hidden"></div>
+        </div>
+
+        {{-- Hidden form for actual post --}}
+        <form id="monthlyStorageForm" method="POST" action="{{ route('depots.monthly-storage.run', $depot) }}">
+            @csrf
+            <input type="hidden" name="year"  id="storageFormYear"  value="{{ now()->year }}">
+            <input type="hidden" name="month" id="storageFormMonth" value="{{ now()->month }}">
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="document.getElementById('monthlyStorageModal').classList.add('hidden')"
+                        class="flex-1 h-9 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit" id="storagePostBtn"
+                        class="flex-1 h-9 rounded-xl border border-purple-500/40 bg-purple-500/10 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition">
+                    Post charges
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function loadStoragePreview() {
+    const month = document.getElementById('storageMonth').value;
+    const year  = document.getElementById('storageYear').value;
+    document.getElementById('storageFormYear').value  = year;
+    document.getElementById('storageFormMonth').value = month;
+
+    const area  = document.getElementById('storagePreviewArea');
+    const table = document.getElementById('storagePreviewTable');
+    const ph    = document.getElementById('storagePreviewPlaceholder');
+
+    ph.textContent = 'Loading…';
+    ph.classList.remove('hidden');
+    table.classList.add('hidden');
+    table.innerHTML = '';
+
+    fetch(`{{ route('depots.monthly-storage.preview', $depot) }}?year=${year}&month=${month}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        ph.classList.add('hidden');
+        table.classList.remove('hidden');
+
+        if (!data.has_configs) {
+            table.innerHTML = '<p class="text-amber-500 text-xs">No active storage configs for this depot.</p>';
+            return;
+        }
+        if (!data.rows || data.rows.length === 0) {
+            table.innerHTML = '<p class="text-xs">No stock held at this depot — nothing to charge.</p>';
+            return;
+        }
+
+        let html = '<table class="w-full text-xs"><thead><tr class="border-b border-[color:var(--tw-border)]">'
+            + '<th class="text-left py-1.5 pr-3 font-semibold">Product</th>'
+            + '<th class="text-left py-1.5 pr-3 font-semibold">Config</th>'
+            + '<th class="text-right py-1.5 pr-3 font-semibold">m³</th>'
+            + '<th class="text-right py-1.5 font-semibold">Amount</th>'
+            + '</tr></thead><tbody>';
+
+        let anyNew = false;
+        data.rows.forEach(r => {
+            const statusCls = r.already_posted
+                ? 'text-slate-400 line-through'
+                : r.chargeable ? 'font-semibold text-[color:var(--tw-fg)]' : 'text-slate-400 italic';
+            const statusTag = r.already_posted
+                ? '<span class="ml-1 text-[9px] bg-slate-500/15 px-1.5 py-0.5 rounded-full">posted</span>'
+                : !r.chargeable ? '<span class="ml-1 text-[9px] bg-amber-500/15 text-amber-600 px-1.5 py-0.5 rounded-full">deferred</span>' : '';
+            const amtStr = r.amount > 0
+                ? `${r.currency} ${r.amount.toFixed(2)}`
+                : (r.already_posted ? 'done' : '—');
+            if (r.chargeable && !r.already_posted) anyNew = true;
+            html += `<tr class="border-b border-[color:var(--tw-border)] last:border-0">
+                <td class="py-1.5 pr-3 ${statusCls}">${r.product}${statusTag}</td>
+                <td class="py-1.5 pr-3 text-[color:var(--tw-muted)]">${r.config_name}</td>
+                <td class="py-1.5 pr-3 text-right text-[color:var(--tw-muted)]">${Number(r.qty_m3).toFixed(3)}</td>
+                <td class="py-1.5 text-right ${r.chargeable && !r.already_posted ? 'text-purple-600 dark:text-purple-400 font-semibold' : 'text-[color:var(--tw-muted)]'}">${amtStr}</td>
+            </tr>`;
+        });
+        html += '</tbody>';
+
+        if (data.totals && Object.keys(data.totals).length > 0) {
+            html += '<tfoot class="border-t border-[color:var(--tw-border)]"><tr>';
+            html += '<td colspan="3" class="pt-2 font-semibold text-[color:var(--tw-fg)] text-xs">Total to post</td>';
+            const totStr = Object.entries(data.totals).map(([c,v]) => `${c} ${v.toFixed(2)}`).join(' + ');
+            html += `<td class="pt-2 text-right font-bold text-purple-600 dark:text-purple-400 text-xs">${totStr}</td>`;
+            html += '</tr></tfoot>';
+        }
+
+        html += '</table>';
+        table.innerHTML = html;
+
+        document.getElementById('storagePostBtn').disabled = !anyNew;
+        document.getElementById('storagePostBtn').style.opacity = anyNew ? '' : '0.4';
+    })
+    .catch(() => {
+        ph.classList.remove('hidden');
+        ph.textContent = 'Preview failed — check that the depot has active storage configs.';
+    });
+}
 </script>
 
 {{-- Record Charge Modal --}}

@@ -72,6 +72,7 @@ class DepotChargeConfig extends Model
             'depot'             => 'Depot (charge to depot ledger)',
             'customs_authority' => 'Customs authority',
             'transporter'       => 'Transporter',
+            'exempt'            => 'Exempt (no charge)',
             'other'             => $name ?: 'Other',
             null                => 'We pay directly',
             default             => $type,

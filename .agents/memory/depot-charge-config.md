@@ -39,8 +39,18 @@ before inserting. Safe to retry delivery recording.
 Stock is tracked in Litres (L). Storage/offloading rates are in m³.
 Conversion: `qty_m3 = qty_litres / 1000`
 
+## Monthly accrual (built)
+- `DepotStorageAccrual::postForDepot()` — posts for a depot/period
+- `batch_costs.charge_period` VARCHAR(7) = "YYYY-MM" for monthly entries; NULL at-delivery
+- Idempotency: (batch_id, depot_charge_config_id, charge_period) unique
+- Artisan: `php artisan depot:accrue-storage --month=N --year=YYYY --dry-run`
+- UI: "Post monthly storage" button on depot page → modal with live JSON preview
+
+## Exempt option
+- `paid_by_type = 'exempt'` → nothing posted at all (contractually waived)
+- DepotChargeAutoPost and DepotStorageAccrual both skip exempt configs
+
 ## What's NOT yet built (v2)
-- Monthly storage accrual job (for deferred billing rules)
-- Per-truck charge overrides / exemptions
-- Customs authority ledger (currently batch cost only)
+- Per-truck charge overrides / exemptions (truck_charge_overrides table)
+- Customs authority ledger (currently batch cost only for customs_authority type)
 - Dispatch month billing rule enforcement (schema has dispatch_rule column, not yet used)
