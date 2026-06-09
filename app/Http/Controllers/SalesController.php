@@ -392,7 +392,7 @@ class SalesController extends Controller
                         'ref_type'      => 'sale',
                         'ref_id'        => (int) $sale->id,
                         'reference'     => 'sale:' . $sale->id,
-                        'notes'         => 'Sale issue (FIFO)',
+                        'notes'         => 'Sale issue (weighted avg)',
 
                         'created_by'    => $u?->id,
                         'updated_by'    => $u?->id,
@@ -501,7 +501,7 @@ class SalesController extends Controller
         }
 
         return redirect()->route('sales.index', ['sale' => $sale->id])
-            ->with('status', "Sale posted.\nFIFO consumed stock.\nMovement created.");
+            ->with('status', "Sale posted. Stock issued. Movement created.");
     }
 
     public function deliveryNote(Sale $sale)
@@ -637,7 +637,7 @@ class SalesController extends Controller
                     ->where('product_id', $sale->product_id)
                     ->increment('qty_on_hand', (float) $sale->qty);
 
-                // Restore each FIFO batch layer from consumptions
+                // Restore batch quantities from consumption rows
                 $consumptions = InventoryConsumption::where('movement_id', $sale->inventory_movement_id)->get();
                 foreach ($consumptions as $c) {
                     Batch::where('id', $c->batch_id)->increment('qty_remaining', (float) $c->qty);
