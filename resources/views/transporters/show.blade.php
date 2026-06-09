@@ -11,6 +11,7 @@
         'short_charge'   => ['label' => 'Short charge', 'color' => 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'],
         'payment'        => ['label' => 'Payment',      'color' => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'],
         'recovery'       => ['label' => 'Recovery',     'color' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'],
+        'adjustment'     => ['label' => 'Adjustment',   'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
     ];
 
     // Fix #4 — currency symbol mapping
@@ -64,12 +65,26 @@
             </svg>
             Export CSV
         </a>
+        <button type="button" onclick="openAdvanceModal()"
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Advance
+        </button>
+        <button type="button" onclick="openAdjustmentModal()"
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Adjustment
+        </button>
         <button type="button" onclick="openPaymentModal()"
                 class="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
-            Record payment
+            Payment
         </button>
     </div>
 </div>
@@ -213,6 +228,121 @@
     @endif
 </div>
 
+{{-- ── Record advance modal ── --}}
+<div id="advanceModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+            <div>
+                <div class="text-sm font-semibold {{ $fg }}">Record advance</div>
+                <div class="text-[10px] {{ $muted }}">Cash paid out before freight is fully earned</div>
+            </div>
+            <button type="button" onclick="closeAdvanceModal()"
+                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('transporters.advances.store', $transporter) }}" class="p-5 space-y-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
+                <div class="flex items-center gap-2">
+                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none">
+                        {{ $sym($currency) }}{{ $currency }}
+                    </span>
+                    <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
+                           class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Date</label>
+                <input type="date" name="entry_date" required value="{{ date('Y-m-d') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Note <span class="{{ $muted }}">(optional)</span></label>
+                <input type="text" name="description" placeholder="e.g. Fuel advance for trip to Lubumbashi"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="closeAdvanceModal()"
+                        class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="h-9 px-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 transition">
+                    Save advance
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ── Adjustment modal ── --}}
+<div id="adjustmentModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+            <div>
+                <div class="text-sm font-semibold {{ $fg }}">Record adjustment</div>
+                <div class="text-[10px] {{ $muted }}">Debit = adds to what we owe · Credit = reduces what we owe</div>
+            </div>
+            <button type="button" onclick="closeAdjustmentModal()"
+                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('transporters.adjustments.store', $transporter) }}" class="p-5 space-y-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Direction</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} cursor-pointer text-xs font-semibold {{ $fg }}">
+                        <input type="radio" name="direction" value="debit" checked class="accent-amber-500"> Debit (we owe more)
+                    </label>
+                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} cursor-pointer text-xs font-semibold {{ $fg }}">
+                        <input type="radio" name="direction" value="credit" class="accent-emerald-500"> Credit (we owe less)
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
+                <div class="flex items-center gap-2">
+                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none">
+                        {{ $sym($currency) }}{{ $currency }}
+                    </span>
+                    <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
+                           class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Date</label>
+                <input type="date" name="entry_date" required value="{{ date('Y-m-d') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason <span class="text-rose-400">*</span></label>
+                <input type="text" name="description" required placeholder="e.g. Overcharge correction — Trip #4"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="closeAdjustmentModal()"
+                        class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
+                    Save adjustment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- ── Record payment modal ── --}}
 <div id="paymentModal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
@@ -280,15 +410,19 @@
 
 @push('scripts')
 <script>
-function openPaymentModal() {
-    document.getElementById('paymentModal').classList.remove('hidden');
-}
-function closePaymentModal() {
-    document.getElementById('paymentModal').classList.add('hidden');
-}
-document.getElementById('paymentModal')?.addEventListener('click', function(e) {
-    if (e.target === this) closePaymentModal();
+function openPaymentModal()    { document.getElementById('paymentModal').classList.remove('hidden'); }
+function closePaymentModal()   { document.getElementById('paymentModal').classList.add('hidden'); }
+function openAdvanceModal()    { document.getElementById('advanceModal').classList.remove('hidden'); }
+function closeAdvanceModal()   { document.getElementById('advanceModal').classList.add('hidden'); }
+function openAdjustmentModal() { document.getElementById('adjustmentModal').classList.remove('hidden'); }
+function closeAdjustmentModal(){ document.getElementById('adjustmentModal').classList.add('hidden'); }
+
+['paymentModal','advanceModal','adjustmentModal'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
 });
+
 @if($errors->any())
 openPaymentModal();
 @endif

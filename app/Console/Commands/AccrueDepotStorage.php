@@ -10,17 +10,21 @@ use Illuminate\Support\Facades\DB;
 class AccrueDepotStorage extends Command
 {
     protected $signature = 'depot:accrue-storage
-        {--month= : Month (1-12), defaults to current month}
-        {--year=  : Year (YYYY), defaults to current year}
+        {--month= : Month (1-12), defaults to previous month}
+        {--year=  : Year (YYYY), defaults to year of previous month}
         {--depot= : Specific depot ID (optional, runs all if omitted)}
+        {--previous-month : Use previous calendar month (used by scheduler)}
         {--dry-run : Preview without posting}';
 
     protected $description = 'Post monthly storage charges for all active depot charge configs';
 
     public function handle(): int
     {
-        $month = (int) ($this->option('month') ?: now()->month);
-        $year  = (int) ($this->option('year')  ?: now()->year);
+        $ref   = ($this->option('previous-month') || (!$this->option('month') && !$this->option('year')))
+                 ? now()->subMonth()
+                 : now();
+        $month = (int) ($this->option('month') ?: $ref->month);
+        $year  = (int) ($this->option('year')  ?: $ref->year);
         $period = sprintf('%04d-%02d', $year, $month);
 
         $this->info("Running storage accrual for period: {$period}");

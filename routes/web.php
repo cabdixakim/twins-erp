@@ -248,6 +248,10 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('transporters.show');
         Route::post('/transporters/{transporter}/payments', [TransporterLedgerController::class, 'recordPayment'])
             ->name('transporters.payments.store');
+        Route::post('/transporters/{transporter}/advances', [TransporterLedgerController::class, 'recordAdvance'])
+            ->name('transporters.advances.store');
+        Route::post('/transporters/{transporter}/adjustments', [TransporterLedgerController::class, 'recordAdjustment'])
+            ->name('transporters.adjustments.store');
 
         // Supplier ledger
         Route::get('/suppliers', [SupplierLedgerController::class, 'index'])

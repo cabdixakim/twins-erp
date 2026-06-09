@@ -137,6 +137,68 @@ class TransporterLedgerController extends Controller
             ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
     }
 
+    public function recordAdvance(Request $request, Transporter $transporter)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $transporter->company_id !== $cid, 403);
+
+        $data = $request->validate([
+            'amount'      => 'required|numeric|min:0.01',
+            'entry_date'  => 'required|date',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        $currency = $transporter->default_currency ?: 'USD';
+
+        TransporterLedgerEntry::create([
+            'company_id'     => $cid,
+            'transporter_id' => $transporter->id,
+            'type'           => 'advance',
+            'amount'         => -(float) $data['amount'],
+            'currency'       => $currency,
+            'description'    => $data['description'] ?: 'Advance to transporter',
+            'entry_date'     => $data['entry_date'],
+            'created_by'     => auth()->id(),
+        ]);
+
+        $sym = self::currencySymbol($currency);
+        return redirect()->route('transporters.show', $transporter)
+            ->with('status', 'Advance of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
+    }
+
+    public function recordAdjustment(Request $request, Transporter $transporter)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $transporter->company_id !== $cid, 403);
+
+        $data = $request->validate([
+            'direction'   => 'required|in:debit,credit',
+            'amount'      => 'required|numeric|min:0.01',
+            'entry_date'  => 'required|date',
+            'description' => 'required|string|max:500',
+        ]);
+
+        $currency = $transporter->default_currency ?: 'USD';
+        $signed   = $data['direction'] === 'debit'
+                    ? (float) $data['amount']        // debit = owed to transporter (positive)
+                    : -(float) $data['amount'];       // credit = reduces what we owe (negative)
+
+        TransporterLedgerEntry::create([
+            'company_id'     => $cid,
+            'transporter_id' => $transporter->id,
+            'type'           => 'adjustment',
+            'amount'         => $signed,
+            'currency'       => $currency,
+            'description'    => $data['description'],
+            'entry_date'     => $data['entry_date'],
+            'created_by'     => auth()->id(),
+        ]);
+
+        $sym = self::currencySymbol($currency);
+        return redirect()->route('transporters.show', $transporter)
+            ->with('status', 'Adjustment of ' . $sym . number_format($data['amount'], 2) . ' (' . $data['direction'] . ') recorded.');
+    }
+
     public function statement(Transporter $transporter)
     {
         $cid = (int) auth()->user()->active_company_id;
