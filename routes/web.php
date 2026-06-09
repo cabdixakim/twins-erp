@@ -23,6 +23,7 @@ use App\Http\Controllers\TransporterLedgerController;
 use App\Http\Controllers\SupplierLedgerController;
 use App\Http\Controllers\DepotLedgerController;
 use App\Http\Controllers\BatchCostController;
+use App\Http\Controllers\DepotChargeConfigController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
@@ -261,6 +262,16 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('suppliers.payments.store');
         Route::post('/suppliers/{supplier}/credits', [SupplierLedgerController::class, 'recordCredit'])
             ->name('suppliers.credits.store');
+
+        // Depot charge configs (rate cards)
+        Route::post('/depots/{depot}/charge-configs', [DepotChargeConfigController::class, 'store'])
+            ->name('depots.charge-configs.store');
+        Route::patch('/depots/{depot}/charge-configs/{config}', [DepotChargeConfigController::class, 'update'])
+            ->name('depots.charge-configs.update');
+        Route::delete('/depots/{depot}/charge-configs/{config}', [DepotChargeConfigController::class, 'destroy'])
+            ->name('depots.charge-configs.destroy');
+        Route::patch('/depots/{depot}/charge-configs/{config}/toggle', [DepotChargeConfigController::class, 'toggleActive'])
+            ->name('depots.charge-configs.toggle');
 
         // Depot ledger
         Route::get('/depots', [DepotLedgerController::class, 'index'])

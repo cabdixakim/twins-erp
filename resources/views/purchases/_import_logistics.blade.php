@@ -398,6 +398,23 @@
           </select>
         </div>
 
+        {{-- Default destination depot --}}
+        <div>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">
+            Default destination depot
+            <span class="font-normal {{ $muted }}">— pre-fills delivery forms; depot charge configs auto-posted on delivery</span>
+          </label>
+          <select name="destination_depot_id"
+                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+            <option value="">— none —</option>
+            @foreach($depots ?? [] as $dep)
+              <option value="{{ $dep->id }}" {{ ($nom && $nom->destination_depot_id == $dep->id) ? 'selected' : '' }}>
+                {{ $dep->name }}{{ $dep->city ? ' (' . $dep->city . ')' : '' }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
           {{-- Currency --}}
           <div>
@@ -843,7 +860,7 @@
                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-green-500/40">
               <option value="">— select depot —</option>
               @foreach($depots as $d)
-                <option value="{{ $d->id }}">{{ $d->name }}</option>
+                <option value="{{ $d->id }}" {{ ($nom && $nom->destination_depot_id == $d->id) ? 'selected' : '' }}>{{ $d->name }}</option>
               @endforeach
             </select>
           </div>
@@ -920,7 +937,7 @@
                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40">
               <option value="">— select depot —</option>
               @foreach($depots as $d)
-                <option value="{{ $d->id }}">{{ $d->name }}</option>
+                <option value="{{ $d->id }}" {{ ($nom && $nom->destination_depot_id == $d->id) ? 'selected' : '' }}>{{ $d->name }}</option>
               @endforeach
             </select>
           </div>
@@ -937,7 +954,7 @@
           <div class="alert-warn rounded-xl p-3 text-xs space-y-1">
             <div>Shortfall beyond {{ $nom->allowed_loss_pct }}% is charged at {{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} {{ $rateLabel }}.</div>
             @if((float)$nom->hospitality_rate > 0)
-              <div>Hospitality fee of {{ $nom->hospitality_currency }} {{ number_format($nom->hospitality_rate, 2) }} per truck will also be auto-posted.</div>
+              <div>Storage rate override: {{ $nom->hospitality_currency }} {{ number_format($nom->hospitality_rate, 2) }} / m³ (overrides depot config for storage).</div>
             @endif
           </div>
         </div>

@@ -10,6 +10,7 @@ use App\Models\ImportNomination;
 use App\Models\ImportTruck;
 use App\Models\TransporterLedgerEntry;
 use App\Http\Controllers\SupplierLedgerController;
+use App\Services\DepotChargeAutoPost;
 
 class ImportNominationController extends Controller
 {
@@ -21,6 +22,7 @@ class ImportNominationController extends Controller
 
         $data = $request->validate([
             'transporter_id'        => 'nullable|integer',
+            'destination_depot_id'  => 'nullable|integer',
             'currency'              => 'required|string|max:8',
             'rate_per_1000l'        => 'required|numeric|min:0',
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
@@ -34,6 +36,7 @@ class ImportNominationController extends Controller
         ]);
         $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
         $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
+        $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
 
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
@@ -69,6 +72,7 @@ class ImportNominationController extends Controller
 
         $data = $request->validate([
             'transporter_id'        => 'nullable|integer',
+            'destination_depot_id'  => 'nullable|integer',
             'currency'              => 'required|string|max:8',
             'rate_per_1000l'        => 'required|numeric|min:0',
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
@@ -82,6 +86,7 @@ class ImportNominationController extends Controller
         ]);
         $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
         $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
+        $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
 
         $nomination->update(array_merge($data, [
             'advances' => $data['advances'] ?? 0,
@@ -397,18 +402,29 @@ class ImportNominationController extends Controller
 
         // NOTE: Shortfall charge is NOT a batch cost — it is deducted from the transporter's payout
         // (already posted to transporter ledger above as a negative short_charge entry).
-        // Our landed cost is the full freight on qty loaded, regardless of transit loss.
 
-        // NOTE: No per-truck supplier invoice — the full purchase invoice was posted at confirm().
-        // Supplier is owed for the full purchased qty × unit price from the moment the deal was confirmed.
+        // Auto-post all depot charge configs (storage, offloading, duty, customs, etc.)
+        $depotChargesPosted = DepotChargeAutoPost::postForDelivery(
+            truck:           $truck,
+            depotId:         (int) $data['depot_id'],
+            qtyDeliveredL:   $qtyDelivered,
+            deliveryDate:    $data['delivery_date'],
+            purchase:        $purchase,
+            nomination:      $nomination,
+            cid:             $cid,
+            createdBy:       (int) auth()->id(),
+        );
 
         $msg = "Delivery recorded: {$qtyDelivered} L.";
         if ($excessLossQty > 0) {
-            $msg .= " Chargeable shortfall: {$excessLossQty} L → deducted from transporter ({$nomination->short_charge_currency} "
-                  . number_format($shortfallCharge, 2) . ').';
+            $msg .= " Shortfall: {$nomination->short_charge_currency} "
+                  . number_format($shortfallCharge, 2) . ' deducted from transporter.';
         }
         if (isset($freightAmt) && $freightAmt > 0) {
-            $msg .= " Freight auto-posted to landed costs: " . number_format($freightAmt, 2) . ".";
+            $msg .= " Freight posted: " . number_format($freightAmt, 2) . ".";
+        }
+        if (!empty($depotChargesPosted)) {
+            $msg .= " Depot charges: " . implode('; ', $depotChargesPosted) . ".";
         }
 
         return back()->with('status', $msg);
@@ -509,25 +525,24 @@ class ImportNominationController extends Controller
             ]);
         }
 
-        // Auto-post hospitality batch cost (border stage was skipped but cost still applies)
-        if ($purchase->batch_id && (float) $nomination->hospitality_rate > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'hospitality')->exists()) {
-            DB::table('batch_costs')->insert([
-                'batch_id' => $purchase->batch_id, 'purchase_id' => $purchase->id,
-                'nomination_id' => $nomination->id, 'truck_id' => $truck->id,
-                'company_id' => $cid, 'category' => 'hospitality',
-                'description' => "Border hospitality — truck {$truck->truck_reg}",
-                'amount' => (float) $nomination->hospitality_rate,
-                'currency' => $nomination->hospitality_currency ?? 'USD',
-                'exchange_rate' => 1, 'amount_base' => (float) $nomination->hospitality_rate,
-                'entry_date' => $data['date'], 'is_included_in_cost' => false,
-                'auto_posted' => true, 'created_by' => auth()->id(),
-                'created_at' => now(), 'updated_at' => now(),
-            ]);
-        }
+        // Auto-post all depot charge configs (storage, offloading, duty, customs, etc.)
+        $depotChargesPosted = DepotChargeAutoPost::postForDelivery(
+            truck:           $truck,
+            depotId:         (int) $data['depot_id'],
+            qtyDeliveredL:   $qtyDelivered,
+            deliveryDate:    $data['date'],
+            purchase:        $purchase,
+            nomination:      $nomination,
+            cid:             $cid,
+            createdBy:       (int) auth()->id(),
+        );
 
         $msg = "Quick delivery posted: {$qtyLoaded} L loaded, {$qtyDelivered} L delivered.";
         if ($excessLossQty > 0) {
-            $msg .= " Shortfall charge: {$nomination->short_charge_currency} " . number_format($shortfallCharge, 2) . " deducted from transporter.";
+            $msg .= " Shortfall: {$nomination->short_charge_currency} " . number_format($shortfallCharge, 2) . " deducted from transporter.";
+        }
+        if (!empty($depotChargesPosted)) {
+            $msg .= " Depot charges posted: " . implode('; ', $depotChargesPosted) . ".";
         }
 
         return back()->with('status', $msg);

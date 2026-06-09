@@ -59,9 +59,20 @@ class DepotLedgerController extends Controller
         $netPayable    = (float) $breakdown->sum();
         $currency      = $depot->default_currency ?: 'USD';
 
+        $chargeConfigs = \App\Models\DepotChargeConfig::where('company_id', $cid)
+            ->where('depot_id', $depot->id)
+            ->orderBy('is_active', 'desc')
+            ->orderBy('category')
+            ->orderBy('effective_from')
+            ->get();
+
+        // For paid_by = 'depot', we resolve the depot name from its own record
+        // (paid_by_id references a depot, transporter, etc.)
+
         return view('depots.show', compact(
             'depot', 'entries',
-            'chargesTotal', 'paymentTotal', 'netPayable', 'currency'
+            'chargesTotal', 'paymentTotal', 'netPayable', 'currency',
+            'chargeConfigs'
         ));
     }
 

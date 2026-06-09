@@ -109,6 +109,116 @@
     </div>
 </div>
 
+{{-- Charge rate configurations --}}
+<div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-6">
+    <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between gap-2 flex-wrap">
+        <div>
+            <span class="text-xs font-semibold {{ $fg }}">Charge rate configurations</span>
+            <span class="ml-2 text-[10px] {{ $muted }}">Auto-posted at truck delivery</span>
+        </div>
+        <button type="button" onclick="document.getElementById('addConfigModal').classList.remove('hidden')"
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-[11px] font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add rate
+        </button>
+    </div>
+
+    @if($chargeConfigs->isEmpty())
+        <div class="px-5 py-6 text-center">
+            <p class="text-xs {{ $muted }}">No charge rates configured — charges won't auto-post at delivery.</p>
+            <p class="text-xs {{ $muted }} mt-1">Add storage, offloading, duty or customs rates to automate landed cost capture.</p>
+        </div>
+    @else
+        @php
+            $catColors = [
+                'storage'    => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+                'offloading' => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30',
+                'duty'       => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+                'customs'    => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30',
+                'other'      => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30',
+            ];
+            $sym = fn(string $code) => match($code) {
+                'USD' => '$', 'EUR' => '€', 'GBP' => '£',
+                'ZAR' => 'R ', 'CDF' => 'FC ', 'ZMW' => 'K ',
+                default => $code . ' '
+            };
+        @endphp
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs {{ $muted }} border-b {{ $border }}">
+                        <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Name</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Category</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Rate</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Billing rule</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Paid by</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Effective</th>
+                        <th class="text-left py-2.5 pr-5 font-semibold">Status</th>
+                        <th class="py-2.5 pr-5"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($chargeConfigs as $cfg)
+                    <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors {{ $cfg->is_active ? '' : 'opacity-50' }}">
+                        <td class="py-3 pl-5 pr-3 text-xs font-semibold {{ $fg }}">{{ $cfg->name }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $catColors[$cfg->category] ?? $catColors['other'] }}">
+                                {{ \App\Models\DepotChargeConfig::categoryLabel($cfg->category) }}
+                            </span>
+                        </td>
+                        <td class="py-3 pr-3 text-xs {{ $fg }} whitespace-nowrap">
+                            {{ $sym($cfg->currency) }}{{ number_format((float)$cfg->rate, 4) }}
+                            <span class="text-[10px] {{ $muted }}">{{ \App\Models\DepotChargeConfig::rateUnitLabel($cfg->rate_unit) }}</span>
+                        </td>
+                        <td class="py-3 pr-3 text-[11px] {{ $muted }}">
+                            @if($cfg->category === 'storage' && $cfg->receipt_rule)
+                                {{ \App\Models\DepotChargeConfig::receiptRuleLabel($cfg->receipt_rule) }}
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="py-3 pr-3 text-[11px] {{ $muted }}">
+                            {{ \App\Models\DepotChargeConfig::paidByLabel($cfg->paid_by_type, $cfg->paid_by_name) }}
+                        </td>
+                        <td class="py-3 pr-3 text-[11px] {{ $muted }} whitespace-nowrap">
+                            {{ $cfg->effective_from->format('d M Y') }}
+                            @if($cfg->effective_to) – {{ $cfg->effective_to->format('d M Y') }} @else onwards @endif
+                        </td>
+                        <td class="py-3 pr-3">
+                            @if($cfg->is_active)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">Active</span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/10 text-slate-500 border border-slate-500/20">Inactive</span>
+                            @endif
+                        </td>
+                        <td class="py-3 pr-5">
+                            <div class="flex items-center gap-2 justify-end">
+                                <form method="POST" action="{{ route('depots.charge-configs.toggle', [$depot, $cfg]) }}">
+                                    @csrf @method('PATCH')
+                                    <button type="submit"
+                                            class="text-[11px] {{ $muted }} hover:text-[color:var(--tw-fg)] transition underline underline-offset-2">
+                                        {{ $cfg->is_active ? 'Deactivate' : 'Activate' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('depots.charge-configs.destroy', [$depot, $cfg]) }}"
+                                      onsubmit="return confirm('Delete this charge config?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-[11px] text-rose-500 hover:text-rose-400 transition underline underline-offset-2">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+</div>
+
 {{-- Ledger entries --}}
 <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-6">
     <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
@@ -166,6 +276,137 @@
         @endif
     @endif
 </div>
+
+{{-- Add Charge Config Modal --}}
+<div id="addConfigModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)" onclick="document.getElementById('addConfigModal').classList.add('hidden')">
+    <div class="w-full max-w-lg rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6 max-h-[90vh] overflow-y-auto"
+         onclick="event.stopPropagation()">
+        <h3 class="text-sm font-bold {{ $fg }} mb-4">Add charge rate — {{ $depot->name }}</h3>
+        <form method="POST" action="{{ route('depots.charge-configs.store', $depot) }}" class="space-y-3">
+            @csrf
+            <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2">
+                    <label class="text-xs font-semibold {{ $muted }}">Name / label</label>
+                    <input name="name" required maxlength="200"
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           placeholder="e.g. Storage rate 2026, Offloading fee">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Category</label>
+                    <select name="category" required id="cfg_category"
+                            class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                            onchange="toggleStorageRules()">
+                        <option value="storage">Storage</option>
+                        <option value="offloading">Offloading</option>
+                        <option value="duty">Duty</option>
+                        <option value="customs">Customs</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Rate unit</label>
+                    <select name="rate_unit" required
+                            class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                        <option value="per_m3_per_month">Per m³ / month (storage)</option>
+                        <option value="per_m3">Per m³ (one-off)</option>
+                        <option value="per_trip">Per trip (flat)</option>
+                        <option value="lump_sum">Lump sum / month</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Rate</label>
+                    <input name="rate" type="number" step="0.000001" min="0" required
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           placeholder="0.00">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Currency</label>
+                    <input name="currency" value="{{ $depot->default_currency ?: 'USD' }}" maxlength="8" required
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                </div>
+            </div>
+
+            {{-- Storage billing rules (shown only for storage category) --}}
+            <div id="storageRulesBlock" class="rounded-xl border {{ $border }} p-3 bg-purple-500/5 space-y-2">
+                <div class="text-[11px] font-semibold text-purple-600 dark:text-purple-400 mb-1">Storage billing rules</div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Receipt month rule</label>
+                    <select name="receipt_rule"
+                            class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                        <option value="include_receipt_month">Charge from receipt month (post at delivery)</option>
+                        <option value="prorate_receipt_month">Prorate receipt month (days remaining / days in month)</option>
+                        <option value="exclude_receipt_month">Skip receipt month (charge starts next month)</option>
+                        <option value="exclude_first_30_days">Exclude first 30 days (charge starts day 31)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Dispatch month rule</label>
+                    <select name="dispatch_rule"
+                            class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                        <option value="include_dispatch_month">Charge for dispatch month</option>
+                        <option value="exclude_dispatch_month">Skip dispatch month</option>
+                    </select>
+                </div>
+            </div>
+
+            {{-- Who pays --}}
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Payable to</label>
+                    <select name="paid_by_type"
+                            class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                        <option value="self">We pay directly (no secondary AP)</option>
+                        <option value="depot">This depot (auto-post depot ledger)</option>
+                        <option value="customs_authority">Customs authority</option>
+                        <option value="other">Other third party</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Party name (if other)</label>
+                    <input name="paid_by_name" maxlength="200"
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           placeholder="e.g. DGRAD, customs agent">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Effective from</label>
+                    <input name="effective_from" type="date" value="{{ now()->toDateString() }}" required
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold {{ $muted }}">Effective to (leave blank = open-ended)</label>
+                    <input name="effective_to" type="date"
+                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-semibold {{ $muted }}">Notes (optional)</label>
+                <input name="notes" maxlength="1000"
+                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                       placeholder="e.g. DRC govt rate as of Jan 2026">
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('addConfigModal').classList.add('hidden')"
+                        class="flex-1 h-9 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 h-9 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
+                    Save rate config
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleStorageRules() {
+    const cat = document.getElementById('cfg_category').value;
+    const block = document.getElementById('storageRulesBlock');
+    block.style.display = cat === 'storage' ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', toggleStorageRules);
+</script>
 
 {{-- Record Charge Modal --}}
 <div id="chargeModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
