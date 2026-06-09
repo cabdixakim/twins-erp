@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToActiveCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BankAccount extends Model
 {
@@ -25,5 +26,20 @@ class BankAccount extends Model
     public function glAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'gl_account_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(BankTransaction::class);
+    }
+
+    public function currentBalance(): float
+    {
+        $posted = $this->transactions()
+            ->whereNull('voided_at')
+            ->get()
+            ->sum(fn($t) => $t->signedAmount());
+
+        return (float) $this->opening_balance + $posted;
     }
 }

@@ -11,6 +11,8 @@ use App\Models\DepotStock;
 use App\Models\Depot;
 use App\Models\SupplierLedgerEntry;
 use App\Models\DepotLedgerEntry;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 
 class DashboardController extends Controller {
     public function index() {
@@ -179,6 +181,30 @@ class DashboardController extends Controller {
             $chartSold[]      = round((float)($soldByMonth[$key]->qty ?? 0), 0);
         }
 
+        // ── Bank balances ─────────────────────────────────────────
+        $bankAccounts = BankAccount::where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $bankByCurrency = collect();
+        $topBankAccounts = collect();
+        if ($bankAccounts->isNotEmpty()) {
+            $bankData = $bankAccounts->map(fn($a) => (object)[
+                'id'       => $a->id,
+                'name'     => $a->name,
+                'balance'  => $a->currentBalance(),
+                'currency' => $a->currency,
+            ]);
+
+            $bankByCurrency = $bankData
+                ->groupBy('currency')
+                ->map(fn($rows) => $rows->sum('balance'))
+                ->sortDesc();
+
+            $topBankAccounts = $bankData->take(3)->values();
+        }
+
         // AP vs AR summary for donut
         $totalAP = $supplierPayableTotal + $depotPayableTotal + $byCurrency->sum();
 
@@ -201,7 +227,9 @@ class DashboardController extends Controller {
             'chartLabels',
             'chartPurchased',
             'chartSold',
-            'totalAP'
+            'totalAP',
+            'bankByCurrency',
+            'topBankAccounts'
         ));
     }
 }

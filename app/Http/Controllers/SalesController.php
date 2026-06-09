@@ -56,6 +56,9 @@ class SalesController extends Controller
         $transporters = Transporter::query()
             ->where('company_id', $cid)
             ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('type', 'local')->orWhereNull('type');
+            })
             ->orderBy('name')
             ->get();
 

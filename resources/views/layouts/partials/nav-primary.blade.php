@@ -135,6 +135,20 @@
         <span class="tw-nav-label sidebar-label">Petty Cash</span>
     </a>
 
+    {{-- BANKS --}}
+    <a href="{{ route('banks.index') }}"
+       class="tw-nav-item {{ ($onBanks ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5v2H3v-2z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12v7M9 12v7M15 12v7M19 12v7"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 19h18"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Banks</span>
+    </a>
+
     {{-- REPORTS --}}
     <a href="{{ route('reports.index') }}"
        class="tw-nav-item {{ ($onReports ?? false) ? 'active' : '' }} sidebar-label-parent">

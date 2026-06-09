@@ -381,6 +381,29 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
 
 /*
 |--------------------------------------------------------------------------
+| Banks
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'company.setup', 'active.company'])
+    ->prefix('banks')
+    ->name('banks.')
+    ->group(function () {
+        Route::get('/',                                          [\App\Http\Controllers\BankAccountController::class, 'index'])->name('index');
+        Route::get('/create',                                   [\App\Http\Controllers\BankAccountController::class, 'create'])->name('create');
+        Route::post('/',                                        [\App\Http\Controllers\BankAccountController::class, 'store'])->name('store');
+        Route::get('/{bank}',                                   [\App\Http\Controllers\BankAccountController::class, 'show'])->name('show');
+        Route::get('/{bank}/edit',                              [\App\Http\Controllers\BankAccountController::class, 'edit'])->name('edit');
+        Route::patch('/{bank}',                                 [\App\Http\Controllers\BankAccountController::class, 'update'])->name('update');
+        Route::post('/{bank}/toggle-active',                    [\App\Http\Controllers\BankAccountController::class, 'toggleActive'])->name('toggle-active');
+        Route::post('/{bank}/transactions',                     [\App\Http\Controllers\BankAccountController::class, 'recordTransaction'])->name('transactions.store');
+        Route::post('/{bank}/transactions/{transaction}/void',  [\App\Http\Controllers\BankAccountController::class, 'voidTransaction'])
+            ->middleware('role:owner,admin,accountant')
+            ->name('transactions.void');
+        Route::get('/{bank}/export',                            [\App\Http\Controllers\BankAccountController::class, 'exportCsv'])->name('export');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Reports
 |--------------------------------------------------------------------------
 */

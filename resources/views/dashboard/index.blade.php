@@ -310,6 +310,64 @@
       </a>
   </section>
 
+  {{-- ── Bank Balances ────────────────────────────────────────── --}}
+  <section>
+      <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Bank Balances</h2>
+      <a href="{{ route('banks.index') }}"
+         class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
+          <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:rgba(20,184,166,.10); border:1px solid rgba(20,184,166,.20)">
+                      <svg class="w-5 h-5" style="color:#14b8a6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-5 9 5v2H3v-2z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12v7M9 12v7M15 12v7M19 12v7"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 19h18"/>
+                      </svg>
+                  </div>
+                  <div class="min-w-0">
+                      <p class="text-xs tw-muted mb-1">Total Bank Balances</p>
+                      @if($bankByCurrency->count() >= 1)
+                          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              @foreach($bankByCurrency as $currency => $total)
+                                  @if(!$loop->first)<span class="tw-muted text-lg leading-none">·</span>@endif
+                                  <span class="text-2xl font-bold leading-none {{ $total >= 0 ? '' : 'opacity-80' }}" style="color:#14b8a6">
+                                      {{ number_format(abs($total), 2) }}<span class="text-sm font-semibold ml-1" style="color:#14b8a6;opacity:.7">{{ $currency }}</span>
+                                      @if($total < 0) <span class="text-xs">DR</span> @endif
+                                  </span>
+                              @endforeach
+                          </div>
+                      @else
+                          <p class="text-sm tw-muted">No bank accounts added yet.</p>
+                      @endif
+                  </div>
+              </div>
+              <svg class="w-4 h-4 flex-shrink-0 ml-3 tw-muted opacity-40 group-hover:opacity-80 transition-opacity" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+              </svg>
+          </div>
+          @if($topBankAccounts->isNotEmpty())
+              <div class="mt-4 pt-4 space-y-2" style="border-top:1px solid var(--tw-border)">
+                  @foreach($topBankAccounts as $b)
+                      <div class="flex items-center justify-between text-sm">
+                          <span class="tw-fg truncate max-w-[60%]">{{ $b->name }}</span>
+                          <span class="font-semibold {{ $b->balance >= 0 ? '' : 'opacity-80' }}" style="color:#14b8a6">
+                              {{ number_format(abs($b->balance), 2) }}
+                              <span class="text-xs font-medium ml-0.5" style="color:#14b8a6;opacity:.7">{{ $b->currency }}</span>
+                              @if($b->balance < 0) <span class="text-xs">DR</span> @endif
+                          </span>
+                      </div>
+                  @endforeach
+                  @if($topBankAccounts->count() >= 3)
+                      <p class="text-xs tw-muted pt-1">Showing first 3 — <a href="{{ route('banks.index') }}" class="underline underline-offset-2">view all</a></p>
+                  @endif
+              </div>
+          @else
+              <p class="mt-3 text-xs tw-muted">Add bank accounts to track your cash position here.</p>
+          @endif
+      </a>
+  </section>
+
   {{-- ── Throughput Chart ─────────────────────────────────────── --}}
   @php
       $chartLabels    = json_encode($chartLabels ?? []);
