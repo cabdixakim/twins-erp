@@ -8,6 +8,8 @@ use App\Models\Transporter;
 use App\Models\TransporterLedgerEntry;
 use App\Models\ImportTruck;
 use App\Models\ImportNomination;
+use App\Models\PettyCashAccount;
+use App\Models\PettyCashTransaction;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransporterLedgerController extends Controller
@@ -16,7 +18,6 @@ class TransporterLedgerController extends Controller
     {
         $cid = (int) auth()->user()->active_company_id;
 
-        // Fix #2: only show active transporters
         $transporters = Transporter::where('company_id', $cid)
             ->where('is_active', true)
             ->orderBy('name')
@@ -27,7 +28,6 @@ class TransporterLedgerController extends Controller
             ->groupBy('transporter_id')
             ->pluck('balance', 'transporter_id');
 
-        // Precompute freight totals to avoid N+1 in the view
         $freightTotals = TransporterLedgerEntry::where('company_id', $cid)
             ->where('type', 'freight_charge')
             ->selectRaw('transporter_id, SUM(amount) as total')
@@ -62,7 +62,7 @@ class TransporterLedgerController extends Controller
 
         $currency = $transporter->default_currency ?: 'USD';
 
-        // Fix #3: Build clickable reference links
+        // Build clickable reference links
         $allEntries = $entries->getCollection();
 
         $truckIds = $allEntries
@@ -100,10 +100,25 @@ class TransporterLedgerController extends Controller
             }
         }
 
+        // Sale freight charge reference links
+        $saleEntries = $allEntries->where('ref_type', \App\Models\Sale::class);
+        foreach ($saleEntries as $e) {
+            $key = \App\Models\Sale::class . ':' . $e->ref_id;
+            if (!isset($refLinks[$key])) {
+                $refLinks[$key] = route('sales.index', ['sale' => $e->ref_id]);
+            }
+        }
+
+        // Load petty cash accounts for payment/advance modals
+        $pettyCashAccounts = PettyCashAccount::where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return view('transporters.show', compact(
             'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
-            'netPayable', 'currency'
+            'netPayable', 'currency', 'pettyCashAccounts'
         ));
     }
 
@@ -113,24 +128,46 @@ class TransporterLedgerController extends Controller
         abort_if((int) $transporter->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'      => 'required|numeric|min:0.01',
-            'entry_date'  => 'required|date',
-            'description' => 'nullable|string|max:500',
+            'amount'               => 'required|numeric|min:0.01',
+            'entry_date'           => 'required|date',
+            'description'          => 'nullable|string|max:500',
+            'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
-        // Enforce transporter's default_currency — keeps ledger single-currency
         $currency = $transporter->default_currency ?: 'USD';
 
-        TransporterLedgerEntry::create([
-            'company_id'     => $cid,
-            'transporter_id' => $transporter->id,
-            'type'           => 'payment',
-            'amount'         => -(float) $data['amount'],
-            'currency'       => $currency,
-            'description'    => $data['description'] ?: 'Payment to transporter',
-            'entry_date'     => $data['entry_date'],
-            'created_by'     => auth()->id(),
-        ]);
+        DB::transaction(function () use ($cid, $transporter, $data, $currency) {
+            $entry = TransporterLedgerEntry::create([
+                'company_id'     => $cid,
+                'transporter_id' => $transporter->id,
+                'type'           => 'payment',
+                'amount'         => -(float) $data['amount'],
+                'currency'       => $currency,
+                'description'    => $data['description'] ?: 'Payment to transporter',
+                'entry_date'     => $data['entry_date'],
+                'created_by'     => auth()->id(),
+            ]);
+
+            if (!empty($data['petty_cash_account_id'])) {
+                $account = PettyCashAccount::where('company_id', $cid)
+                    ->where('id', (int) $data['petty_cash_account_id'])
+                    ->firstOrFail();
+
+                PettyCashTransaction::create([
+                    'company_id'       => $cid,
+                    'account_id'       => $account->id,
+                    'type'             => 'transporter_advance',
+                    'amount'           => -(float) $data['amount'],
+                    'currency'         => $currency,
+                    'description'      => 'Transporter payment — ' . $transporter->name
+                                         . ($data['description'] ? ' · ' . $data['description'] : ''),
+                    'transaction_date' => $data['entry_date'],
+                    'ref_type'         => TransporterLedgerEntry::class,
+                    'ref_id'           => $entry->id,
+                    'created_by'       => auth()->id(),
+                ]);
+            }
+        });
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
@@ -143,23 +180,46 @@ class TransporterLedgerController extends Controller
         abort_if((int) $transporter->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'      => 'required|numeric|min:0.01',
-            'entry_date'  => 'required|date',
-            'description' => 'nullable|string|max:500',
+            'amount'               => 'required|numeric|min:0.01',
+            'entry_date'           => 'required|date',
+            'description'          => 'nullable|string|max:500',
+            'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
         $currency = $transporter->default_currency ?: 'USD';
 
-        TransporterLedgerEntry::create([
-            'company_id'     => $cid,
-            'transporter_id' => $transporter->id,
-            'type'           => 'advance',
-            'amount'         => -(float) $data['amount'],
-            'currency'       => $currency,
-            'description'    => $data['description'] ?: 'Advance to transporter',
-            'entry_date'     => $data['entry_date'],
-            'created_by'     => auth()->id(),
-        ]);
+        DB::transaction(function () use ($cid, $transporter, $data, $currency) {
+            $entry = TransporterLedgerEntry::create([
+                'company_id'     => $cid,
+                'transporter_id' => $transporter->id,
+                'type'           => 'advance',
+                'amount'         => -(float) $data['amount'],
+                'currency'       => $currency,
+                'description'    => $data['description'] ?: 'Advance to transporter',
+                'entry_date'     => $data['entry_date'],
+                'created_by'     => auth()->id(),
+            ]);
+
+            if (!empty($data['petty_cash_account_id'])) {
+                $account = PettyCashAccount::where('company_id', $cid)
+                    ->where('id', (int) $data['petty_cash_account_id'])
+                    ->firstOrFail();
+
+                PettyCashTransaction::create([
+                    'company_id'       => $cid,
+                    'account_id'       => $account->id,
+                    'type'             => 'transporter_advance',
+                    'amount'           => -(float) $data['amount'],
+                    'currency'         => $currency,
+                    'description'      => 'Driver advance — ' . $transporter->name
+                                         . ($data['description'] ? ' · ' . $data['description'] : ''),
+                    'transaction_date' => $data['entry_date'],
+                    'ref_type'         => TransporterLedgerEntry::class,
+                    'ref_id'           => $entry->id,
+                    'created_by'       => auth()->id(),
+                ]);
+            }
+        });
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
@@ -180,8 +240,8 @@ class TransporterLedgerController extends Controller
 
         $currency = $transporter->default_currency ?: 'USD';
         $signed   = $data['direction'] === 'debit'
-                    ? (float) $data['amount']        // debit = owed to transporter (positive)
-                    : -(float) $data['amount'];       // credit = reduces what we owe (negative)
+                    ? (float) $data['amount']
+                    : -(float) $data['amount'];
 
         TransporterLedgerEntry::create([
             'company_id'     => $cid,
@@ -212,7 +272,6 @@ class TransporterLedgerController extends Controller
             ->orderBy('id')
             ->get();
 
-        // Attach running balance
         $running = 0;
         foreach ($entries as $e) {
             $running += (float) $e->amount;
@@ -267,9 +326,6 @@ class TransporterLedgerController extends Controller
         }, $filename, ['Content-Type' => 'text/csv']);
     }
 
-    /**
-     * Map currency codes to display symbols.
-     */
     public static function currencySymbol(string $code): string
     {
         return match ($code) {

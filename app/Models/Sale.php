@@ -19,8 +19,9 @@ class Sale extends Model
         'unit_price'    => 'float',
         'total'         => 'float',
         'cogs_total'    => 'float',
-        'gross_profit'  => 'float',
-        'posted_at'     => 'datetime',
+        'gross_profit'   => 'float',
+        'freight_amount' => 'float',
+        'posted_at'      => 'datetime',
     ];
 
     public function depot(): BelongsTo

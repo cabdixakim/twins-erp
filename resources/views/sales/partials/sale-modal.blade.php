@@ -172,6 +172,27 @@
                   @error('waybill_no') <div class="{{ $errText }}">{{ $message }}</div> @enderror
                 </div>
 
+                {{-- Freight --}}
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Freight amount</label>
+                  <input id="f_freight_amount" type="number" name="freight_amount" step="0.01" min="0"
+                         value="{{ old('freight_amount') }}"
+                         placeholder="0.00"
+                         class="{{ $fieldBase }} @error('freight_amount') {{ $fieldErr }} @enderror" />
+                  <div class="mt-1 text-[11px] {{ $muted }}">Optional — posts to transporter ledger on sale post.</div>
+                  @error('freight_amount') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Freight currency</label>
+                  <select id="f_freight_currency" name="freight_currency"
+                          class="{{ $fieldBase }} @error('freight_currency') {{ $fieldErr }} @enderror">
+                    @foreach(['USD','EUR','GBP','ZAR','CDF','ZMW','ZWL'] as $c)
+                      <option value="{{ $c }}" @selected(old('freight_currency', 'USD') === $c)>{{ $c }}</option>
+                    @endforeach
+                  </select>
+                  @error('freight_currency') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
+
                 <div class="sm:col-span-2">
                   <label class="text-xs font-semibold {{ $muted }}">Delivery notes</label>
                   <textarea id="f_delivery_notes" name="delivery_notes" rows="2"
@@ -303,6 +324,8 @@ window.selectedSale = @json($selected);
     setVal('f_truck_no', sale.truck_no || '');
     setVal('f_trailer_no', sale.trailer_no || '');
     setVal('f_waybill_no', sale.waybill_no || '');
+    setVal('f_freight_amount', sale.freight_amount || '');
+    setVal('f_freight_currency', sale.freight_currency || 'USD');
     const notesEl = document.getElementById('f_delivery_notes');
     if (notesEl) notesEl.value = sale.delivery_notes || '';
 

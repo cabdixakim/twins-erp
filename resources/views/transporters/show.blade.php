@@ -266,6 +266,19 @@
                 <input type="text" name="description" placeholder="e.g. Fuel advance for trip to Lubumbashi"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
+            @if($pettyCashAccounts->isNotEmpty())
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Pay from petty cash <span class="{{ $muted }}">(optional)</span></label>
+                <select name="petty_cash_account_id"
+                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+                    <option value="">— Cash out separately —</option>
+                    @foreach($pettyCashAccounts as $pca)
+                        <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[10px] {{ $muted }} mt-1">If selected, a matching expense is posted to that petty cash account.</p>
+            </div>
+            @endif
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="closeAdvanceModal()"
                         class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
@@ -387,6 +400,20 @@
                        placeholder="e.g. Bank transfer, Ref #12345"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
+
+            @if($pettyCashAccounts->isNotEmpty())
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Pay from petty cash <span class="{{ $muted }}">(optional)</span></label>
+                <select name="petty_cash_account_id"
+                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+                    <option value="">— Cash out separately —</option>
+                    @foreach($pettyCashAccounts as $pca)
+                        <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[10px] {{ $muted }} mt-1">If selected, a matching expense is posted to that petty cash account.</p>
+            </div>
+            @endif
 
             @if($errors->any())
                 <div class="text-xs text-rose-500 space-y-0.5">

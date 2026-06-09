@@ -128,12 +128,14 @@ class SalesController extends Controller
             'currency'       => 'required|string|max:8',
             'reference'      => 'nullable|string|max:64',
 
-            'delivery_mode'  => 'required|in:ex_depot,delivered',
-            'transporter_id' => 'nullable|integer',
-            'truck_no'       => 'nullable|string|max:32',
-            'trailer_no'     => 'nullable|string|max:32',
-            'waybill_no'     => 'nullable|string|max:64',
-            'delivery_notes' => 'nullable|string',
+            'delivery_mode'    => 'required|in:ex_depot,delivered',
+            'transporter_id'   => 'nullable|integer',
+            'truck_no'         => 'nullable|string|max:32',
+            'trailer_no'       => 'nullable|string|max:32',
+            'waybill_no'       => 'nullable|string|max:64',
+            'delivery_notes'   => 'nullable|string',
+            'freight_amount'   => 'nullable|numeric|min:0',
+            'freight_currency' => 'nullable|string|max:8',
         ]);
 
         // Check for duplicate sale reference (company_id + reference)
@@ -212,12 +214,16 @@ class SalesController extends Controller
                 'currency'      => $data['currency'] ?? 'USD',
                 'total'         => $total,
 
-                'delivery_mode'  => $data['delivery_mode'],
-                'transporter_id' => !empty($data['transporter_id']) ? (int) $data['transporter_id'] : null,
-                'truck_no'       => $data['delivery_mode'] === 'delivered' ? ($data['truck_no'] ?? null) : null,
-                'trailer_no'     => $data['delivery_mode'] === 'delivered' ? ($data['trailer_no'] ?? null) : null,
-                'waybill_no'     => $data['delivery_mode'] === 'delivered' ? ($data['waybill_no'] ?? null) : null,
-                'delivery_notes' => $data['delivery_mode'] === 'delivered' ? ($data['delivery_notes'] ?? null) : null,
+                'delivery_mode'    => $data['delivery_mode'],
+                'transporter_id'   => !empty($data['transporter_id']) ? (int) $data['transporter_id'] : null,
+                'truck_no'         => $data['delivery_mode'] === 'delivered' ? ($data['truck_no'] ?? null) : null,
+                'trailer_no'       => $data['delivery_mode'] === 'delivered' ? ($data['trailer_no'] ?? null) : null,
+                'waybill_no'       => $data['delivery_mode'] === 'delivered' ? ($data['waybill_no'] ?? null) : null,
+                'delivery_notes'   => $data['delivery_mode'] === 'delivered' ? ($data['delivery_notes'] ?? null) : null,
+                'freight_amount'   => $data['delivery_mode'] === 'delivered' && !empty($data['transporter_id']) && !empty($data['freight_amount'])
+                                        ? (float) $data['freight_amount'] : null,
+                'freight_currency' => $data['delivery_mode'] === 'delivered' && !empty($data['transporter_id'])
+                                        ? ($data['freight_currency'] ?? 'USD') : null,
 
                 'status'        => 'draft',
                 'created_by'    => $u?->id,
@@ -252,12 +258,14 @@ class SalesController extends Controller
             'unit_price'     => 'required|numeric|min:0',
             'currency'       => 'required|string|max:8',
 
-            'delivery_mode'  => 'required|in:ex_depot,delivered',
-            'transporter_id' => 'nullable|integer',
-            'truck_no'       => 'nullable|string|max:32',
-            'trailer_no'     => 'nullable|string|max:32',
-            'waybill_no'     => 'nullable|string|max:64',
-            'delivery_notes' => 'nullable|string',
+            'delivery_mode'    => 'required|in:ex_depot,delivered',
+            'transporter_id'   => 'nullable|integer',
+            'truck_no'         => 'nullable|string|max:32',
+            'trailer_no'       => 'nullable|string|max:32',
+            'waybill_no'       => 'nullable|string|max:64',
+            'delivery_notes'   => 'nullable|string',
+            'freight_amount'   => 'nullable|numeric|min:0',
+            'freight_currency' => 'nullable|string|max:8',
         ]);
 
         $depotOk = Depot::query()->where('company_id', $cid)->whereKey((int) $data['depot_id'])->exists();
@@ -304,15 +312,22 @@ class SalesController extends Controller
         $sale->transporter_id = !empty($data['transporter_id']) ? (int) $data['transporter_id'] : null;
 
         if ($data['delivery_mode'] === 'delivered') {
-            $sale->truck_no       = $data['truck_no'] ?? null;
-            $sale->trailer_no     = $data['trailer_no'] ?? null;
-            $sale->waybill_no     = $data['waybill_no'] ?? null;
-            $sale->delivery_notes = $data['delivery_notes'] ?? null;
+            $sale->truck_no         = $data['truck_no'] ?? null;
+            $sale->trailer_no       = $data['trailer_no'] ?? null;
+            $sale->waybill_no       = $data['waybill_no'] ?? null;
+            $sale->delivery_notes   = $data['delivery_notes'] ?? null;
+            $hasTransporter         = !empty($data['transporter_id']);
+            $sale->freight_amount   = $hasTransporter && !empty($data['freight_amount'])
+                                        ? (float) $data['freight_amount'] : null;
+            $sale->freight_currency = $hasTransporter
+                                        ? ($data['freight_currency'] ?? 'USD') : null;
         } else {
-            $sale->truck_no       = null;
-            $sale->trailer_no     = null;
-            $sale->waybill_no     = null;
-            $sale->delivery_notes = null;
+            $sale->truck_no         = null;
+            $sale->trailer_no       = null;
+            $sale->waybill_no       = null;
+            $sale->delivery_notes   = null;
+            $sale->freight_amount   = null;
+            $sale->freight_currency = null;
         }
 
         $sale->updated_by = $u?->id;
@@ -384,6 +399,33 @@ class SalesController extends Controller
 
                 $sale->updated_by = $u?->id;
                 $sale->save();
+
+                // Auto-post freight charge to transporter ledger (idempotent)
+                if ($sale->transporter_id && $sale->freight_amount > 0) {
+                    $freightAlreadyPosted = \App\Models\TransporterLedgerEntry::where('company_id', (int) $sale->company_id)
+                        ->where('transporter_id', (int) $sale->transporter_id)
+                        ->where('type', 'freight_charge')
+                        ->where('ref_type', \App\Models\Sale::class)
+                        ->where('ref_id', $sale->id)
+                        ->exists();
+
+                    if (!$freightAlreadyPosted) {
+                        \App\Models\TransporterLedgerEntry::create([
+                            'company_id'     => (int) $sale->company_id,
+                            'transporter_id' => (int) $sale->transporter_id,
+                            'type'           => 'freight_charge',
+                            'amount'         => (float) $sale->freight_amount,
+                            'currency'       => $sale->freight_currency ?: 'USD',
+                            'description'    => 'Freight — Sale ' . $sale->reference,
+                            'entry_date'     => $sale->sale_date
+                                ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d')
+                                : now()->format('Y-m-d'),
+                            'ref_type'       => \App\Models\Sale::class,
+                            'ref_id'         => $sale->id,
+                            'created_by'     => $u?->id,
+                        ]);
+                    }
+                }
 
                 // Auto-post AR ledger entry + generate invoice if client is linked
                 if ($sale->client_id) {
