@@ -226,6 +226,14 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             [ImportNominationController::class, 'importTrucks'])
             ->name('purchases.import-nomination.trucks.import');
 
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/quick-load-deliver',
+            [ImportNominationController::class, 'quickLoadDeliver'])
+            ->name('purchases.import-nomination.trucks.quick-load-deliver');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/bulk-in-transit',
+            [ImportNominationController::class, 'bulkMarkInTransit'])
+            ->name('purchases.import-nomination.trucks.bulk-in-transit');
+
         // Clients moved to settings group above
 
         // Transporter ledger (balance, entries, payments, statement, export)

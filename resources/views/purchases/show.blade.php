@@ -514,6 +514,47 @@
         <input name="exchange_rate" type="number" step="0.000001" value="1"
                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
+
+      {{-- Paid by routing --}}
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Who paid this cost?</label>
+        <select name="paid_by_type" id="costPaidByType" onchange="updatePaidByFields()"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+          <option value="self">We paid directly (no secondary payable)</option>
+          <option value="depot">Depot fronted it (creates depot charge)</option>
+          <option value="transporter">Clearing agent / transporter (creates advance entry)</option>
+          <option value="other">Other party (free text, no auto AP)</option>
+        </select>
+      </div>
+
+      <div id="paidByDepotRow" class="hidden">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Depot</label>
+        <select name="paid_by_id_depot"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+          <option value="">— select depot —</option>
+          @foreach(\App\Models\Depot::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->where('is_system', false)->orderBy('name')->get() as $d)
+            <option value="{{ $d->id }}">{{ $d->name }}</option>
+          @endforeach
+        </select>
+      </div>
+
+      <div id="paidByTransporterRow" class="hidden">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Transporter / clearing agent</label>
+        <select name="paid_by_id_transporter"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+          <option value="">— select transporter —</option>
+          @foreach(\App\Models\Transporter::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get() as $t)
+            <option value="{{ $t->id }}">{{ $t->name }}</option>
+          @endforeach
+        </select>
+      </div>
+
+      <div id="paidByOtherRow" class="hidden">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Name of paying party</label>
+        <input name="paid_by_name" type="text" maxlength="200" placeholder="e.g. DHL, local agent…"
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+      </div>
+
       <div class="flex items-center gap-3 pt-2">
         <button type="button" onclick="document.getElementById('addCostModal').classList.add('hidden')"
                 class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
@@ -527,6 +568,14 @@
     </form>
   </div>
 </div>
+<script>
+function updatePaidByFields() {
+  const v = document.getElementById('costPaidByType').value;
+  document.getElementById('paidByDepotRow').classList.toggle('hidden', v !== 'depot');
+  document.getElementById('paidByTransporterRow').classList.toggle('hidden', v !== 'transporter');
+  document.getElementById('paidByOtherRow').classList.toggle('hidden', v !== 'other');
+}
+</script>
 @endif
 
 {{-- =========================

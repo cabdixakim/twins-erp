@@ -145,8 +145,33 @@
       </div>
     </div>
 
-    {{-- Truck table --}}
+    {{-- Bulk actions toolbar (shown when loaded trucks exist) --}}
     @if($trucks->isNotEmpty())
+    @php
+      $loadedTrucks   = $trucks->where('status', 'loaded');
+      $inTransitTrucks = $trucks->where('status', 'in_transit');
+    @endphp
+    @if($loadedTrucks->isNotEmpty())
+    <form method="POST"
+          action="{{ route('purchases.import-nomination.trucks.bulk-in-transit', [$purchase, $nom]) }}"
+          id="bulkInTransitForm">
+      @csrf
+      <div class="mx-4 mb-3 flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/8">
+        <span class="text-xs font-semibold text-amber-700 dark:text-amber-400 flex-1">
+          {{ $loadedTrucks->count() }} truck(s) loaded and waiting to be marked in transit
+        </span>
+        @foreach($loadedTrucks as $lt)
+          <input type="hidden" name="truck_ids[]" value="{{ $lt->id }}">
+        @endforeach
+        <button type="submit"
+                class="h-7 px-3 rounded-lg border border-amber-500/40 bg-amber-600/10 text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-600/20 transition whitespace-nowrap">
+          Mark all in transit
+        </button>
+      </div>
+    </form>
+    @endif
+
+    {{-- Truck table --}}
     @php
       $justImportedIds = collect(
         array_filter(
@@ -242,6 +267,15 @@
                               onclick="openTruckModal('editTruckModal-{{ $truck->id }}')"
                               class="h-7 px-2 rounded-lg border {{ $border }} {{ $surface }} text-[11px] {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
                         Edit
+                      </button>
+                    @endif
+                    {{-- Quick deliver: skip all intermediate stages --}}
+                    @if($truck->status === 'nominated')
+                      <button type="button"
+                              onclick="openTruckModal('quickDeliverModal-{{ $truck->id }}')"
+                              class="h-7 px-2 rounded-lg border border-teal-500/40 bg-teal-600/10 text-[11px] font-semibold text-teal-600 hover:bg-teal-600/20 transition"
+                              title="Record load + delivery in one step">
+                        Quick post
                       </button>
                     @endif
                     @if(in_array('record_load', $truckActions))
@@ -412,6 +446,26 @@
                  value="{{ $nom ? $nom->short_charge_rate : '' }}"
                  placeholder="0.00"
                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+        </div>
+
+        {{-- Hospitality --}}
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Hospitality / border fee <span class="{{ $muted }}">per truck</span></label>
+            <input type="number" name="hospitality_rate" step="0.01" min="0"
+                   value="{{ $nom ? $nom->hospitality_rate : '0' }}"
+                   placeholder="0.00"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Hospitality currency</label>
+            <select name="hospitality_currency"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+              @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
+                <option value="{{ $cur }}" {{ ($nom ? ($nom->hospitality_currency ?? 'USD') : 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
+              @endforeach
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -830,6 +884,78 @@
   </div>
   @endif
 
+  {{-- ── Quick load + deliver modal (skip intermediate stages) ── --}}
+  @if($truck->status === 'nominated')
+  <div id="quickDeliverModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+        <div>
+          <div class="text-base font-semibold {{ $fg }}">Quick post — {{ $truck->truck_reg }}</div>
+          <div class="text-xs {{ $muted }} mt-0.5">Record load + delivery in one step (skips transit & border stages)</div>
+        </div>
+        <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+      </div>
+      <form method="POST"
+            action="{{ route('purchases.import-nomination.trucks.quick-load-deliver', [$purchase, $nom, $truck]) }}">
+        @csrf
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty loaded (L) <span class="text-rose-400">*</span></label>
+              <input type="number" name="qty_loaded" step="0.001" min="1" required
+                     placeholder="e.g. {{ number_format($truck->capacity, 0) }}"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty delivered (L) <span class="text-rose-400">*</span></label>
+              <input type="number" name="qty_delivered" step="0.001" min="0" required
+                     placeholder="e.g. {{ number_format($truck->capacity, 0) }}"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Destination depot <span class="text-rose-400">*</span></label>
+            <select name="depot_id" required
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+              <option value="">— select depot —</option>
+              @foreach($depots as $d)
+                <option value="{{ $d->id }}">{{ $d->name }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Date <span class="text-rose-400">*</span></label>
+            <input type="date" name="date" required
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes</label>
+            <input type="text" name="notes" maxlength="1000"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+          </div>
+          <div class="alert-warn rounded-xl p-3 text-xs space-y-1">
+            <div>Shortfall beyond {{ $nom->allowed_loss_pct }}% is charged at {{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} {{ $rateLabel }}.</div>
+            @if((float)$nom->hospitality_rate > 0)
+              <div>Hospitality fee of {{ $nom->hospitality_currency }} {{ number_format($nom->hospitality_rate, 2) }} per truck will also be auto-posted.</div>
+            @endif
+          </div>
+        </div>
+        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+          <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-teal-500/40 bg-teal-600 text-sm font-semibold text-white hover:bg-teal-500 transition">
+            Post load + delivery
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  @endif
+
 @endforeach
 @endif
 
@@ -1220,7 +1346,7 @@
   // ESC closes all truck modals
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], #addTruckModal, #nominationModal, #importTrucksModal')
+    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], [id^="quickDeliverModal-"], #addTruckModal, #nominationModal, #importTrucksModal')
       .forEach(el => el.classList.add('hidden'));
     document.documentElement.classList.remove('overflow-hidden');
   });

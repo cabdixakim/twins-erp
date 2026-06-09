@@ -26,10 +26,14 @@ class ImportNominationController extends Controller
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
             'short_charge_rate'     => 'required|numeric|min:0',
             'short_charge_currency' => 'required|string|max:8',
+            'hospitality_rate'      => 'nullable|numeric|min:0',
+            'hospitality_currency'  => 'nullable|string|max:8',
             'advances'              => 'nullable|numeric|min:0',
             'advances_currency'     => 'required|string|max:8',
             'notes'                 => 'nullable|string|max:2000',
         ]);
+        $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
+        $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
 
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
@@ -53,26 +57,7 @@ class ImportNominationController extends Controller
 
         $this->syncAdvanceEntry($cid, $nom, $data);
 
-        // Post provisional supplier invoice for the full committed purchase value
-        // This reflects AP immediately at nomination — adjusted by actual delivery quantities per truck
-        if ($purchase->supplier_id) {
-            $provisionalAmt = round((float) $purchase->qty * (float) $purchase->unit_price, 4);
-            if ($provisionalAmt > 0) {
-                SupplierLedgerController::postInvoice(
-                    companyId:   $cid,
-                    supplierId:  (int) $purchase->supplier_id,
-                    amount:      $provisionalAmt,
-                    currency:    $purchase->currency ?? 'USD',
-                    description: "Provisional invoice — import PO {$purchase->reference} ({$purchase->qty} L × {$purchase->unit_price} {$purchase->currency})",
-                    entryDate:   now()->toDateString(),
-                    refType:     ImportNomination::class,
-                    refId:       $nom->id,
-                    createdBy:   auth()->id(),
-                );
-            }
-        }
-
-        return back()->with('status', 'Import nomination created. Provisional supplier invoice posted. You can now add trucks.');
+        return back()->with('status', 'Import nomination created. You can now add trucks.');
     }
 
     // ── Update nomination ────────────────────────────────────────────────────
@@ -89,10 +74,14 @@ class ImportNominationController extends Controller
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
             'short_charge_rate'     => 'required|numeric|min:0',
             'short_charge_currency' => 'required|string|max:8',
+            'hospitality_rate'      => 'nullable|numeric|min:0',
+            'hospitality_currency'  => 'nullable|string|max:8',
             'advances'              => 'nullable|numeric|min:0',
             'advances_currency'     => 'required|string|max:8',
             'notes'                 => 'nullable|string|max:2000',
         ]);
+        $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
+        $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
 
         $nomination->update(array_merge($data, [
             'advances' => $data['advances'] ?? 0,
@@ -254,6 +243,36 @@ class ImportNominationController extends Controller
 
         $truck->update(array_merge($data, ['status' => 'border_cleared']));
 
+        // Auto-post hospitality as a batch cost if a rate is configured (idempotent per truck)
+        if ($purchase->batch_id && (float) $nomination->hospitality_rate > 0) {
+            $hospExists = DB::table('batch_costs')
+                ->where('batch_id', $purchase->batch_id)
+                ->where('truck_id', $truck->id)
+                ->where('category', 'hospitality')
+                ->exists();
+            if (!$hospExists) {
+                DB::table('batch_costs')->insert([
+                    'batch_id'            => $purchase->batch_id,
+                    'purchase_id'         => $purchase->id,
+                    'nomination_id'       => $nomination->id,
+                    'truck_id'            => $truck->id,
+                    'company_id'          => $cid,
+                    'category'            => 'hospitality',
+                    'description'         => "Border hospitality — truck {$truck->truck_reg}",
+                    'amount'              => (float) $nomination->hospitality_rate,
+                    'currency'            => $nomination->hospitality_currency ?? 'USD',
+                    'exchange_rate'       => 1,
+                    'amount_base'         => (float) $nomination->hospitality_rate,
+                    'entry_date'          => $data['border_date'],
+                    'is_included_in_cost' => false,
+                    'auto_posted'         => true,
+                    'created_by'          => auth()->id(),
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+            }
+        }
+
         return back()->with('status', "Border clearance recorded for {$truck->truck_reg}.");
     }
 
@@ -376,66 +395,162 @@ class ImportNominationController extends Controller
             }
         }
 
-        // Auto-post shortfall charge as a batch cost (idempotent per truck)
-        if ($purchase->batch_id && $shortfallCharge > 0) {
-            $shortCostExists = DB::table('batch_costs')
-                ->where('batch_id', $purchase->batch_id)
-                ->where('truck_id', $truck->id)
-                ->where('category', 'penalty')
-                ->exists();
-            if (!$shortCostExists) {
-                DB::table('batch_costs')->insert([
-                    'batch_id'           => $purchase->batch_id,
-                    'purchase_id'        => $purchase->id,
-                    'nomination_id'      => $nomination->id,
-                    'truck_id'           => $truck->id,
-                    'company_id'         => $cid,
-                    'category'           => 'penalty',
-                    'description'        => "Shortfall charge — truck {$truck->truck_reg} ({$excessLossQty} L excess loss)",
-                    'amount'             => $shortfallCharge,
-                    'currency'           => $nomination->short_charge_currency ?? 'USD',
-                    'exchange_rate'      => 1,
-                    'amount_base'        => $shortfallCharge,
-                    'entry_date'         => $data['delivery_date'],
-                    'is_included_in_cost'=> false,
-                    'auto_posted'        => true,
-                    'created_by'         => auth()->id(),
-                    'created_at'         => now(),
-                    'updated_at'         => now(),
-                ]);
-            }
-        }
+        // NOTE: Shortfall charge is NOT a batch cost — it is deducted from the transporter's payout
+        // (already posted to transporter ledger above as a negative short_charge entry).
+        // Our landed cost is the full freight on qty loaded, regardless of transit loss.
 
-        // Post actual delivery invoice per truck (idempotent)
-        // The provisional invoice posted at nomination covers the full PO value.
-        // Per-truck delivery entries allow reconciliation: sum of truck invoices vs provisional.
-        if ($purchase->supplier_id && $qtyDelivered > 0) {
-            $invoiceAmt = round($qtyDelivered * (float) $purchase->unit_price, 4);
-            if ($invoiceAmt > 0) {
-                SupplierLedgerController::postInvoice(
-                    companyId:   $cid,
-                    supplierId:  (int) $purchase->supplier_id,
-                    amount:      $invoiceAmt,
-                    currency:    $purchase->currency ?? 'USD',
-                    description: "Delivery invoice: truck {$truck->truck_reg} — {$qtyDelivered} L delivered",
-                    entryDate:   $data['delivery_date'],
-                    refType:     ImportTruck::class,
-                    refId:       (int) $truck->id,
-                    createdBy:   auth()->id(),
-                );
-            }
-        }
+        // NOTE: No per-truck supplier invoice — the full purchase invoice was posted at confirm().
+        // Supplier is owed for the full purchased qty × unit price from the moment the deal was confirmed.
 
         $msg = "Delivery recorded: {$qtyDelivered} L.";
         if ($excessLossQty > 0) {
-            $msg .= " Chargeable shortfall: {$excessLossQty} L → {$nomination->short_charge_currency} "
-                  . number_format($shortfallCharge, 2) . '.';
+            $msg .= " Chargeable shortfall: {$excessLossQty} L → deducted from transporter ({$nomination->short_charge_currency} "
+                  . number_format($shortfallCharge, 2) . ').';
         }
         if (isset($freightAmt) && $freightAmt > 0) {
-            $msg .= " Freight cost auto-posted: " . number_format($freightAmt, 2) . ".";
+            $msg .= " Freight auto-posted to landed costs: " . number_format($freightAmt, 2) . ".";
         }
 
         return back()->with('status', $msg);
+    }
+
+    // ── Quick load + deliver (skip intermediate stages) ──────────────────────
+    // Accepts a truck in 'nominated' status and records the full load→deliver
+    // pipeline in one step. Useful for catching up records after the fact.
+
+    public function quickLoadDeliver(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
+        abort_if($truck->status !== 'nominated', 422, 'Quick post is only available for trucks that have not started loading yet.');
+
+        $data = $request->validate([
+            'qty_loaded'     => 'required|numeric|min:1',
+            'qty_delivered'  => 'required|numeric|min:0',
+            'depot_id'       => 'required|integer',
+            'date'           => 'required|date',
+            'notes'          => 'nullable|string|max:1000',
+        ]);
+
+        $depotOk = DB::table('depots')
+            ->where('company_id', $cid)
+            ->where('id', (int) $data['depot_id'])
+            ->where('is_active', true)
+            ->exists();
+        if (!$depotOk) {
+            return back()->with('error', 'Invalid depot selected.');
+        }
+
+        $volumeUnit      = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+        $rateDivisor     = ($volumeUnit === 'M3') ? 1 : 1000;
+        $qtyLoaded       = (float) $data['qty_loaded'];
+        $qtyDelivered    = (float) $data['qty_delivered'];
+        $lossPct         = (float) $nomination->allowed_loss_pct / 100;
+        $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
+        $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
+        $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
+        $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
+
+        $truck->update([
+            'status'           => 'delivered',
+            'qty_loaded'       => $qtyLoaded,
+            'pickup_date'      => $data['date'],
+            'qty_delivered'    => $qtyDelivered,
+            'delivery_date'    => $data['date'],
+            'depot_id'         => $data['depot_id'],
+            'delivery_notes'   => $data['notes'],
+            'shortfall_qty'    => $shortfallQty,
+            'allowed_loss_qty' => $allowedLossQty,
+            'excess_loss_qty'  => $excessLossQty,
+            'shortfall_charge' => $shortfallCharge,
+        ]);
+
+        // Post transporter entries (freight + shortfall charge)
+        if ($nomination->transporter_id) {
+            $ledgerCurrency = DB::table('transporters')
+                ->where('id', $nomination->transporter_id)
+                ->value('default_currency') ?? 'USD';
+            $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
+            if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
+                TransporterLedgerEntry::create([
+                    'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
+                    'type'           => 'freight_charge', 'amount' => $freightAmt,
+                    'currency'       => $ledgerCurrency,
+                    'description'    => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
+                    'entry_date'     => $data['date'], 'ref_type' => ImportTruck::class,
+                    'ref_id'         => $truck->id, 'created_by' => auth()->id(),
+                ]);
+            }
+            if ($shortfallCharge > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'short_charge')->exists()) {
+                TransporterLedgerEntry::create([
+                    'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
+                    'type'           => 'short_charge', 'amount' => -$shortfallCharge,
+                    'currency'       => $ledgerCurrency,
+                    'description'    => "Shortfall charge — {$truck->truck_reg} ({$excessLossQty} L excess)",
+                    'entry_date'     => $data['date'], 'ref_type' => ImportTruck::class,
+                    'ref_id'         => $truck->id, 'created_by' => auth()->id(),
+                ]);
+            }
+        } else { $freightAmt = 0; }
+
+        // Auto-post freight batch cost
+        if ($purchase->batch_id && $freightAmt > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'freight')->exists()) {
+            $freightCurrency = ($nomination->transporter_id) ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD') : ($nomination->currency ?? 'USD');
+            DB::table('batch_costs')->insert([
+                'batch_id' => $purchase->batch_id, 'purchase_id' => $purchase->id,
+                'nomination_id' => $nomination->id, 'truck_id' => $truck->id,
+                'company_id' => $cid, 'category' => 'freight',
+                'description' => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
+                'amount' => $freightAmt, 'currency' => $freightCurrency,
+                'exchange_rate' => 1, 'amount_base' => $freightAmt,
+                'entry_date' => $data['date'], 'is_included_in_cost' => false,
+                'auto_posted' => true, 'created_by' => auth()->id(),
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        // Auto-post hospitality batch cost (border stage was skipped but cost still applies)
+        if ($purchase->batch_id && (float) $nomination->hospitality_rate > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'hospitality')->exists()) {
+            DB::table('batch_costs')->insert([
+                'batch_id' => $purchase->batch_id, 'purchase_id' => $purchase->id,
+                'nomination_id' => $nomination->id, 'truck_id' => $truck->id,
+                'company_id' => $cid, 'category' => 'hospitality',
+                'description' => "Border hospitality — truck {$truck->truck_reg}",
+                'amount' => (float) $nomination->hospitality_rate,
+                'currency' => $nomination->hospitality_currency ?? 'USD',
+                'exchange_rate' => 1, 'amount_base' => (float) $nomination->hospitality_rate,
+                'entry_date' => $data['date'], 'is_included_in_cost' => false,
+                'auto_posted' => true, 'created_by' => auth()->id(),
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $msg = "Quick delivery posted: {$qtyLoaded} L loaded, {$qtyDelivered} L delivered.";
+        if ($excessLossQty > 0) {
+            $msg .= " Shortfall charge: {$nomination->short_charge_currency} " . number_format($shortfallCharge, 2) . " deducted from transporter.";
+        }
+
+        return back()->with('status', $msg);
+    }
+
+    // ── Bulk mark in transit ─────────────────────────────────────────────────
+
+    public function bulkMarkInTransit(Request $request, Purchase $purchase, ImportNomination $nomination)
+    {
+        $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+
+        $ids = array_filter(array_map('intval', (array) $request->input('truck_ids', [])));
+        if (empty($ids)) {
+            return back()->with('error', 'No trucks selected.');
+        }
+
+        $updated = ImportTruck::where('nomination_id', $nomination->id)
+            ->whereIn('id', $ids)
+            ->where('status', 'loaded')
+            ->update(['status' => 'in_transit', 'updated_at' => now()]);
+
+        return back()->with('status', "{$updated} truck(s) marked as in transit.");
     }
 
     // ── Download truck CSV template ──────────────────────────────────────────

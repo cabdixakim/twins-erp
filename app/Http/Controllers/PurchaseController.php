@@ -473,15 +473,18 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         $purchase->updated_by = $u?->id;
         $purchase->save();
 
-        // Post supplier invoice for cross_dock at confirm (goods are in cross dock; local_depot invoiced at receive)
-        if ($purchase->type === 'cross_dock' && $purchase->supplier_id) {
+        // Post supplier invoice at confirm for cross_dock and import
+        // Deal is done at this point — we owe for the full purchased qty × unit price.
+        // Local depot invoices at receive() instead (physical handover).
+        if (in_array($purchase->type, ['cross_dock', 'import'], true) && $purchase->supplier_id) {
             $invoiceAmt = round((float) $purchase->qty * (float) $purchase->unit_price, 4);
+            $typeLabel  = $purchase->type === 'import' ? 'import confirmed' : 'cross-dock confirmed';
             SupplierLedgerController::postInvoice(
                 companyId:   (int) $purchase->company_id,
                 supplierId:  (int) $purchase->supplier_id,
                 amount:      $invoiceAmt,
                 currency:    $purchase->currency ?? 'USD',
-                description: "Purchase {$purchase->reference} — cross-dock confirmed",
+                description: "Purchase {$purchase->reference} — {$typeLabel} ({$purchase->qty} L × {$purchase->unit_price} {$purchase->currency})",
                 entryDate:   now()->toDateString(),
                 refType:     'purchase',
                 refId:       (int) $purchase->id,
@@ -1018,24 +1021,24 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 }
             }
 
-            // Reverse provisional supplier invoice for import nominations (posted at nomination time)
-            if ($purchase->type === 'import' && $purchase->supplier_id && $purchase->importNomination) {
-                $nom = $purchase->importNomination;
-                $provisionalEntry = \App\Models\SupplierLedgerEntry::where('ref_type', \App\Models\ImportNomination::class)
-                    ->where('ref_id', $nom->id)
+            // Reverse supplier invoice posted at confirmation (cross_dock and import)
+            // The invoice posts at confirm() against ref_type='purchase'; cancellation creates a matching credit note.
+            if (in_array($purchase->type, ['cross_dock', 'import'], true) && $purchase->supplier_id) {
+                $confirmedInvoice = \App\Models\SupplierLedgerEntry::where('ref_type', 'purchase')
+                    ->where('ref_id', $purchase->id)
                     ->where('type', 'purchase_invoice')
                     ->first();
-                if ($provisionalEntry) {
+                if ($confirmedInvoice) {
                     \App\Models\SupplierLedgerEntry::create([
                         'company_id'  => $purchase->company_id,
                         'supplier_id' => (int) $purchase->supplier_id,
                         'type'        => 'credit_note',
-                        'amount'      => -abs((float) $provisionalEntry->amount),
-                        'currency'    => $provisionalEntry->currency,
-                        'description' => "Cancellation reversal of provisional invoice — {$purchase->reference}",
+                        'amount'      => -abs((float) $confirmedInvoice->amount),
+                        'currency'    => $confirmedInvoice->currency,
+                        'description' => "Cancellation reversal — {$purchase->reference}",
                         'entry_date'  => now()->toDateString(),
-                        'ref_type'    => \App\Models\ImportNomination::class,
-                        'ref_id'      => $nom->id,
+                        'ref_type'    => 'purchase',
+                        'ref_id'      => (int) $purchase->id,
                         'created_by'  => $u?->id,
                     ]);
                 }
