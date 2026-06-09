@@ -413,6 +413,15 @@ class SalesController extends Controller
                     "Sale {$sale->reference} posted — {$qty} L, total {$sale->currency} " . number_format((float)$sale->total, 2),
                     $sale,
                     "Sale {$sale->reference}",
+                    severity: 'warning',
+                    after: [
+                        'status'    => 'posted',
+                        'qty'       => $qty,
+                        'total'     => $sale->total,
+                        'currency'  => $sale->currency,
+                        'client_id' => $sale->client_id,
+                    ],
+                    module: 'Sale',
                 );
             });
         } catch (\RuntimeException $e) {

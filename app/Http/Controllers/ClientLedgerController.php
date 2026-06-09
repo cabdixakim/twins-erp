@@ -155,6 +155,9 @@ class ClientLedgerController extends Controller
             "Payment of {$currency} " . number_format($data['amount'], 2) . " received from client {$client->name}",
             $client,
             "Client {$client->name}",
+            severity: 'warning',
+            after: ['amount' => $data['amount'], 'currency' => $currency, 'entry_date' => $data['entry_date']],
+            module: 'Client',
         );
 
         $sym = self::currencySymbol($currency);
@@ -191,6 +194,9 @@ class ClientLedgerController extends Controller
             "Credit note of {$currency} " . number_format($data['amount'], 2) . " issued to client {$client->name}",
             $client,
             "Client {$client->name}",
+            severity: 'warning',
+            after: ['amount' => $data['amount'], 'currency' => $currency, 'description' => $data['description']],
+            module: 'Client',
         );
 
         $sym = self::currencySymbol($currency);

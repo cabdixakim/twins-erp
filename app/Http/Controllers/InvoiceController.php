@@ -127,6 +127,10 @@ class InvoiceController extends Controller
             "Invoice {$invoice->invoice_number} marked " . ($status === 'paid' ? 'fully paid' : 'partially paid') . " — amount: {$data['paid_amount']} {$invoice->currency}",
             $invoice,
             "Invoice {$invoice->invoice_number}",
+            severity: 'warning',
+            before: ['paid_amount' => (float)$invoice->getOriginal('paid_amount'), 'status' => $invoice->getOriginal('status')],
+            after: ['paid_amount' => min($newPaid, (float)$invoice->total), 'status' => $status],
+            module: 'Invoice',
         );
 
         return back()->with('status', 'Payment recorded on invoice.');
@@ -150,6 +154,10 @@ class InvoiceController extends Controller
             "Invoice {$invoice->invoice_number} voided for client {$invoice->client?->name}",
             $invoice,
             "Invoice {$invoice->invoice_number}",
+            severity: 'critical',
+            before: ['status' => $invoice->getOriginal('status'), 'total' => $invoice->total],
+            after: ['status' => 'void'],
+            module: 'Invoice',
         );
 
         return back()->with('status', 'Invoice voided.');

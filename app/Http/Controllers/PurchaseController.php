@@ -505,6 +505,17 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         "Purchase {$purchase->reference} confirmed ({$purchase->type}) — {$purchase->qty} L × {$purchase->unit_price} {$purchase->currency}",
         $purchase,
         "Purchase {$purchase->reference}",
+        severity: 'warning',
+        after: [
+            'status'     => 'confirmed',
+            'type'       => $purchase->type,
+            'qty'        => $purchase->qty,
+            'unit_price' => $purchase->unit_price,
+            'currency'   => $purchase->currency,
+            'supplier'   => $purchase->supplier?->name,
+            'batch_id'   => $purchase->batch_id,
+        ],
+        module: 'Purchase',
     );
 
     return redirect()->route('purchases.show', $purchase)
@@ -651,6 +662,14 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         "Purchase {$purchase->reference} received into depot — {$purchase->qty} L",
         $purchase,
         "Purchase {$purchase->reference}",
+        severity: 'warning',
+        before: ['status' => 'confirmed'],
+        after: [
+            'status'   => 'received',
+            'qty'      => $purchase->qty,
+            'depot_id' => $purchase->depot_id,
+        ],
+        module: 'Purchase',
     );
 
     return redirect()->route('purchases.show', $purchase)
@@ -1072,6 +1091,10 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             "Purchase {$purchase->reference} cancelled" . ($reason ? " — {$reason}" : ''),
             $purchase,
             "Purchase {$purchase->reference}",
+            severity: 'critical',
+            before: ['status' => $purchase->status],
+            after: ['status' => 'cancelled', 'reason' => $reason ?: null],
+            module: 'Purchase',
         );
 
         return redirect()->route('purchases.show', $purchase)
@@ -1137,6 +1160,10 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             "Purchase {$purchase->reference} voided/returned to seller" . ($reason ? " — {$reason}" : ''),
             $purchase,
             "Purchase {$purchase->reference}",
+            severity: 'critical',
+            before: ['status' => 'received', 'qty' => $purchase->qty, 'depot_id' => $purchase->depot_id],
+            after: ['status' => 'voided', 'reason' => $reason ?: null],
+            module: 'Purchase',
         );
 
         return redirect()->route('purchases.show', $purchase)

@@ -329,13 +329,13 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::patch('/invoices/{invoice}/notes', [InvoiceController::class, 'updateNotes'])
-            ->middleware('role:owner,manager')
+            ->middleware('role:owner,admin,manager,accountant')
             ->name('invoices.update-notes');
         Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])
-            ->middleware('role:owner,manager')
+            ->middleware('role:owner,admin,manager,accountant')
             ->name('invoices.mark-paid');
         Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('invoices.void');
 
     });
@@ -343,26 +343,44 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Admin area – only for owners
+| Admin area — owners and admins
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company', 'role:owner'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'role:owner,admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
 
+        // User management — owner + admin only
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
-        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])
+            ->middleware('role:owner') // delete = owner only
+            ->name('users.destroy');
 
-        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
-        Route::match(['put', 'patch'], '/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
-        Route::post('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->name('roles.permissions.sync');
+        // Roles management — owner only
+        Route::get('/roles', [RoleController::class, 'index'])
+            ->middleware('role:owner')
+            ->name('roles.index');
+        Route::post('/roles', [RoleController::class, 'store'])
+            ->middleware('role:owner')
+            ->name('roles.store');
+        Route::match(['put', 'patch'], '/roles/{role}', [RoleController::class, 'update'])
+            ->middleware('role:owner')
+            ->name('roles.update');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
+            ->middleware('role:owner')
+            ->name('roles.destroy');
+        Route::post('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])
+            ->middleware('role:owner')
+            ->name('roles.permissions.sync');
 
-        Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log');
+        // Audit log — owner + admin + manager can view
+        Route::get('/audit-log', [AuditLogController::class, 'index'])
+            ->withoutMiddleware('role:owner,admin')
+            ->middleware('role:owner,admin,manager')
+            ->name('audit-log');
     });

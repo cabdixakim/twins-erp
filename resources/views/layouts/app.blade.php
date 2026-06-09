@@ -61,7 +61,10 @@
     $company = $company ?: \App\Models\Company::query()->orderBy('id')->first();
     $companyCode = $company?->code;
 
-    $canManageUsers  = in_array($userRole, ['owner','manager'], true);
+    $canManageUsers  = in_array($userRole, ['owner','admin','manager'], true);
+    $isOwnerOrAdmin  = in_array($userRole, ['owner','admin'], true);
+    $isFinanceRole   = in_array($userRole, ['owner','admin','manager','accountant'], true);
+    $isTransport     = in_array($userRole, ['owner','admin','manager','transport-controller'], true);
 
     $onDashboard     = request()->routeIs('dashboard');
     $onDepotStock    = request()->routeIs('depot-stock.*');
@@ -76,11 +79,13 @@
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
+    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
+    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">
