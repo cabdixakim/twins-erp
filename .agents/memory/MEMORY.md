@@ -6,3 +6,7 @@
 - [Invoice document pattern](invoice-pattern.md) — standalone Blade view (no app layout), accent color from company.invoice_accent_color, auto-created in SalesController::post() idempotently via Invoice::where('sale_id',...)->exists() guard.
 - [AuditLog::record() signature](audit-log-usage.md) — named params: event, description, model, modelLabel, companyId, severity (info/warning/critical), before[], after[], module. Auto-captures url/method/ua. Never throws.
 - [Roles system](roles-system.md) — 6 system roles: owner(god), admin(near-owner), manager, accountant, transport-controller, viewer. RoleMiddleware checks slug; owner always bypasses. Route gates use role:X,Y syntax. $isOwnerOrAdmin/$isFinanceRole/$isTransport passed to sidebar partials.
+- [Smart quotes cause PHP parse errors](smart-quotes.md) — Unicode curly quotes in PHP strings cause "unexpected double-quote" parse errors; use ASCII quotes and dot-concatenation when interpolating variables.
+- [Petty cash balance pattern](petty-cash-balance.md) — balance = opening_balance + SUM(amount); expenses negative, top-ups positive; voids = reversal entry, not hard-delete.
+- [Chart.js CDN per-page only](chartjs-cdn.md) — load Chart.js 4.4.0 via CDN only in views that use it (dashboard, throughput report); not in master layout.
+- [New modules: petty-cash + reports](new-modules.md) — petty-cash at /petty-cash (5 routes), reports at /reports (4 routes); both use ['auth','company.setup','active.company'] middleware; nav flags $onPettyCash/$onReports in app.blade.php compact().

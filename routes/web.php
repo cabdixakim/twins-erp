@@ -343,6 +343,37 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Petty Cash
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'company.setup', 'active.company'])
+    ->prefix('petty-cash')
+    ->name('petty-cash.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\PettyCashController::class, 'index'])->name('index');
+        Route::post('/accounts', [\App\Http\Controllers\PettyCashController::class, 'storeAccount'])->name('store');
+        Route::post('/accounts/{account}/transactions', [\App\Http\Controllers\PettyCashController::class, 'recordTransaction'])->name('transaction');
+        Route::post('/accounts/{account}/transactions/{transaction}/void', [\App\Http\Controllers\PettyCashController::class, 'voidTransaction'])->name('transaction.void');
+        Route::post('/accounts/{account}/toggle', [\App\Http\Controllers\PettyCashController::class, 'toggleAccount'])->name('toggle');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'company.setup', 'active.company'])
+    ->prefix('reports')
+    ->name('reports.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\ReportController::class, 'index'])->name('index');
+        Route::get('/pl', [\App\Http\Controllers\ReportController::class, 'plByBatch'])->name('pl');
+        Route::get('/ar-aging', [\App\Http\Controllers\ReportController::class, 'arAging'])->name('ar-aging');
+        Route::get('/throughput', [\App\Http\Controllers\ReportController::class, 'throughput'])->name('throughput');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Admin area — owners and admins
 |--------------------------------------------------------------------------
 */

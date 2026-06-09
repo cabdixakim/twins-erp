@@ -4,6 +4,52 @@
 
 <div class="space-y-6 max-w-4xl">
 
+  {{-- ── Quick Actions ────────────────────────────────────────── --}}
+  <section>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <a href="{{ route('purchases.create') }}"
+             class="tw-card group rounded-xl p-3 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   style="background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.2)">
+                  <svg class="w-4 h-4" style="color:#10b981" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                  </svg>
+              </div>
+              <span class="text-xs font-semibold tw-fg group-hover:text-[color:var(--tw-accent)] transition">New Purchase</span>
+          </a>
+          <a href="{{ route('sales.index') }}"
+             class="tw-card group rounded-xl p-3 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   style="background:rgba(14,165,233,.12); border:1px solid rgba(14,165,233,.2)">
+                  <svg class="w-4 h-4" style="color:#0ea5e9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                  </svg>
+              </div>
+              <span class="text-xs font-semibold tw-fg group-hover:text-[color:var(--tw-accent)] transition">New Sale</span>
+          </a>
+          <a href="{{ route('petty-cash.index') }}"
+             class="tw-card group rounded-xl p-3 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   style="background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.2)">
+                  <svg class="w-4 h-4" style="color:#f59e0b" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75"/>
+                  </svg>
+              </div>
+              <span class="text-xs font-semibold tw-fg group-hover:text-[color:var(--tw-accent)] transition">Petty Cash</span>
+          </a>
+          <a href="{{ route('reports.index') }}"
+             class="tw-card group rounded-xl p-3 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                   style="background:rgba(168,85,247,.12); border:1px solid rgba(168,85,247,.2)">
+                  <svg class="w-4 h-4" style="color:#a855f7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
+                  </svg>
+              </div>
+              <span class="text-xs font-semibold tw-fg group-hover:text-[color:var(--tw-accent)] transition">Reports</span>
+          </a>
+      </div>
+  </section>
+
   {{-- Welcome banner --}}
   <div class="tw-card rounded-2xl px-6 py-5 flex items-center gap-4">
       <div class="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center"
@@ -264,6 +310,93 @@
       </a>
   </section>
 
+  {{-- ── Throughput Chart ─────────────────────────────────────── --}}
+  @php
+      $chartLabels    = json_encode($chartLabels ?? []);
+      $chartPurchased = json_encode($chartPurchased ?? []);
+      $chartSold      = json_encode($chartSold ?? []);
+  @endphp
+  <section>
+      <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Volume Throughput — Last 6 Months</h2>
+      <div class="tw-card rounded-2xl p-5">
+          <div class="flex items-center gap-4 mb-4 flex-wrap">
+              <div class="flex items-center gap-1.5 text-xs tw-muted">
+                  <span class="w-3 h-3 rounded-sm flex-shrink-0" style="background:rgba(14,165,233,.7)"></span>
+                  Purchased
+              </div>
+              <div class="flex items-center gap-1.5 text-xs tw-muted">
+                  <span class="w-3 h-3 rounded-sm flex-shrink-0" style="background:rgba(16,185,129,.7)"></span>
+                  Sold
+              </div>
+              <a href="{{ route('reports.throughput') }}" class="ml-auto text-xs tw-muted hover:underline underline-offset-2">
+                  Full report →
+              </a>
+          </div>
+          <div style="height:220px; position:relative">
+              <canvas id="dashThroughputChart"></canvas>
+          </div>
+      </div>
+  </section>
+
+  {{-- ── AP / AR Summary ──────────────────────────────────────── --}}
+  <section>
+      <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Financial Position</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {{-- AP total --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-semibold tw-muted">Total Payables (AP)</span>
+                  <a href="{{ route('suppliers.index') }}" class="text-xs tw-muted hover:underline">View suppliers →</a>
+              </div>
+              <div class="text-3xl font-bold" style="color:#ef4444">
+                  {{ number_format($totalAP ?? 0, 2) }}
+              </div>
+              <div class="mt-3 space-y-1.5">
+                  @if($supplierPayableTotal > 0)
+                  <div class="flex items-center justify-between text-xs">
+                      <span class="tw-muted">Supplier</span>
+                      <span class="font-semibold" style="color:#ef4444">{{ number_format($supplierPayableTotal, 2) }}</span>
+                  </div>
+                  @endif
+                  @if($depotPayableTotal > 0)
+                  <div class="flex items-center justify-between text-xs">
+                      <span class="tw-muted">Depot charges</span>
+                      <span class="font-semibold" style="color:#a855f7">{{ number_format($depotPayableTotal, 2) }}</span>
+                  </div>
+                  @endif
+                  @if($byCurrency->sum() > 0)
+                  <div class="flex items-center justify-between text-xs">
+                      <span class="tw-muted">Freight</span>
+                      <span class="font-semibold" style="color:#f59e0b">{{ number_format($byCurrency->sum(), 2) }}</span>
+                  </div>
+                  @endif
+              </div>
+          </div>
+          {{-- AR total --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-semibold tw-muted">Total Receivables (AR)</span>
+                  <a href="{{ route('reports.ar-aging') }}" class="text-xs tw-muted hover:underline">AR aging →</a>
+              </div>
+              <div class="text-3xl font-bold" style="color:#10b981">
+                  {{ number_format($totalAR, 2) }}
+              </div>
+              @if($topARClients->isNotEmpty())
+              <div class="mt-3 space-y-1.5">
+                  @foreach($topARClients as $c)
+                  <div class="flex items-center justify-between text-xs">
+                      <span class="tw-fg truncate max-w-[60%]">{{ $c->name }}</span>
+                      <span class="font-semibold" style="color:#10b981">{{ number_format($c->balance, 2) }} <span class="opacity-60">{{ $c->currency }}</span></span>
+                  </div>
+                  @endforeach
+              </div>
+              @else
+              <p class="mt-3 text-xs tw-muted">No outstanding receivables.</p>
+              @endif
+          </div>
+      </div>
+  </section>
+
   {{-- ── Freight Payables ─────────────────────────────────────── --}}
   <section>
       <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Freight Payables</h2>
@@ -319,4 +452,78 @@
   </section>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const isDark    = document.documentElement.dataset.theme === 'dark' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+    const textColor = isDark ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.35)';
+
+    Chart.defaults.font.family = 'inherit';
+    Chart.defaults.font.size   = 11;
+    Chart.defaults.color       = textColor;
+
+    const labels    = {!! json_encode($chartLabels ?? []) !!};
+    const purchased = {!! json_encode($chartPurchased ?? []) !!};
+    const sold      = {!! json_encode($chartSold ?? []) !!};
+
+    if (!labels.length) return;
+
+    new Chart(document.getElementById('dashThroughputChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Purchased (L)',
+                    data: purchased,
+                    backgroundColor: 'rgba(14,165,233,.3)',
+                    borderColor: 'rgba(14,165,233,.85)',
+                    borderWidth: 1.5,
+                    borderRadius: 5,
+                    order: 2,
+                },
+                {
+                    label: 'Sold (L)',
+                    data: sold,
+                    backgroundColor: 'rgba(16,185,129,.3)',
+                    borderColor: 'rgba(16,185,129,.85)',
+                    borderWidth: 1.5,
+                    borderRadius: 5,
+                    order: 1,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + ' L'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor },
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: textColor,
+                        callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v
+                    },
+                    beginAtZero: true,
+                }
+            }
+        }
+    });
+})();
+</script>
+
 @endsection

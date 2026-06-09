@@ -76,16 +76,18 @@
     $onTransporters  = request()->routeIs('transporters.*');
     $onSuppliers     = request()->routeIs('suppliers.*');
     $onDepotLedger   = request()->routeIs('depots.*');
+    $onReports       = request()->routeIs('reports.*');
+    $onPettyCash     = request()->routeIs('petty-cash.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">

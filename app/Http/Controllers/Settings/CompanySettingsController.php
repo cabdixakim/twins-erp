@@ -33,6 +33,14 @@ class CompanySettingsController extends Controller
             'country'       => ['nullable', 'string', 'max:255'],
             'timezone'      => ['nullable', 'string', 'max:255'],
 
+            // Invoice defaults
+            'invoice_prefix'       => ['nullable', 'string', 'max:20'],
+            'invoice_payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'invoice_tax_rate'     => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'invoice_bank_details' => ['nullable', 'string', 'max:1000'],
+            'invoice_footer_notes' => ['nullable', 'string', 'max:500'],
+            'invoice_accent_color' => ['nullable', 'string', 'max:20'],
+
             // normal upload (fallback if cropper isn't used)
             'logo'          => ['nullable', 'image', 'max:2048'], // 2MB
 

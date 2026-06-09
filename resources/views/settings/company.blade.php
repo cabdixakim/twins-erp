@@ -268,6 +268,64 @@
                 </div>
             </div>
 
+            {{-- INVOICE DEFAULTS --}}
+            <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
+                <div class="text-sm font-semibold {{ $fg }} mb-1">Invoice Defaults</div>
+                <div class="text-[11px] {{ $muted }} mb-4">These values are applied automatically when generating invoices.</div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="{{ $label }}">Invoice prefix</label>
+                        <input type="text" name="invoice_prefix"
+                               value="{{ old('invoice_prefix', $company->invoice_prefix ?? 'INV') }}"
+                               placeholder="INV"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">e.g. INV-2024-001</div>
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">Payment terms (days)</label>
+                        <input type="number" name="invoice_payment_days"
+                               value="{{ old('invoice_payment_days', $company->invoice_payment_days ?? 30) }}"
+                               placeholder="30" min="0" max="365"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">Days until invoice is due</div>
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">Default tax rate (%)</label>
+                        <input type="number" name="invoice_tax_rate"
+                               value="{{ old('invoice_tax_rate', $company->invoice_tax_rate ?? 0) }}"
+                               placeholder="0" min="0" max="100" step="0.01"
+                               class="{{ $input }}">
+                        <div class="text-[10px] {{ $muted }} mt-1">0 = no tax</div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="{{ $label }}">Bank details (shown on invoices)</label>
+                    <textarea name="invoice_bank_details" rows="3"
+                              placeholder="Bank: XYZ Bank&#10;Account: 000123456&#10;Branch: 001"
+                              class="{{ $input }} resize-none leading-relaxed">{{ old('invoice_bank_details', $company->invoice_bank_details ?? '') }}</textarea>
+                </div>
+
+                <div class="mt-3">
+                    <label class="{{ $label }}">Invoice footer note</label>
+                    <input type="text" name="invoice_footer_notes"
+                           value="{{ old('invoice_footer_notes', $company->invoice_footer_notes ?? '') }}"
+                           placeholder="e.g. Thank you for your business. Payment within terms is appreciated."
+                           class="{{ $input }}">
+                </div>
+
+                <div class="mt-3">
+                    <label class="{{ $label }}">Invoice accent colour</label>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="color" name="invoice_accent_color"
+                               value="{{ old('invoice_accent_color', $company->invoice_accent_color ?? '#10b981') }}"
+                               class="w-10 h-9 rounded-lg border {{ $border }} cursor-pointer p-1">
+                        <span class="text-[11px] {{ $muted }}">Used for invoice header, table headers, and accents.</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex justify-end pt-2">
                 <button type="submit"
                         class="{{ $btnPrimary }} px-4 py-2 text-sm">

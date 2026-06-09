@@ -53,4 +53,9 @@ class Batch extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function batchCosts(): HasMany
+    {
+        return $this->hasMany(BatchCost::class);
+    }
 }
