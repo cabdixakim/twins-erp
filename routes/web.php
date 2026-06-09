@@ -30,6 +30,8 @@ use App\Http\Controllers\ImportNominationController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AccountRecoveryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,10 +72,26 @@ Route::middleware('company.setup')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Account Recovery — public (no auth required)
+|--------------------------------------------------------------------------
+*/
+Route::get('/account-recovery', [AccountRecoveryController::class, 'show'])
+    ->name('account-recovery');
+Route::post('/account-recovery', [AccountRecoveryController::class, 'recover'])
+    ->name('account-recovery.recover');
+
+/*
+|--------------------------------------------------------------------------
 | Protected area
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'company.setup'])->group(function () {
+
+    // Profile — any authenticated user
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::post('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
+    Route::post('/profile/recovery-token', [ProfileController::class, 'generateRecoveryToken'])->name('profile.recovery-token');
+    Route::post('/profile/recovery-token/clear', [ProfileController::class, 'clearRecoveryToken'])->name('profile.recovery-token.clear');
 
     // Switcher is accessible even if no active company (edge cases)
     Route::get('/companies/switcher', [CompanySwitcherController::class, 'index'])
@@ -181,8 +199,10 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::patch('/purchases/{purchase}', [PurchaseController::class, 'update'])
             ->name('purchases.update');
         Route::post('/purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])
+            ->middleware('role:owner,admin,manager')
             ->name('purchases.cancel');
         Route::post('/purchases/{purchase}/void', [PurchaseController::class, 'void'])
+            ->middleware('role:owner,admin')
             ->name('purchases.void');
 
         // Import logistics (nominations + truck lifecycle)
@@ -353,7 +373,9 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
         Route::get('/', [\App\Http\Controllers\PettyCashController::class, 'index'])->name('index');
         Route::post('/accounts', [\App\Http\Controllers\PettyCashController::class, 'storeAccount'])->name('store');
         Route::post('/accounts/{account}/transactions', [\App\Http\Controllers\PettyCashController::class, 'recordTransaction'])->name('transaction');
-        Route::post('/accounts/{account}/transactions/{transaction}/void', [\App\Http\Controllers\PettyCashController::class, 'voidTransaction'])->name('transaction.void');
+        Route::post('/accounts/{account}/transactions/{transaction}/void', [\App\Http\Controllers\PettyCashController::class, 'voidTransaction'])
+            ->middleware('role:owner,admin,accountant')
+            ->name('transaction.void');
         Route::post('/accounts/{account}/toggle', [\App\Http\Controllers\PettyCashController::class, 'toggleAccount'])->name('toggle');
     });
 

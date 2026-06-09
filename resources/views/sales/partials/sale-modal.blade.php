@@ -134,25 +134,23 @@
 
               @error('delivery_mode') <div class="{{ $errText }}">{{ $message }}</div> @enderror
 
-              {{-- Transporter — always visible --}}
-              <div class="mt-3">
-                <label class="text-xs font-semibold {{ $muted }}">Transporter <span class="{{ $muted }}">(optional)</span></label>
-                <select id="f_transporter_id" name="transporter_id"
-                        class="{{ $fieldBase }} @error('transporter_id') {{ $fieldErr }} @enderror">
-                  <option value="">— None —</option>
-                  @foreach($transporters as $t)
-                    <option value="{{ $t->id }}" @selected(old('transporter_id') == $t->id)>{{ $t->name }}</option>
-                  @endforeach
-                </select>
-                @if($transporters->isEmpty())
-                  <p class="mt-1 text-[11px] {{ $muted }}">No transporters set up yet.
-                    <a href="{{ route('settings.transporters.index') }}" class="text-emerald-400 hover:underline" target="_blank">Add one →</a>
-                  </p>
-                @endif
-                @error('transporter_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
-              </div>
-
           <div id="deliveryFields" class="mt-3 hidden grid gap-3 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-semibold {{ $muted }}">Transporter</label>
+                  <select id="f_transporter_id" name="transporter_id"
+                          class="{{ $fieldBase }} @error('transporter_id') {{ $fieldErr }} @enderror">
+                    <option value="">— None —</option>
+                    @foreach($transporters as $t)
+                      <option value="{{ $t->id }}" @selected(old('transporter_id') == $t->id)>{{ $t->name }}</option>
+                    @endforeach
+                  </select>
+                  @if($transporters->isEmpty())
+                    <p class="mt-1 text-[11px] {{ $muted }}">No transporters yet.
+                      <a href="{{ route('settings.transporters.index') }}" class="text-emerald-400 hover:underline" target="_blank">Add one →</a>
+                    </p>
+                  @endif
+                  @error('transporter_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+                </div>
                 <div>
                   <label class="text-xs font-semibold {{ $muted }}">Truck no</label>
                   <input id="f_truck_no" name="truck_no" value="{{ old('truck_no') }}"

@@ -237,6 +237,18 @@
         <div class="text-[11px] tw-muted truncate">{{ $u?->email ?? '' }}</div>
     </div>
     <div class="p-2">
+        <a href="{{ route('profile') }}" class="flex items-center gap-3 {{ $popItem }}">
+            <span class="h-9 w-9 rounded-xl grid place-items-center bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
+                <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+            </span>
+            <div>
+                <div class="text-[13px] font-semibold">My profile</div>
+                <div class="text-[11px] tw-muted">Password · security</div>
+            </div>
+        </a>
+
         <a href="{{ route('settings.company.edit') }}" class="flex items-center gap-3 {{ $popItem }}">
             <span class="h-9 w-9 rounded-xl grid place-items-center bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
                 <svg class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -17,7 +17,7 @@ class User extends Authenticatable
         'active_company_id',
         'role_id',
         'status',
-            
+        'recovery_token',
     ];
 
     protected $hidden = [
