@@ -210,7 +210,7 @@ class SalesController extends Controller
                 'total'         => $total,
 
                 'delivery_mode'  => $data['delivery_mode'],
-                'transporter_id' => $data['delivery_mode'] === 'delivered' ? ($data['transporter_id'] ?? null) : null,
+                'transporter_id' => !empty($data['transporter_id']) ? (int) $data['transporter_id'] : null,
                 'truck_no'       => $data['delivery_mode'] === 'delivered' ? ($data['truck_no'] ?? null) : null,
                 'trailer_no'     => $data['delivery_mode'] === 'delivered' ? ($data['trailer_no'] ?? null) : null,
                 'waybill_no'     => $data['delivery_mode'] === 'delivered' ? ($data['waybill_no'] ?? null) : null,
@@ -297,16 +297,15 @@ class SalesController extends Controller
         $sale->currency     = $data['currency'] ?? 'USD';
         $sale->total        = $total;
 
-        $sale->delivery_mode = $data['delivery_mode'];
+        $sale->delivery_mode  = $data['delivery_mode'];
+        $sale->transporter_id = !empty($data['transporter_id']) ? (int) $data['transporter_id'] : null;
 
         if ($data['delivery_mode'] === 'delivered') {
-            $sale->transporter_id = $data['transporter_id'] ?? null;
             $sale->truck_no       = $data['truck_no'] ?? null;
             $sale->trailer_no     = $data['trailer_no'] ?? null;
             $sale->waybill_no     = $data['waybill_no'] ?? null;
             $sale->delivery_notes = $data['delivery_notes'] ?? null;
         } else {
-            $sale->transporter_id = null;
             $sale->truck_no       = null;
             $sale->trailer_no     = null;
             $sale->waybill_no     = null;

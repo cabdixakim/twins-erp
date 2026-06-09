@@ -280,11 +280,28 @@
     </div>
 </div>
 
-{{-- Void confirmation --}}
-<form id="voidForm" method="POST" class="hidden">
-    @csrf
-    <input type="hidden" name="reason" id="voidReason">
-</form>
+{{-- ─────── Void Modal ────────────────────────────────── --}}
+<div id="voidModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.55)">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} w-full max-w-sm p-6 shadow-2xl">
+        <h3 class="text-sm font-bold {{ $fg }} mb-1">Void transaction</h3>
+        <p id="voidModalDesc" class="text-xs {{ $muted }} mb-4"></p>
+        <form id="voidForm" method="POST" class="space-y-3">
+            @csrf
+            <div>
+                <label class="block text-[11px] {{ $muted }} mb-1">Reason <span class="{{ $muted }}">(optional)</span></label>
+                <input type="text" name="reason" id="voidReason" placeholder="e.g. Entered wrong amount"
+                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} {{ $fg }} text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500/30">
+            </div>
+            <div class="flex gap-2 pt-1">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-rose-500/50 bg-rose-600 text-white font-semibold text-xs px-3 py-2 hover:bg-rose-500 transition flex-1 justify-center">
+                    Yes, void it
+                </button>
+                <button type="button" onclick="document.getElementById('voidModal').classList.add('hidden')"
+                    class="{{ $btnGhost }}">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endif
 
 <script>
@@ -296,12 +313,10 @@ function openTx(type) {
 }
 
 function confirmVoid(txId, desc) {
-    const reason = prompt(`Void "${desc}"?\n\nEnter reason (optional):`);
-    if (reason === null) return; // cancelled
-    const form = document.getElementById('voidForm');
-    form.action = `/petty-cash/accounts/{{ $active?->id ?? 0 }}/transactions/${txId}/void`;
-    document.getElementById('voidReason').value = reason;
-    form.submit();
+    document.getElementById('voidModalDesc').textContent = 'Voiding: "' + desc + '"';
+    document.getElementById('voidReason').value = '';
+    document.getElementById('voidForm').action = `/petty-cash/accounts/{{ $active?->id ?? 0 }}/transactions/${txId}/void`;
+    document.getElementById('voidModal').classList.remove('hidden');
 }
 </script>
 

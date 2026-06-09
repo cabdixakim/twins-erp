@@ -134,19 +134,25 @@
 
               @error('delivery_mode') <div class="{{ $errText }}">{{ $message }}</div> @enderror
 
-              <div id="deliveryFields" class="mt-3 hidden grid gap-3 sm:grid-cols-2">
-                <div class="sm:col-span-2">
-                  <label class="text-xs font-semibold {{ $muted }}">Transporter</label>
-                  <select id="f_transporter_id" name="transporter_id"
-                          class="{{ $fieldBase }} @error('transporter_id') {{ $fieldErr }} @enderror">
-                    <option value="">—</option>
-                    @foreach($transporters as $t)
-                      <option value="{{ $t->id }}" @selected(old('transporter_id') == $t->id)>{{ $t->name }}</option>
-                    @endforeach
-                  </select>
-                  @error('transporter_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
-                </div>
+              {{-- Transporter — always visible --}}
+              <div class="mt-3">
+                <label class="text-xs font-semibold {{ $muted }}">Transporter <span class="{{ $muted }}">(optional)</span></label>
+                <select id="f_transporter_id" name="transporter_id"
+                        class="{{ $fieldBase }} @error('transporter_id') {{ $fieldErr }} @enderror">
+                  <option value="">— None —</option>
+                  @foreach($transporters as $t)
+                    <option value="{{ $t->id }}" @selected(old('transporter_id') == $t->id)>{{ $t->name }}</option>
+                  @endforeach
+                </select>
+                @if($transporters->isEmpty())
+                  <p class="mt-1 text-[11px] {{ $muted }}">No transporters set up yet.
+                    <a href="{{ route('settings.transporters.index') }}" class="text-emerald-400 hover:underline" target="_blank">Add one →</a>
+                  </p>
+                @endif
+                @error('transporter_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+              </div>
 
+          <div id="deliveryFields" class="mt-3 hidden grid gap-3 sm:grid-cols-2">
                 <div>
                   <label class="text-xs font-semibold {{ $muted }}">Truck no</label>
                   <input id="f_truck_no" name="truck_no" value="{{ old('truck_no') }}"
@@ -280,6 +286,7 @@ window.selectedSale = @json($selected);
 
     setVal('f_depot_id', sale.depot_id ? String(sale.depot_id) : '');
     setVal('f_product_id', sale.product_id ? String(sale.product_id) : '');
+    setVal('f_client_id', sale.client_id ? String(sale.client_id) : '');
     setVal('f_client_name', sale.client_name || '');
     setVal('f_sale_date', sale.sale_date || '');
     setVal('f_currency', sale.currency || 'USD');

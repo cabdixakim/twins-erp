@@ -27,6 +27,7 @@
     'currency'      => (string) ($sale->currency ?? 'USD'),
     'qty'           => (string) ($sale->qty ?? ''),
     'unit_price'    => (string) ($sale->unit_price ?? ''),
+    'client_id'     => $sale->client_id ? (int) $sale->client_id : null,
     'delivery_mode' => (string) ($sale->delivery_mode ?? 'ex_depot'),
     'transporter_id'=> $sale->transporter_id ? (int) $sale->transporter_id : null,
     'truck_no'      => (string) ($sale->truck_no ?? ''),
@@ -131,15 +132,20 @@
     </div>
   </div>
 
-  @if($sale->delivery_mode === 'delivered')
+  @if($sale->transporter_id || $sale->delivery_mode === 'delivered')
     <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3">
       <div class="text-[11px] {{ $muted }}">Transport details</div>
-      <div class="mt-1 text-sm {{ $fg }}">
-        <span class="font-semibold">Transporter:</span> {{ $sale->transporter?->name ?? '—' }}
-        <span class="mx-2 {{ $muted }}">·</span>
-        <span class="font-semibold">Truck:</span> {{ $sale->truck_no ?? '—' }}
-        <span class="mx-2 {{ $muted }}">·</span>
-        <span class="font-semibold">Trailer:</span> {{ $sale->trailer_no ?? '—' }}
+      <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs {{ $fg }}">
+        <span><span class="{{ $muted }}">Transporter:</span> <span class="font-semibold">{{ $sale->transporter?->name ?? '—' }}</span></span>
+        @if($sale->truck_no)
+          <span><span class="{{ $muted }}">Truck:</span> <span class="font-semibold">{{ $sale->truck_no }}</span></span>
+        @endif
+        @if($sale->trailer_no)
+          <span><span class="{{ $muted }}">Trailer:</span> <span class="font-semibold">{{ $sale->trailer_no }}</span></span>
+        @endif
+        @if($sale->waybill_no)
+          <span><span class="{{ $muted }}">Waybill:</span> <span class="font-semibold">{{ $sale->waybill_no }}</span></span>
+        @endif
       </div>
     </div>
   @endif
