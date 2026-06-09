@@ -23,7 +23,7 @@
 @endphp
 
 @section('title', 'Sales')
-@section('subtitle', 'Draft → Posted issues stock at weighted average cost')
+@section('subtitle', 'Draft → Posted issues stock from depot')
 
 @section('content')
 

@@ -211,7 +211,7 @@
         <div class="p-5 border-b {{ $border }} {{ $surface2 }} flex items-start justify-between gap-4">
           <div>
             <div class="text-base font-semibold {{ $fg }}">Post sale</div>
-            <div class="mt-1 text-xs {{ $muted }}">Issues stock at weighted average cost — cannot be undone without cancellation.</div>
+            <div class="mt-1 text-xs {{ $muted }}">Issues stock from depot — cannot be undone without cancellation.</div>
           </div>
           <button type="button" id="{{ $pCloseId }}" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
         </div>
@@ -237,7 +237,7 @@
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
             <div class="font-semibold mb-2">What happens</div>
             <ul class="list-disc pl-5 {{ $muted }} space-y-1">
-              <li>Creates an <span class="{{ $fg }}">ISSUE</span> movement at weighted avg cost</li>
+              <li>Creates an <span class="{{ $fg }}">ISSUE</span> inventory movement</li>
               <li>Reduces depot stock + batch remaining</li>
               <li>Writes COGS consumption rows</li>
               @if($sale->freight_amount > 0)<li>Posts freight charge to transporter ledger</li>@endif

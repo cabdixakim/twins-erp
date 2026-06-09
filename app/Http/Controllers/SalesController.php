@@ -392,7 +392,7 @@ class SalesController extends Controller
                         'ref_type'      => 'sale',
                         'ref_id'        => (int) $sale->id,
                         'reference'     => 'sale:' . $sale->id,
-                        'notes'         => 'Sale issue (weighted avg)',
+                        'notes'         => 'Sale issue',
 
                         'created_by'    => $u?->id,
                         'updated_by'    => $u?->id,

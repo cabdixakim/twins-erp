@@ -15,7 +15,7 @@
           <div class="flex items-start justify-between gap-4">
             <div>
               <div id="saleModalTitle" class="text-base font-semibold {{ $fg }}">New sale</div>
-              <div id="saleModalSub" class="mt-1 text-xs {{ $muted }}">Draft first, then post to issue stock.</div>
+              <div id="saleModalSub" class="mt-1 text-xs {{ $muted }}">Draft first, then post to issue stock from depot.</div>
             </div>
             <button type="button" id="closeNewSale"
               class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
@@ -331,7 +331,7 @@ window.selectedSale = @json($selected);
 
   const setCreateMode = () => {
     if (titleEl) titleEl.textContent = 'New sale';
-    if (subEl) subEl.textContent = 'Draft first, then post to issue stock.';
+    if (subEl) subEl.textContent = 'Draft first, then post to issue stock from depot.';
     if (saleForm) saleForm.action = @json(route('sales.store'));
     if (saleFormMethod) {
       saleFormMethod.value = 'POST';
