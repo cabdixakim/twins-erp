@@ -2,3 +2,4 @@
 - [Depot charge config system](depot-charge-config.md) — per-depot landed cost rate cards; auto-post at delivery; billing rules; paid-by routing; v2 = monthly accrual job.
 - [Ledger auto-posting pattern](ledger-auto-posting.md) — supplier invoice timing: local_depot at receive(), cross_dock at confirm(), import per truck at recordDelivery(); always idempotent via ref_type+ref_id+type check.
 - [Tailwind 4 arbitrary var() classes broken](tw4-arbitrary-vars.md) — `text-[color:var(--tw-*)]` compiles to zero rules; use hand-written CSS utility classes instead.
+- [Client AR routes vs settings CRUD routes](client-routes.md) — /clients/* → ClientLedgerController (AR ledger, clients.*); /settings/clients/* → ClientController (CRUD, settings.clients.*); both coexist safely — different paths and name prefixes.

@@ -21,6 +21,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\TransporterLedgerController;
 use App\Http\Controllers\SupplierLedgerController;
+use App\Http\Controllers\ClientLedgerController;
 use App\Http\Controllers\DepotLedgerController;
 use App\Http\Controllers\BatchCostController;
 use App\Http\Controllers\DepotChargeConfigController;
@@ -266,6 +267,22 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('suppliers.payments.store');
         Route::post('/suppliers/{supplier}/credits', [SupplierLedgerController::class, 'recordCredit'])
             ->name('suppliers.credits.store');
+
+        // Client AR ledger
+        Route::get('/clients', [ClientLedgerController::class, 'index'])
+            ->name('clients.index');
+        Route::get('/clients/{client}/statement', [ClientLedgerController::class, 'statement'])
+            ->name('clients.statement');
+        Route::get('/clients/{client}/export', [ClientLedgerController::class, 'exportCsv'])
+            ->name('clients.export');
+        Route::get('/clients/{client}', [ClientLedgerController::class, 'show'])
+            ->name('clients.show');
+        Route::post('/clients/{client}/payments', [ClientLedgerController::class, 'recordPayment'])
+            ->name('clients.payments.store');
+        Route::post('/clients/{client}/credits', [ClientLedgerController::class, 'recordCredit'])
+            ->name('clients.credits.store');
+        Route::post('/clients/{client}/adjustments', [ClientLedgerController::class, 'recordAdjustment'])
+            ->name('clients.adjustments.store');
 
         // Depot charge configs (rate cards)
         Route::post('/depots/{depot}/charge-configs', [DepotChargeConfigController::class, 'store'])

@@ -59,7 +59,20 @@
             </div>
 
             <div class="sm:col-span-2">
-              <label class="text-xs font-semibold {{ $muted }}">Client name</label>
+              <label class="text-xs font-semibold {{ $muted }}">Client <span class="{{ $muted }}">(AR ledger)</span></label>
+              <select id="f_client_id" name="client_id"
+                      class="{{ $fieldBase }} @error('client_id') {{ $fieldErr }} @enderror">
+                <option value="">— Ad-hoc / no AR tracking —</option>
+                @foreach($clients ?? [] as $cl)
+                  <option value="{{ $cl->id }}" data-name="{{ $cl->name }}"
+                          @selected(old('client_id') == $cl->id)>{{ $cl->name }}</option>
+                @endforeach
+              </select>
+              @error('client_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-semibold {{ $muted }}">Client name <span class="{{ $muted }}">(free-text, overrides dropdown name)</span></label>
               <input id="f_client_name" name="client_name" value="{{ old('client_name') }}"
                      class="{{ $fieldBase }} @error('client_name') {{ $fieldErr }} @enderror"
                      placeholder="e.g. Katanga Mining" />

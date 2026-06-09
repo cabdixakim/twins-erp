@@ -68,7 +68,7 @@
     $onPurchases     = request()->routeIs('purchases.*');
     $onSettingsRoute = request()->routeIs('settings.*') || request()->is('admin/*');
     $onSales         = request()->routeIs('sales.*');
-    $onClients       = request()->routeIs('settings.clients.*');
+    $onClients       = request()->routeIs('clients.*') || request()->routeIs('settings.clients.*');
     $onTransporters  = request()->routeIs('transporters.*');
     $onSuppliers     = request()->routeIs('suppliers.*');
     $onDepotLedger   = request()->routeIs('depots.*');

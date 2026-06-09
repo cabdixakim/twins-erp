@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\Depot;
 use App\Models\Product;
@@ -55,14 +56,20 @@ class SalesController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
-          
+
+        $clients = Client::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         $prefill = [
             'open'       => (bool) $request->boolean('open_sale'),
             'depot_id'   => (int) $request->query('from_depot', 0),
             'product_id' => (int) $request->query('from_product', 0),
             ];
 
-        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'prefill'));
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'prefill'));
     }
 
     public function exportCsv()
@@ -108,6 +115,7 @@ class SalesController extends Controller
         $data = $request->validate([
             'depot_id'       => 'required|integer',
             'product_id'     => 'required|integer',
+            'client_id'      => 'nullable|integer',
             'client_name'    => 'nullable|string|max:120',
             'sale_date'      => 'nullable|date',
             'qty'            => 'required|numeric|min:0.001',
@@ -187,6 +195,7 @@ class SalesController extends Controller
                 'company_id'    => $cid,
                 'depot_id'      => (int) $data['depot_id'],
                 'product_id'    => (int) $data['product_id'],
+                'client_id'     => $data['client_id'] ? (int) $data['client_id'] : null,
                 'client_name'   => $data['client_name'] ?? null,
 
                 'sequence_no'   => $nextSeq,
@@ -231,6 +240,7 @@ class SalesController extends Controller
         $data = $request->validate([
             'depot_id'       => 'required|integer',
             'product_id'     => 'required|integer',
+            'client_id'      => 'nullable|integer',
             'client_name'    => 'nullable|string|max:120',
             'sale_date'      => 'nullable|date',
             'qty'            => 'required|numeric|min:0.001',
@@ -277,6 +287,7 @@ class SalesController extends Controller
 
         $sale->depot_id     = (int) $data['depot_id'];
         $sale->product_id   = (int) $data['product_id'];
+        $sale->client_id    = $data['client_id'] ? (int) $data['client_id'] : null;
         $sale->client_name  = $data['client_name'] ?? null;
         $sale->sale_date    = $data['sale_date'] ?? $sale->sale_date;
         $sale->qty          = $qty;
@@ -369,6 +380,22 @@ class SalesController extends Controller
 
                 $sale->updated_by = $u?->id;
                 $sale->save();
+
+                // Auto-post AR invoice if client is linked
+                if ($sale->client_id) {
+                    ClientLedgerController::postInvoice(
+                        (int) $sale->client_id,
+                        (int) $sale->company_id,
+                        (float) $sale->total,
+                        $sale->currency ?? 'USD',
+                        \App\Models\Sale::class,
+                        $sale->id,
+                        'Invoice for sale ' . $sale->reference,
+                        $sale->sale_date
+                            ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d')
+                            : now()->format('Y-m-d')
+                    );
+                }
             });
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'Insufficient stock')) {

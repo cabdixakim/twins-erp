@@ -123,6 +123,7 @@
   'depots' => $depots,
   'products' => $products,
   'transporters' => $transporters,
+  'clients' => $clients ?? collect(),
   'selected' => $selected,
 ])
 

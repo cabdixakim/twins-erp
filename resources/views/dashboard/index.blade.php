@@ -210,6 +210,60 @@
       </a>
   </section>
 
+  {{-- ── Accounts Receivable ─────────────────────────────────── --}}
+  <section>
+      <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Accounts Receivable</h2>
+      <a href="{{ route('clients.index') }}"
+         class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
+          <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.20)">
+                      <svg class="w-5 h-5" style="color:#10b981" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                  </div>
+                  <div class="min-w-0">
+                      <p class="text-xs tw-muted mb-1">Outstanding Client Receivables</p>
+                      @if($clientARByCurrency->count() >= 1)
+                          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              @foreach($clientARByCurrency as $currency => $total)
+                                  @if(!$loop->first)<span class="tw-muted text-lg leading-none">·</span>@endif
+                                  <span class="text-2xl font-bold leading-none" style="color:#10b981">
+                                      {{ number_format($total, 2) }}<span class="text-sm font-semibold ml-1" style="color:#10b981;opacity:.7">{{ $currency }}</span>
+                                  </span>
+                              @endforeach
+                          </div>
+                      @else
+                          <p class="text-2xl font-bold tw-fg">$0.00</p>
+                      @endif
+                  </div>
+              </div>
+              <svg class="w-4 h-4 flex-shrink-0 ml-3 tw-muted opacity-40 group-hover:opacity-80 transition-opacity" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+              </svg>
+          </div>
+          @if($topARClients->isNotEmpty())
+              <div class="mt-4 pt-4 space-y-2" style="border-top:1px solid var(--tw-border)">
+                  @foreach($topARClients as $c)
+                      <div class="flex items-center justify-between text-sm">
+                          <span class="tw-fg truncate max-w-[60%]">{{ $c->name }}</span>
+                          <span class="font-semibold" style="color:#10b981">
+                              {{ number_format($c->balance, 2) }}
+                              <span class="text-xs font-medium ml-0.5" style="color:#10b981;opacity:.7">{{ $c->currency }}</span>
+                          </span>
+                      </div>
+                  @endforeach
+                  @if($topARClients->count() >= 3)
+                      <p class="text-xs tw-muted pt-1">Showing top 3 — <a href="{{ route('clients.index') }}" class="underline underline-offset-2">view all</a></p>
+                  @endif
+              </div>
+          @else
+              <p class="mt-3 text-xs tw-muted">No outstanding receivables — all clients are settled.</p>
+          @endif
+      </a>
+  </section>
+
   {{-- ── Freight Payables ─────────────────────────────────────── --}}
   <section>
       <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Freight Payables</h2>

@@ -2,6 +2,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
+use App\Models\Client;
+use App\Models\ClientLedgerEntry;
 use App\Models\TransporterLedgerEntry;
 use App\Models\Transporter;
 use App\Models\Purchase;
@@ -117,6 +119,31 @@ class DashboardController extends Controller {
             ])->values();
         }
 
+        // Client AR receivables (positive = client owes us)
+        $clientARBalances = ClientLedgerEntry::where('company_id', $cid)
+            ->selectRaw('client_id, currency, SUM(amount) as balance')
+            ->groupBy('client_id', 'currency')
+            ->havingRaw('SUM(amount) > 0')
+            ->get();
+
+        $clientARByCurrency = $clientARBalances
+            ->groupBy('currency')
+            ->map(fn($rows) => $rows->sum('balance'))
+            ->sortDesc();
+
+        $totalAR = $clientARByCurrency->sum();
+
+        $topARClients = collect();
+        if ($clientARBalances->isNotEmpty()) {
+            $top = $clientARBalances->sortByDesc('balance')->take(3);
+            $cIds = $top->pluck('client_id')->unique();
+            $cNames = Client::where('company_id', $cid)->whereIn('id', $cIds)->pluck('name', 'id');
+            $topARClients = $top->map(fn($r) => (object)[
+                'id' => $r->client_id, 'name' => $cNames[$r->client_id] ?? 'Unknown',
+                'balance' => $r->balance, 'currency' => $r->currency,
+            ])->values();
+        }
+
         return view('dashboard.index', compact(
             'byCurrency',
             'topTransporters',
@@ -129,7 +156,10 @@ class DashboardController extends Controller {
             'supplierPayableTotal',
             'depotByCurrency',
             'topDepots',
-            'depotPayableTotal'
+            'depotPayableTotal',
+            'clientARByCurrency',
+            'topARClients',
+            'totalAR'
         ));
     }
 }
