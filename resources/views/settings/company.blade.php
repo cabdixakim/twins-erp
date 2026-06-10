@@ -255,21 +255,31 @@
                         When importing trucks from a spreadsheet the wizard will detect the file's unit and offer to convert.
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    @php $vu = old('volume_unit', $company->volume_unit ?? 'L'); @endphp
-                    <label class="flex items-center gap-2 cursor-pointer">
+                @php $vu = old('volume_unit', $company->volume_unit ?? 'L'); @endphp
+                <div class="flex items-center gap-3 {{ ($hasNominations ?? false) ? 'opacity-50' : '' }}">
+                    <label class="flex items-center gap-2 {{ ($hasNominations ?? false) ? 'cursor-not-allowed' : 'cursor-pointer' }}">
                         <input type="radio" name="volume_unit" value="L"
                                {{ $vu === 'L' ? 'checked' : '' }}
+                               {{ ($hasNominations ?? false) ? 'disabled' : '' }}
                                class="accent-emerald-500">
                         <span class="text-sm {{ $fg }}">Litres <span class="{{ $muted }} text-[11px]">(L)</span></span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
+                    <label class="flex items-center gap-2 {{ ($hasNominations ?? false) ? 'cursor-not-allowed' : 'cursor-pointer' }}">
                         <input type="radio" name="volume_unit" value="M3"
                                {{ $vu === 'M3' ? 'checked' : '' }}
+                               {{ ($hasNominations ?? false) ? 'disabled' : '' }}
                                class="accent-emerald-500">
                         <span class="text-sm {{ $fg }}">Cubic metres <span class="{{ $muted }} text-[11px]">(M³)</span></span>
                     </label>
                 </div>
+                @if($hasNominations ?? false)
+                    <div class="mt-2 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        Locked — import nominations exist. The unit cannot be changed once nominations have been created.
+                    </div>
+                @endif
                 @error('volume_unit')
                     <div class="mt-1 text-[11px] text-rose-600">{{ $message }}</div>
                 @enderror

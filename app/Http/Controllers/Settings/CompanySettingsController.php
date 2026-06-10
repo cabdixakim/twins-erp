@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -16,8 +17,13 @@ class CompanySettingsController extends Controller
         // Single-company install – just grab the first row
         $company = Company::firstOrFail();
 
+        $hasNominations = DB::table('import_nominations')
+            ->where('company_id', $company->id)
+            ->exists();
+
         return view('settings.company', [
-            'company' => $company,
+            'company'         => $company,
+            'hasNominations'  => $hasNominations,
         ]);
     }
 
@@ -124,6 +130,14 @@ class CompanySettingsController extends Controller
 
         // prevent mass-assign trying to fill non-columns
         unset($data['logo'], $data['logo_cropped'], $data['remove_logo']);
+
+        // Volume unit is locked once any import nominations exist — silently preserve existing value
+        $nominationsExist = DB::table('import_nominations')
+            ->where('company_id', $company->id)
+            ->exists();
+        if ($nominationsExist) {
+            $data['volume_unit'] = $company->volume_unit; // ignore submitted value
+        }
 
         $company->fill($data)->save();
 
