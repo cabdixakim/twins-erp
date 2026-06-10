@@ -8,16 +8,16 @@ return [
 
         'pgsql' => [
             'driver'         => 'pgsql',
-            'host'           => env('PGHOST', '127.0.0.1'),
-            'port'           => env('PGPORT', '5432'),
-            'database'       => env('PGDATABASE', 'forge'),
-            'username'       => env('PGUSER', 'forge'),
-            'password'       => env('PGPASSWORD', ''),
+            'host'           => env('DB_HOST',     env('PGHOST',     '127.0.0.1')),
+            'port'           => env('DB_PORT',     env('PGPORT',     '5432')),
+            'database'       => env('DB_DATABASE', env('PGDATABASE', 'forge')),
+            'username'       => env('DB_USERNAME', env('PGUSER',     'forge')),
+            'password'       => env('DB_PASSWORD', env('PGPASSWORD', '')),
             'charset'        => 'utf8',
             'prefix'         => '',
             'prefix_indexes' => true,
             'search_path'    => 'public',
-            'sslmode'        => env('PGSSLMODE', 'prefer'),
+            'sslmode'        => env('DB_SSLMODE',  env('PGSSLMODE',  'prefer')),
         ],
 
         'sqlite' => [
@@ -30,7 +30,7 @@ return [
     ],
 
     'migrations' => [
-        'table'                => 'migrations',
+        'table'                  => 'migrations',
         'update_date_on_publish' => true,
     ],
 
