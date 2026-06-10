@@ -39,7 +39,7 @@ class SalesController extends Controller
 
         $sales = Sale::query()
             ->where('company_id', $cid)
-            ->with(['depot', 'product', 'transporter'])
+            ->with(['depot', 'product', 'transporter', 'invoice'])
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
@@ -48,10 +48,8 @@ class SalesController extends Controller
         if ($saleId > 0) {
             $selected = Sale::query()
                 ->where('company_id', $cid)
-                ->with(['depot', 'product', 'transporter', 'movement'])
+                ->with(['depot', 'product', 'transporter', 'movement', 'invoice'])
                 ->find($saleId);
-        } else {
-            $selected = $sales->first();
         }
 
         $products = Product::query()

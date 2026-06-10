@@ -187,6 +187,47 @@
     </div>
   @endif
 
+  {{-- Invoice badge --}}
+  @php $inv = $sale->invoice; @endphp
+  @if($inv)
+    @php
+      $invPill = match($inv->status) {
+        'paid'    => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+        'overdue' => 'border-rose-500/30 bg-rose-500/10 text-rose-400',
+        'sent'    => 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+        'void'    => 'border-gray-400/30 bg-gray-700/30 text-gray-400',
+        default   => 'border-gray-400/30 bg-gray-700/30 text-gray-400',
+      };
+      $invIcon = match($inv->status) {
+        'paid'  => '✓ Paid',
+        'void'  => '✗ Void',
+        default => ucfirst($inv->status),
+      };
+    @endphp
+    <div class="mt-4 rounded-xl border {{ $border }} {{ $surface2 }} p-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <svg class="h-4 w-4 {{ $muted }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <div>
+          <div class="text-[11px] {{ $muted }}">Invoice</div>
+          <div class="text-xs font-semibold {{ $fg }}">{{ $inv->invoice_number }}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold {{ $invPill }}">
+          {{ $invIcon }}
+        </span>
+        <a href="{{ route('invoices.show', $inv) }}"
+           class="inline-flex items-center gap-1 h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+          View invoice
+          <svg class="h-3 w-3 {{ $muted }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  @endif
+
   {{-- POD summary (delivered) --}}
   @if($isDelivered)
     <div class="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
