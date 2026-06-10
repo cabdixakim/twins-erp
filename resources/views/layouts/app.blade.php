@@ -25,7 +25,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     @php
-        $appName = (isset($company) && $company) ? $company->name : config('app.name');
+        $appName = auth()->user()?->activeCompany?->name ?? config('app.name');
     @endphp
 
     <title>{{ $appName }} — @yield('title','Dashboard')</title>
