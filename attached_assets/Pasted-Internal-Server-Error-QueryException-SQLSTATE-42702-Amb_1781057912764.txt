@@ -1,0 +1,82 @@
+Internal Server Error
+
+QueryException
+SQLSTATE[42702]: Ambiguous column: 7 ERROR: column reference "type" is ambiguous LINE 1: select sum(CASE WHEN type IN ('freight_charge','advance') TH... ^ (Connection: pgsql, SQL: select sum(CASE WHEN type IN ('freight_charge','advance') THEN amount ELSE -amount END) as aggregate from "transporter_ledger_entries" inner join "transporters" on "transporters"."id" = "transporter_ledger_entries"."transporter_id" where "transporters"."company_id" = 2 and "transporter_ledger_entries"."created_at"::date <= 2026-06-10)
+app/Http/Controllers/AccountingController.php :352
+        // Transporter payables (charges - payments)
+        $transporterPayables = DB::table('transporter_ledger_entries')
+            ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id', $cid)
+            ->whereDate('transporter_ledger_entries.created_at', '<=', $asOf)
+            ->sum(DB::raw("CASE WHEN type IN ('freight_charge','advance') THEN amount ELSE -amount END"));
+ 
+        // Depot payables
+        $depotPayables = DB::table('depot_ledger_entries')
+            ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
+            ->where('depots.company_id', $cid)
+            ->whereDate('depot_ledger_entries.created_at', '<=', $asOf)
+            ->sum(DB::raw("CASE WHEN type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN amount ELSE -amount END"));
+ 
+        $totalLiabilities = max(0, (float)$supplierPayables)
+                          + max(0, (float)$transporterPayables)
+                          + max(0, (float)$depotPayables);
+Request
+GET /accounting/balance-sheet
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en;q=0.9
+cookie
+XSRF-TOKEN=eyJpdiI6IjFlT3ZPTUxPQjNnNGZQc0VTclgwUGc9PSIsInZhbHVlIjoib3g2ZStteE9xa3lIb0lwcnhSVndDUU1FZnFVNlZHUlluUUk2V1J2N1RxeXJBZVR4eTdlUEo4VmJ6S245bGtkMjNkOEZGdERJTHBoZWRWZjRURVY1UFdUeURuWXd5WktjMGIxSE5keFpJS2w1bmlzendabDA3SHlZbGQrYUdCbFoiLCJtYWMiOiI3ZGE5ZWYxOTM1Y2YyNGUxNTMwNjNmMTg4MGYzZjU2YjRiN2Q1NjFmZDk0NzRlMTgwZjMwMmE5MWIzNmJjYWMxIiwidGFnIjoiIn0%3D; twins_session=eyJpdiI6IitnM1RJbXY5c1RpYmVmK09NWjRWZlE9PSIsInZhbHVlIjoiZDg5VVBrQWxUa25nMlhiVm5hYkpneHBQU0tTWkNYMnpJVllXT1dnL1loYVNkOXpFR2gxejVTVkFxTVRtd3RFUXZIOFc5VkNGbVI4MzhWaHJmL2xqRHJSQWFPMHJsaHd4Z3AwcHFHT1NmZk5paGR1V2Q2SVNVcXVyS0pyUzEyZlYiLCJtYWMiOiJhOTEzYmEyODNhOTM0YTI0NmRkYjI5YTZkODQ5OTY3NjhmZTRkNDEwZTcyZDM5N2U1Zjc2NjlhNzQwZmE4NmFjIiwidGFnIjoiIn0%3D
+priority
+u=0, i
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/accounting
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+x-forwarded-for
+217.171.84.50, 10.83.13.71, 10.56.175.93, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\AccountingController@balanceSheet
+route name
+accounting.balance-sheet
+middleware
+web, auth, company.setup, active.company
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 2) as "exists"
+pgsql
+select * from "bank_accounts" where "company_id" = 2 and "is_active" = 1
+pgsql
