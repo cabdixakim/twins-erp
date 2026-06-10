@@ -85,12 +85,8 @@ class InvoiceController extends Controller
             ->get();
 
         $auditLogs = AuditLog::where('company_id', $invoice->company_id)
-            ->where(function ($q) use ($invoice) {
-                $q->where(function ($q2) use ($invoice) {
-                    $q2->where('auditable_type', Invoice::class)
-                       ->where('auditable_id', $invoice->id);
-                });
-            })
+            ->where('model_type', Invoice::class)
+            ->where('model_id', $invoice->id)
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();

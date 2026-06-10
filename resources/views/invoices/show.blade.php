@@ -514,6 +514,31 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download PDF
     </a>
+
+    {{-- Email Client — opens Gmail/Outlook with prefilled subject + body --}}
+    @php
+        $eTo   = rawurlencode($invoice->client?->email ?? '');
+        $eSub  = rawurlencode('Invoice ' . $invoice->invoice_number . ' — ' . ($invoice->client?->name ?? ''));
+        $eBody = rawurlencode(
+            'Dear ' . ($invoice->client?->contact_person ?? $invoice->client?->name ?? 'Client') . ',' . "\n\n" .
+            'Please find attached invoice ' . $invoice->invoice_number . '.' . "\n\n" .
+            'Amount Due : ' . $invoice->currency . ' ' . number_format((float)$invoice->total - (float)$invoice->paid_amount, 2) . "\n" .
+            'Invoice Total: ' . $invoice->currency . ' ' . number_format((float)$invoice->total, 2) . "\n" .
+            'Due Date    : ' . $invoice->due_date?->format('d M Y') . "\n" .
+            'Terms       : ' . ($invoice->payment_terms ?? 'Net 30') . "\n\n" .
+            ($invoice->bank_details ? 'Payment Details:' . "\n" . $invoice->bank_details . "\n\n" : '') .
+            'Please do not hesitate to contact us should you have any questions.' . "\n\n" .
+            'Kind regards,' . "\n" .
+            ($invoice->company?->name ?? '')
+        );
+    @endphp
+    <a href="mailto:{{ $eTo }}?subject={{ $eSub }}&body={{ $eBody }}"
+       class="ab-btn ab-btn-ghost"
+       title="Open in Gmail / Outlook with prefilled content">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Email Client
+    </a>
+
     <button onclick="window.print()" class="ab-btn ab-btn-print">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Print

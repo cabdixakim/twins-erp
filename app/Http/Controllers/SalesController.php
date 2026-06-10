@@ -610,22 +610,10 @@ class SalesController extends Controller
             );
         });
 
-        // Send POD confirmation email (non-blocking — fires after transaction commits)
-        try {
-            $invoice = Invoice::where('sale_id', $sale->id)
-                ->where('type', 'invoice')
-                ->latest()
-                ->first();
-
-            $clientEmail = $sale->client?->email ?? null;
-
-            if ($invoice && $clientEmail) {
-                $sale->load(['product', 'depot', 'client', 'transporter', 'company']);
-                \Illuminate\Support\Facades\Mail::to($clientEmail)
-                    ->send(new \App\Mail\PodConfirmation($sale, $invoice));
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('POD email failed: ' . $e->getMessage());
+        // Store mailto link in session so the invoice page can offer "Email Client"
+        $invoice = Invoice::where('sale_id', $sale->id)->where('type', 'invoice')->latest()->first();
+        if ($invoice) {
+            session(['pod_invoice_id' => $invoice->id]);
         }
 
         return redirect()->route('sales.index', ['sale' => $sale->id])
