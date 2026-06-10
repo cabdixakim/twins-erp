@@ -453,21 +453,110 @@
         .btn-confirm       { background: var(--accent); color: #fff; }
         .btn-danger        { background: #ef4444; color: #fff; }
 
+        /* ── Mobile responsive ────────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .action-bar {
+                padding: 10px 12px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .action-bar .ab-left {
+                flex: 0 0 100%;
+                flex-wrap: wrap;
+            }
+            .ab-btn {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+            .page-wrap { padding: 12px 0 60px; }
+            .inv { border-radius: 12px; margin: 0 10px; }
+            .inv-head {
+                flex-direction: column;
+                gap: 16px;
+                padding: 24px 20px 20px;
+            }
+            .inv-meta-right { text-align: left; }
+            .inv-big-label { font-size: 26px; }
+            .inv-parties {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            .inv-party + .inv-party {
+                border-left: none;
+                border-top: 1px solid #e8ecf0;
+                padding-left: 0;
+                padding-top: 16px;
+                margin-top: 16px;
+            }
+            .inv-items { padding: 20px 16px 0; }
+            .inv-table thead { display: none; }
+            .inv-table tbody td {
+                display: block;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            .inv-table tbody td.td-idx { display: none; }
+            .inv-table tbody tr {
+                display: block;
+                border: 1px solid #e8ecf0;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                padding: 8px 0;
+            }
+            .inv-table tbody td.td-right { text-align: left; }
+            .inv-totals-wrap { padding: 16px 20px 20px; }
+            .inv-totals { min-width: unset; width: 100%; }
+            .inv-footer {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 16px;
+            }
+        }
+
         /* ── Print styles ─────────────────────────────────────────────────────── */
+        @page { size: A4; margin: 18mm 14mm; }
         @media print {
             body { background: #fff; }
-            .action-bar, .flash-bar, .modal-overlay { display: none !important; }
+            .action-bar, .flash-bar, .modal-overlay, .email-dropdown { display: none !important; }
             .page-wrap { padding: 0; }
             .inv {
                 border-radius: 0;
                 box-shadow: none;
                 max-width: none;
-            }
-            @page {
-                size: A4;
-                margin: 18mm 14mm;
+                margin: 0;
             }
         }
+
+        /* ── Email dropdown ───────────────────────────────────────────────────── */
+        .email-wrap { position: relative; }
+        .email-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 12px;
+            min-width: 160px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.4);
+            z-index: 300;
+            overflow: hidden;
+        }
+        .email-wrap:focus-within .email-dropdown,
+        .email-wrap.open .email-dropdown { display: block; }
+        .email-opt {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: background .12s;
+        }
+        .email-opt:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .email-opt + .email-opt { border-top: 1px solid rgba(255,255,255,.06); }
     </style>
 </head>
 <body>
@@ -515,7 +604,7 @@
         Download PDF
     </a>
 
-    {{-- Email Client — opens Gmail/Outlook with prefilled subject + body --}}
+    {{-- Email Client — Gmail / Outlook dropdown --}}
     @php
         $eTo   = rawurlencode($invoice->client?->email ?? '');
         $eSub  = rawurlencode('Invoice ' . $invoice->invoice_number . ' — ' . ($invoice->client?->name ?? ''));
@@ -531,15 +620,34 @@
             'Kind regards,' . "\n" .
             ($invoice->company?->name ?? '')
         );
+        $gmailUrl   = 'https://mail.google.com/mail/?view=cm&fs=1&to=' . $eTo . '&su=' . $eSub . '&body=' . $eBody;
+        $outlookUrl = 'https://outlook.live.com/mail/0/deeplink/compose?to=' . $eTo . '&subject=' . $eSub . '&body=' . $eBody;
     @endphp
-    <a href="mailto:{{ $eTo }}?subject={{ $eSub }}&body={{ $eBody }}"
-       class="ab-btn ab-btn-ghost"
-       title="Open in Gmail / Outlook with prefilled content">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        Email Client
-    </a>
+    <div class="email-wrap" id="emailWrap">
+        <button onclick="document.getElementById('emailWrap').classList.toggle('open')"
+                class="ab-btn ab-btn-ghost"
+                title="Email this invoice">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="email-dropdown">
+            <a href="{{ $gmailUrl }}" target="_blank" class="email-opt"
+               onclick="document.getElementById('emailWrap').classList.remove('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Open in Gmail
+            </a>
+            <a href="{{ $outlookUrl }}" target="_blank" class="email-opt"
+               onclick="document.getElementById('emailWrap').classList.remove('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                Open in Outlook
+            </a>
+        </div>
+    </div>
 
-    <button onclick="window.print()" class="ab-btn ab-btn-print">
+    {{-- Print — open in new tab so it works outside the iframe --}}
+    <button onclick="window.open('{{ route('invoices.show', $invoice) }}', '_blank').onload = function(){ this.print(); }"
+            class="ab-btn ab-btn-print">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Print
     </button>
