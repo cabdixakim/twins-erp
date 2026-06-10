@@ -568,6 +568,27 @@ class ImportNominationController extends Controller
         return back()->with('status', "{$updated} truck(s) marked as in transit.");
     }
 
+    // ── Bulk mark border cleared ─────────────────────────────────────────────
+
+    public function bulkMarkBorderCleared(Request $request, Purchase $purchase, ImportNomination $nomination)
+    {
+        $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+
+        $ids = array_filter(array_map('intval', (array) $request->input('truck_ids', [])));
+        if (empty($ids)) {
+            return back()->with('error', 'No trucks selected.');
+        }
+
+        $now = now();
+        $updated = ImportTruck::where('nomination_id', $nomination->id)
+            ->whereIn('id', $ids)
+            ->where('status', 'in_transit')
+            ->update(['status' => 'border_cleared', 'border_cleared_at' => $now, 'updated_at' => $now]);
+
+        return back()->with('status', "{$updated} truck(s) marked as border cleared.");
+    }
+
     // ── Download truck CSV template ──────────────────────────────────────────
 
     public function truckTemplate(Purchase $purchase, ImportNomination $nomination)
