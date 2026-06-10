@@ -106,6 +106,9 @@ class PettyCashController extends Controller
             'type'             => 'required|in:top_up,expense,adjustment',
             'amount'           => 'required|numeric|min:0.01',
             'description'      => 'required|string|max:500',
+            'recipient'        => 'nullable|string|max:200',
+            'reference'        => 'nullable|string|max:100',
+            'category'         => 'nullable|string|max:80',
             'transaction_date' => 'required|date',
             'ref_type'         => 'nullable|string|max:100',
             'ref_id'           => 'nullable|integer',
@@ -161,6 +164,9 @@ class PettyCashController extends Controller
                 'amount'             => $amount,
                 'currency'           => $account->currency,
                 'description'        => $data['description'],
+                'recipient'          => $data['recipient'] ?? null,
+                'reference'          => $data['reference'] ?? null,
+                'category'           => $data['category'] ?? null,
                 'transaction_date'   => $data['transaction_date'],
                 'ref_type'           => $data['ref_type'] ?? null,
                 'ref_id'             => $data['ref_id'] ?? null,
@@ -223,5 +229,47 @@ class PettyCashController extends Controller
         abort_if((int)$account->company_id !== $this->cid(), 403);
         $account->update(['is_active' => !$account->is_active]);
         return back()->with('status', 'Account status updated.');
+    }
+
+    public function exportCsv(PettyCashAccount $account)
+    {
+        abort_if((int)$account->company_id !== $this->cid(), 403);
+
+        $rows = PettyCashTransaction::where('company_id', $this->cid())
+            ->where('account_id', $account->id)
+            ->with('createdBy')
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get();
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="petty-cash-' . str($account->name)->slug() . '.csv"',
+        ];
+
+        $callback = function () use ($rows, $account) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Type', 'Category', 'Recipient', 'Reference', 'Description', 'Amount', 'Currency', 'Balance After', 'By']);
+
+            $running = (float) $account->opening_balance;
+            foreach ($rows as $r) {
+                $running += (float) $r->amount;
+                fputcsv($out, [
+                    $r->transaction_date->format('Y-m-d'),
+                    $r->type,
+                    $r->category ?? '',
+                    $r->recipient ?? '',
+                    $r->reference ?? '',
+                    $r->description,
+                    number_format($r->amount, 4, '.', ''),
+                    $r->currency,
+                    number_format($running, 4, '.', ''),
+                    $r->createdBy?->name ?? '',
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

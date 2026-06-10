@@ -380,6 +380,7 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
             ->middleware('role:owner,admin,accountant')
             ->name('transaction.void');
         Route::post('/accounts/{account}/toggle', [\App\Http\Controllers\PettyCashController::class, 'toggleAccount'])->name('toggle');
+        Route::get('/accounts/{account}/export', [\App\Http\Controllers\PettyCashController::class, 'exportCsv'])->name('export');
     });
 
 /*
