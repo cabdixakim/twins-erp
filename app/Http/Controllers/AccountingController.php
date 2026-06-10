@@ -300,7 +300,7 @@ class AccountingController extends Controller
         $bankRows  = [];
         foreach ($bankAccounts as $bank) {
             $movements = DB::table('bank_transactions')
-                ->where('account_id', $bank->id)
+                ->where('bank_account_id', $bank->id)
                 ->whereNull('voided_at')
                 ->whereDate('entry_date', '<=', $asOf)
                 ->selectRaw("SUM(CASE WHEN type IN ('deposit','transfer_in') THEN amount ELSE -amount END) as net")
@@ -348,14 +348,14 @@ class AccountingController extends Controller
         $transporterPayables = DB::table('transporter_ledger_entries')
             ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
             ->where('transporters.company_id', $cid)
-            ->whereDate('transporter_ledger_entries.created_at', '<=', $asOf)
+            ->whereDate('transporter_ledger_entries.entry_date', '<=', $asOf)
             ->sum(DB::raw("CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END"));
 
         // Depot payables
         $depotPayables = DB::table('depot_ledger_entries')
             ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
             ->where('depots.company_id', $cid)
-            ->whereDate('depot_ledger_entries.created_at', '<=', $asOf)
+            ->whereDate('depot_ledger_entries.entry_date', '<=', $asOf)
             ->sum(DB::raw("CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END"));
 
         $totalLiabilities = max(0, (float)$supplierPayables)
