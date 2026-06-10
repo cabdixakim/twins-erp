@@ -11,6 +11,8 @@ use App\Models\DepotStock;
 use App\Models\Invoice;
 use App\Models\InventoryConsumption;
 use App\Models\InventoryMovement;
+use App\Models\PettyCashAccount;
+use App\Models\PettyCashTransaction;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\Transporter;
@@ -73,13 +75,19 @@ class SalesController extends Controller
             ->orderBy('name')
             ->get();
 
+        $pettyCashAccounts = PettyCashAccount::query()
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         $prefill = [
             'open'       => (bool) $request->boolean('open_sale'),
             'depot_id'   => (int) $request->query('from_depot', 0),
             'product_id' => (int) $request->query('from_product', 0),
             ];
 
-        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'prefill'));
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill'));
     }
 
     public function exportCsv()
@@ -145,6 +153,11 @@ class SalesController extends Controller
             'seal_numbers'     => 'nullable|string',
             'temperature'      => 'nullable|numeric|min:-20|max:100',
             'density'          => 'nullable|numeric|min:0|max:2',
+
+            'advance_account_id' => 'nullable|integer',
+            'trip_advance'       => 'nullable|numeric|min:0',
+            'fuel_advance'       => 'nullable|numeric|min:0',
+            'advance_currency'   => 'nullable|string|max:8',
         ]);
 
         // Check for duplicate sale reference (company_id + reference)
@@ -238,11 +251,19 @@ class SalesController extends Controller
                 'temperature'      => $data['delivery_mode'] === 'delivered' ? (isset($data['temperature']) ? (float) $data['temperature'] : 20.0) : null,
                 'density'          => $data['delivery_mode'] === 'delivered' ? (isset($data['density']) && $data['density'] !== '' ? (float) $data['density'] : null) : null,
 
+                'advance_account_id' => !empty($data['advance_account_id']) ? (int) $data['advance_account_id'] : null,
+                'trip_advance'       => !empty($data['trip_advance'])       ? (float) $data['trip_advance'] : null,
+                'fuel_advance'       => !empty($data['fuel_advance'])       ? (float) $data['fuel_advance'] : null,
+                'advance_currency'   => $data['advance_currency'] ?? 'USD',
+
                 'status'        => 'draft',
                 'created_by'    => $u?->id,
                 'updated_by'    => $u?->id,
             ]);
         });
+
+        // Post driver advances to petty cash if provided
+        $this->postDriverAdvances($sale, $data, $cid);
 
         return redirect()->route('sales.index', ['sale' => $sale->id])
             ->with('status', 'Sale created (draft).');
@@ -283,6 +304,11 @@ class SalesController extends Controller
             'seal_numbers'     => 'nullable|string',
             'temperature'      => 'nullable|numeric|min:-20|max:100',
             'density'          => 'nullable|numeric|min:0|max:2',
+
+            'advance_account_id' => 'nullable|integer',
+            'trip_advance'       => 'nullable|numeric|min:0',
+            'fuel_advance'       => 'nullable|numeric|min:0',
+            'advance_currency'   => 'nullable|string|max:8',
         ]);
 
         $depotOk = Depot::query()->where('company_id', $cid)->whereKey((int) $data['depot_id'])->exists();
@@ -355,11 +381,76 @@ class SalesController extends Controller
             $sale->density          = null;
         }
 
+        // Advance fields (on delivered mode only)
+        if ($data['delivery_mode'] === 'delivered') {
+            $sale->advance_account_id = !empty($data['advance_account_id']) ? (int) $data['advance_account_id'] : null;
+            $sale->trip_advance       = !empty($data['trip_advance']) ? (float) $data['trip_advance'] : null;
+            $sale->fuel_advance       = !empty($data['fuel_advance']) ? (float) $data['fuel_advance'] : null;
+            $sale->advance_currency   = $data['advance_currency'] ?? 'USD';
+        } else {
+            $sale->advance_account_id = null;
+            $sale->trip_advance       = null;
+            $sale->fuel_advance       = null;
+            $sale->advance_currency   = null;
+        }
+
         $sale->updated_by = $u?->id;
         $sale->save();
 
+        // Re-post advances (void existing advance txns for this sale, re-create)
+        DB::table('petty_cash_transactions')
+            ->where('ref_type', 'sale')
+            ->where('ref_id', $sale->id)
+            ->whereIn('category', ['trip_advance','fuel_advance'])
+            ->delete();
+        $this->postDriverAdvances($sale, $data, $cid);
+
         return redirect()->route('sales.index', ['sale' => $sale->id])
             ->with('status', 'Draft updated.');
+    }
+
+    /**
+     * Post trip/fuel advances as petty cash expense transactions for a sale.
+     * Idempotent when called from update() — caller deletes old rows first.
+     */
+    private function postDriverAdvances(Sale $sale, array $data, int $cid): void
+    {
+        $accountId = !empty($data['advance_account_id']) ? (int) $data['advance_account_id'] : null;
+        if (!$accountId) return;
+
+        $account = PettyCashAccount::where('id', $accountId)
+            ->where('company_id', $cid)
+            ->first();
+        if (!$account) return;
+
+        $currency = $data['advance_currency'] ?? $account->currency ?? 'USD';
+        $driver   = $data['driver_name'] ?? 'driver';
+        $saleRef  = $sale->reference ?? "Sale #{$sale->id}";
+        $today    = now()->toDateString();
+
+        $advances = [
+            'trip_advance' => (float) ($data['trip_advance'] ?? 0),
+            'fuel_advance' => (float) ($data['fuel_advance'] ?? 0),
+        ];
+
+        foreach ($advances as $category => $amount) {
+            if ($amount <= 0) continue;
+            $label = $category === 'trip_advance' ? 'Trip advance' : 'Fuel advance';
+            PettyCashTransaction::create([
+                'company_id'       => $cid,
+                'account_id'       => $account->id,
+                'type'             => 'expense',
+                'amount'           => -$amount,
+                'currency'         => $currency,
+                'description'      => "{$label} — {$saleRef} ({$driver})",
+                'recipient'        => $driver,
+                'category'         => $category,
+                'transaction_date' => $today,
+                'ref_type'         => 'sale',
+                'ref_id'           => $sale->id,
+                'created_by'       => auth()->id(),
+            ]);
+        }
     }
 
     public function post(Sale $sale, InventoryLedger $ledger)

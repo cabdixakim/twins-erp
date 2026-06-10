@@ -620,8 +620,9 @@
             'Kind regards,' . "\n" .
             ($invoice->company?->name ?? '')
         );
-        $gmailUrl   = 'https://mail.google.com/mail/?view=cm&fs=1&to=' . $eTo . '&su=' . $eSub . '&body=' . $eBody;
+        $gmailUrl   = 'https://mail.google.com/mail/u/0/?view=cm&fs=1&tf=1&to=' . $eTo . '&su=' . $eSub . '&body=' . $eBody;
         $outlookUrl = 'https://outlook.live.com/mail/0/deeplink/compose?to=' . $eTo . '&subject=' . $eSub . '&body=' . $eBody;
+        $mailtoUrl  = 'mailto:' . ($invoice->client?->email ?? '') . '?subject=' . $eSub . '&body=' . $eBody;
     @endphp
     <div class="email-wrap" id="emailWrap">
         <button onclick="document.getElementById('emailWrap').classList.toggle('open')"
@@ -632,15 +633,20 @@
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="email-dropdown">
-            <a href="{{ $gmailUrl }}" target="_blank" class="email-opt"
+            <a href="{{ $gmailUrl }}" target="_blank" rel="noopener" class="email-opt"
                onclick="document.getElementById('emailWrap').classList.remove('open')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                Open in Gmail
+                Gmail (web)
             </a>
-            <a href="{{ $outlookUrl }}" target="_blank" class="email-opt"
+            <a href="{{ $outlookUrl }}" target="_blank" rel="noopener" class="email-opt"
                onclick="document.getElementById('emailWrap').classList.remove('open')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                Open in Outlook
+                Outlook (web)
+            </a>
+            <a href="{{ $mailtoUrl }}" class="email-opt"
+               onclick="document.getElementById('emailWrap').classList.remove('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></svg>
+                Mail App (iPhone / default)
             </a>
         </div>
     </div>

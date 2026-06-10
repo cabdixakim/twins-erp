@@ -212,6 +212,65 @@
                   @error('driver_name') <div class="{{ $errText }}">{{ $message }}</div> @enderror
                 </div>
 
+                {{-- ── Driver Advances ─────────────────────────────────── --}}
+                <div class="sm:col-span-2 border-t {{ $border }} pt-3 mt-1">
+                  <div class="text-xs font-semibold {{ $fg }}">Driver Advances
+                    <span class="font-normal {{ $muted }}">— optional, deducted from petty cash immediately</span>
+                  </div>
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-semibold {{ $muted }}">Petty Cash Account</label>
+                  <select id="f_advance_account_id" name="advance_account_id"
+                          class="{{ $fieldBase }}">
+                    <option value="">— No advance —</option>
+                    @foreach($pettyCashAccounts ?? [] as $pca)
+                      <option value="{{ $pca->id }}"
+                              @selected(old('advance_account_id') == $pca->id)>
+                        {{ $pca->name }} ({{ $pca->currency }})
+                      </option>
+                    @endforeach
+                  </select>
+                  @if(($pettyCashAccounts ?? collect())->isEmpty())
+                    <div class="mt-1 text-[11px] {{ $muted }}">
+                      No petty cash accounts yet.
+                      <a href="{{ route('petty-cash.index') }}" class="text-emerald-400 hover:underline" target="_blank">Create one →</a>
+                    </div>
+                  @endif
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Trip Advance</label>
+                  <input id="f_trip_advance" type="number" name="trip_advance" step="0.01" min="0"
+                         value="{{ old('trip_advance') }}"
+                         placeholder="0.00"
+                         class="{{ $fieldBase }}" />
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Fuel Advance</label>
+                  <input id="f_fuel_advance" type="number" name="fuel_advance" step="0.01" min="0"
+                         value="{{ old('fuel_advance') }}"
+                         placeholder="0.00"
+                         class="{{ $fieldBase }}" />
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold {{ $muted }}">Advance Currency</label>
+                  <select id="f_advance_currency" name="advance_currency"
+                          class="{{ $fieldBase }}">
+                    @foreach(['USD','EUR','GBP','ZAR','CDF','ZMW','ZWL'] as $c)
+                      <option value="{{ $c }}" @selected(old('advance_currency', 'USD') === $c)>{{ $c }}</option>
+                    @endforeach
+                  </select>
+                </div>
+
+                <div class="text-[11px] {{ $muted }} sm:col-span-2 -mt-1">
+                  Both advances post immediately as expenses from the selected petty cash account.
+                  They will appear in the petty cash ledger linked to this sale.
+                </div>
+                {{-- ── end Driver Advances ─────────────────────────────── --}}
+
                 <div class="sm:col-span-2">
                   <label class="text-xs font-semibold {{ $muted }}">Seal numbers / Numéros de scellé</label>
                   <textarea id="f_seal_numbers" name="seal_numbers" rows="3"
@@ -381,6 +440,11 @@ window.selectedSale = @json($selected);
     if (sealEl) sealEl.value = sale.seal_numbers || '';
     setVal('f_temperature', sale.temperature != null ? String(sale.temperature) : '20');
     setVal('f_density', sale.density != null ? String(sale.density) : '');
+
+    setVal('f_advance_account_id', sale.advance_account_id ? String(sale.advance_account_id) : '');
+    setVal('f_trip_advance', sale.trip_advance || '');
+    setVal('f_fuel_advance', sale.fuel_advance || '');
+    setVal('f_advance_currency', sale.advance_currency || 'USD');
 
     paintModes();
   };

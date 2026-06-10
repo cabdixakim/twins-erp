@@ -10,3 +10,4 @@
 - [Petty cash balance pattern](petty-cash-balance.md) — balance = opening_balance + SUM(amount); expenses negative, top-ups positive; voids = reversal entry, not hard-delete.
 - [Chart.js CDN per-page only](chartjs-cdn.md) — load Chart.js 4.4.0 via CDN only in views that use it (dashboard, throughput report); not in master layout.
 - [New modules: petty-cash + reports](new-modules.md) — petty-cash at /petty-cash (5 routes), reports at /reports (4 routes); both use ['auth','company.setup','active.company'] middleware; nav flags $onPettyCash/$onReports in app.blade.php compact().
+- [Driver advances on sales](driver-advances-sales.md) — trip_advance/fuel_advance on sales table; postDriverAdvances() posts to petty_cash_transactions; update() deletes then re-posts.
