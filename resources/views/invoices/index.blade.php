@@ -103,7 +103,8 @@
                 $balanceDue = max(0, (float)$inv->total - (float)$inv->paid_amount);
                 $stClass = $statusClasses[$inv->status] ?? $statusClasses['sent'];
             @endphp
-            <tr class="hover:bg-[color:var(--tw-surface-2)] transition">
+            <tr class="hover:bg-[color:var(--tw-surface-2)] transition cursor-pointer"
+                onclick="window.open('{{ route('invoices.show', $inv) }}', '_blank')">
                 <td class="px-4 py-3">
                     <span class="font-mono font-bold {{ $fg }}">{{ $inv->invoice_number }}</span>
                     @if($inv->sale)
@@ -140,10 +141,14 @@
                         </span>
                     @endif
                 </td>
-                <td class="px-4 py-3 text-right">
-                    <a href="{{ route('invoices.show', $inv) }}" target="_blank"
-                       class="{{ $btnGhost }}">
-                        View
+                <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
+                    <a href="{{ route('invoices.pdf', $inv) }}"
+                       title="Download PDF"
+                       class="{{ $btnGhost }} !px-2.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                        PDF
                     </a>
                 </td>
             </tr>
