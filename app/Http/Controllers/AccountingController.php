@@ -318,13 +318,13 @@ class AccountingController extends Controller
             WHERE pca.company_id = ? AND pca.is_active = true
         ", [$cid])[0]->bal ?? 0;
 
-        // Inventory (stock value = qty × weighted_avg_cost)
+        // Inventory (stock value = qty_on_hand × unit_cost)
         $inventoryValue = DB::table('depot_stocks')
             ->join('depots', 'depots.id', '=', 'depot_stocks.depot_id')
             ->where('depot_stocks.company_id', $cid)
             ->where('depots.is_system', false)
             ->where('depots.is_active', true)
-            ->sum(DB::raw('depot_stocks.qty * depot_stocks.weighted_avg_cost'));
+            ->sum(DB::raw('depot_stocks.qty_on_hand * depot_stocks.unit_cost'));
 
         // Accounts Receivable (open client invoices)
         $arTotal = DB::table('invoices')

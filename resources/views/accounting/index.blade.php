@@ -7,18 +7,21 @@
 <div class="max-w-5xl space-y-6">
 
     {{-- MTD P&L strip --}}
-    <div class="grid grid-cols-3 gap-4">
-        <div class="rounded-2xl border p-4" style="background:var(--tw-surface);border-color:var(--tw-border)">
-            <div class="text-[11px] font-semibold uppercase tracking-wider mb-1" style="color:var(--tw-muted)">Revenue (MTD)</div>
-            <div class="text-xl font-bold" style="color:var(--tw-fg)">{{ number_format($summary['revenue_mtd'],2) }}</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-2xl border p-4 flex sm:block items-center justify-between gap-3"
+             style="background:var(--tw-surface);border-color:var(--tw-border)">
+            <div class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--tw-muted)">Revenue (MTD)</div>
+            <div class="text-xl font-bold sm:mt-1" style="color:var(--tw-fg)">{{ number_format($summary['revenue_mtd'],2) }}</div>
         </div>
-        <div class="rounded-2xl border p-4" style="background:var(--tw-surface);border-color:var(--tw-border)">
-            <div class="text-[11px] font-semibold uppercase tracking-wider mb-1" style="color:var(--tw-muted)">COGS (MTD)</div>
-            <div class="text-xl font-bold" style="color:var(--tw-fg)">{{ number_format($summary['cogs_mtd'],2) }}</div>
+        <div class="rounded-2xl border p-4 flex sm:block items-center justify-between gap-3"
+             style="background:var(--tw-surface);border-color:var(--tw-border)">
+            <div class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--tw-muted)">COGS (MTD)</div>
+            <div class="text-xl font-bold sm:mt-1" style="color:var(--tw-fg)">{{ number_format($summary['cogs_mtd'],2) }}</div>
         </div>
-        <div class="rounded-2xl border p-4" style="background:var(--tw-surface);border-color:var(--tw-border)">
-            <div class="text-[11px] font-semibold uppercase tracking-wider mb-1" style="color:var(--tw-muted)">Gross Profit (MTD)</div>
-            <div class="text-xl font-bold {{ $summary['gross_profit'] >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
+        <div class="rounded-2xl border p-4 flex sm:block items-center justify-between gap-3"
+             style="background:var(--tw-surface);border-color:var(--tw-border)">
+            <div class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--tw-muted)">Gross Profit (MTD)</div>
+            <div class="text-xl font-bold sm:mt-1 {{ $summary['gross_profit'] >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
                 {{ number_format($summary['gross_profit'],2) }}
             </div>
         </div>
