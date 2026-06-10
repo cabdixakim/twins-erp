@@ -11,6 +11,15 @@ return new class extends Migration {
 
         $roles = [
             [
+                'name'        => 'Owner',
+                'slug'        => 'owner',
+                'description' => 'Company owner. Full god-mode access including billing and company settings.',
+                'is_system'   => true,
+                'is_active'   => true,
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ],
+            [
                 'name'        => 'Admin',
                 'slug'        => 'admin',
                 'description' => 'Full operational access; cannot delete the company or manage billing.',
@@ -67,7 +76,7 @@ return new class extends Migration {
     public function down(): void
     {
         DB::table('roles')
-            ->whereIn('slug', ['admin', 'manager', 'accountant', 'transport-controller', 'viewer'])
+            ->whereIn('slug', ['owner', 'admin', 'manager', 'accountant', 'transport-controller', 'viewer'])
             ->delete();
     }
 };
