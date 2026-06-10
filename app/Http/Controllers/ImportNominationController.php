@@ -305,9 +305,9 @@ class ImportNominationController extends Controller
             return back()->with('error', 'Invalid depot selected.');
         }
 
-        // Rate divisor depends on company volume unit: L → per 1000 units; M3 → per 1 unit
+        // Rate is per unit (per L when volume_unit=L, per M³ when M3) — no hidden ÷1000
         $volumeUnit  = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
-        $rateDivisor = ($volumeUnit === 'M3') ? 1 : 1000;
+        $rateDivisor = 1;
 
         $qtyLoaded       = (float) $truck->qty_loaded;
         $qtyDelivered    = (float) $data['qty_delivered'];
@@ -458,7 +458,7 @@ class ImportNominationController extends Controller
         }
 
         $volumeUnit      = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
-        $rateDivisor     = ($volumeUnit === 'M3') ? 1 : 1000;
+        $rateDivisor     = 1; // Rate is per unit (per L when unit=L, per M³ when M3)
         $qtyLoaded       = (float) $data['qty_loaded'];
         $qtyDelivered    = (float) $data['qty_delivered'];
         $lossPct         = (float) $nomination->allowed_loss_pct / 100;
