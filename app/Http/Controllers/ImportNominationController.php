@@ -40,6 +40,8 @@ class ImportNominationController extends Controller
 
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
+            // volume_unit is intentionally NOT updated — it's locked at creation time
+            // so historical calculations remain correct if the global setting changes
             $nom->update(array_merge($data, [
                 'advances' => $data['advances'] ?? 0,
             ]));
@@ -47,11 +49,15 @@ class ImportNominationController extends Controller
             return back()->with('status', 'Nomination updated.');
         }
 
+        // Snapshot the company's current volume_unit at creation — immune to future global changes
+        $companyVolumeUnit = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+
         $nom = ImportNomination::create(array_merge($data, [
             'company_id'  => $cid,
             'purchase_id' => $purchase->id,
             'advances'    => $data['advances'] ?? 0,
             'created_by'  => auth()->id(),
+            'volume_unit' => $companyVolumeUnit,
         ]));
 
         if ($purchase->status === 'confirmed') {
@@ -305,9 +311,9 @@ class ImportNominationController extends Controller
             return back()->with('error', 'Invalid depot selected.');
         }
 
-        // Rate is per unit (per L when volume_unit=L, per M³ when M3) — no hidden ÷1000
-        $volumeUnit  = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
-        $rateDivisor = 1;
+        // Use the nomination's own volume_unit (snapshotted at creation) — immune to global changes
+        $volumeUnit  = $nomination->volume_unit ?? 'L';
+        $rateDivisor = 1; // Rate is always per unit (per L or per M³)
 
         $qtyLoaded       = (float) $truck->qty_loaded;
         $qtyDelivered    = (float) $data['qty_delivered'];
@@ -457,8 +463,9 @@ class ImportNominationController extends Controller
             return back()->with('error', 'Invalid depot selected.');
         }
 
-        $volumeUnit      = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
-        $rateDivisor     = 1; // Rate is per unit (per L when unit=L, per M³ when M3)
+        // Use the nomination's own volume_unit (snapshotted at creation) — immune to global changes
+        $volumeUnit      = $nomination->volume_unit ?? 'L';
+        $rateDivisor     = 1; // Rate is always per unit (per L or per M³)
         $qtyLoaded       = (float) $data['qty_loaded'];
         $qtyDelivered    = (float) $data['qty_delivered'];
         $lossPct         = (float) $nomination->allowed_loss_pct / 100;

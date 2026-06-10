@@ -378,7 +378,11 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
+        // Use the nomination's own snapshotted volume_unit (set at creation time).
+        // Fall back to company setting only when no nomination exists yet (pre-setup state).
+        $volumeUnit = $importNomination?->volume_unit
+            ?? \App\Models\Company::find($cid)?->volume_unit
+            ?? 'L';
 
         // Landed / batch costs for this purchase
         $batchCosts = $purchase->batch_id

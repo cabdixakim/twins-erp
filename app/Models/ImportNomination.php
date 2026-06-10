@@ -25,6 +25,7 @@ class ImportNomination extends Model
         'notes',
         'status',
         'created_by',
+        'volume_unit',
     ];
 
     protected $casts = [
@@ -80,7 +81,8 @@ class ImportNomination extends Model
 
     public function grossPayable(): float
     {
-        return $this->qtyLoaded() * ((float) $this->rate_per_1000l) / 1000;
+        // Rate is per unit (per L when volume_unit=L, per M³ when M3) — no hidden divisor
+        return $this->qtyLoaded() * (float) $this->rate_per_1000l;
     }
 
     public function netPayable(): float
