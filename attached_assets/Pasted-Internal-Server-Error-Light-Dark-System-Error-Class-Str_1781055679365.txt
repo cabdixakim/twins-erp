@@ -1,0 +1,111 @@
+Internal Server Error
+
+Light
+Dark
+System
+Error
+Class "Str" not found
+resources/views/dashboard/index.blade.php :391
+              </div>
+              <p class="text-2xl font-bold" style="color:#10b981">
+                  {{ number_format($revenueMtd, 0) }}
+                  <span class="text-sm font-semibold" style="color:#10b981;opacity:.7">USD</span>
+              </p>
+              <p class="text-xs tw-muted mt-2">{{ number_format($salesCountMtd) }} posted {{ Str::plural('sale', $salesCountMtd) }} this month</p>
+          </div>
+ 
+          {{-- Gross Profit MTD --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center gap-3 mb-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.20)">
+                      <svg class="w-4.5 h-4.5" style="color:#f59e0b;width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"/>
+                      </svg>
+                  </div>
+ 
+Request
+GET /dashboard
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en;q=0.9
+cookie
+XSRF-TOKEN=eyJpdiI6Ii9WSTJlWUhCNzBlOHV0UUxFVlhrcWc9PSIsInZhbHVlIjoiQ3lmdTl3N0VnSEQzS29nR09uTll0VTJOYWJubWRrR0FVMjdXdzJ3anVCWE8yNTlCV213WHljVlNnRHp4RXVRVmJHanBjYW5GZGFTc3lhYlVKLzdwWXMzVkNKeWVERTE5Nk5jTVlEdXc2cC8vWlMvYmdodUQ5TzFrcTNoM1IvK08iLCJtYWMiOiI3NWZiY2MwNmE1MTFmYzljMzZmMWQ5OGVhODlhZjk3ZTMwZGE3ZGM3ZDI4OTk0MDIzM2RhZWNmMzM4Nzk4MmU1IiwidGFnIjoiIn0%3D; twins_session=eyJpdiI6ImpmR29oVXhZOFdJekJYeTlNOTIwR2c9PSIsInZhbHVlIjoib2JxTXhwUXp3L1VkOE4yV0ZLQWxybHNlUUNYSTA2cjJPdWVHd0tETkJaUzBSUkIrbU1NRGlpSkZFanRxN09kWWRDNnZXVXo0RWFQL3QrSFRuZnZMMkxneWVHVVNacklDeW1CczRLRE55d0hHelVzS1l3YU1YdDNhaWRpRGFVRHIiLCJtYWMiOiIxYmFkYzVlYWEyZDhhYmUzZDQ3ZTAzNGU3NTEzMWYxODg3MTgyMDVhZTczNzMzNTFkMzMwZmIwZDIxNWRlMmU5IiwidGFnIjoiIn0%3D
+priority
+u=0, i
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+none
+x-forwarded-for
+217.171.84.50, 10.83.10.172, 10.56.0.68, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\DashboardController@index
+route name
+dashboard
+middleware
+web, auth, company.setup, active.company
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 2) as "exists"
+pgsql
+select transporter_id, currency, SUM(amount) as balance from "transporter_ledger_entries" where "company_id" = 2 and "transporter_ledger_entries"."company_id" = 2 group by "transporter_id", "currency" having SUM(amount) > 0
+pgsql
+select "name", "id" from "transporters" where "company_id" = 2 and "id" in (1) and "transporters"."company_id" = 2
+pgsql
+select count(*) as aggregate from "purchases" where "company_id" = 2 and "status" in ('draft', 'confirmed', 'nominated') and "purchases"."company_id" = 2
+pgsql
+select status, COUNT(*) as cnt from "purchases" where "company_id" = 2 and "status" in ('draft', 'confirmed', 'nominated') and "purchases"."company_id" = 2 group by "status"
+pgsql
+select depots.id as depot_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as total_qty from "depot_stocks" inner join "depots" on "depots"."id" = "depot_stocks"."depot_id" where "depot_stocks"."company_id" = 2 and "depots"."is_system" = 0 and "depot_stocks"."company_id" = 2 group by "depots"."id", "depots"."name" order by "depots"."name" asc
+pgsql
+select supplier_id, currency, SUM(amount) as balance from "supplier_ledger_entries" where "company_id" = 2 group by "supplier_id", "currency" having SUM(amount) > 0
+pgsql
+select depot_id, currency, SUM(amount) as balance from "depot_ledger_entries" where "company_id" = 2 group by "depot_id", "currency" having SUM(amount) > 0
+pgsql
+select client_id, currency, SUM(amount) as balance from "client_ledger_entries" where "company_id" = 2 group by "client_id", "currency" having SUM(amount) > 0
+pgsql
+select TO_CHAR(created_at, 'Mon') as month_label, TO_CHAR(created_at, 'YYYY-MM') as month_key, SUM(qty) as qty from "inventory_movements" where "company_id" = 2 and "type" = 'receipt' and "ref_type" = 'purchase' and "created_at"::date >= '2026-01-01' group by TO_CHAR(created_at, 'Mon'), TO_CHAR(created_at, 'YYYY-MM') order by "month_key" asc
+pgsql
+select TO_CHAR(created_at, 'Mon') as month_label, TO_CHAR(created_at, 'YYYY-MM') as month_key, SUM(qty) as qty from "inventory_movements" where "company_id" = 2 and "type" = 'issue' and "ref_type" = 'sale' and "created_at"::date >= '2026-01-01' group by TO_CHAR(created_at, 'Mon'), TO_CHAR(created_at, 'YYYY-MM') order by "month_key" asc
+pgsql
+select * from "bank_accounts" where "company_id" = 2 and "is_active" = 1 and "bank_accounts"."company_id" = 2 order by "name" asc
+pgsql
+select 
+                COALESCE(SUM(total), 0)        AS revenue_mtd,
+                COALESCE(SUM(gross_profit), 0) AS gross_profit_mtd,
+                COUNT(*)                        AS sales_count_mtd
+             from "sales" where "company_id" = 2 and "status" = 'posted' and extract(month from "sale_date") = '06' and extract(year from "sale_date") = 2026 limit 1
+pgsql
+select COALESCE(SU

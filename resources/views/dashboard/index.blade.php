@@ -388,7 +388,7 @@
                   {{ number_format($revenueMtd, 0) }}
                   <span class="text-sm font-semibold" style="color:#10b981;opacity:.7">USD</span>
               </p>
-              <p class="text-xs tw-muted mt-2">{{ number_format($salesCountMtd) }} posted {{ Str::plural('sale', $salesCountMtd) }} this month</p>
+              <p class="text-xs tw-muted mt-2">{{ number_format($salesCountMtd) }} posted {{ $salesCountMtd == 1 ? 'sale' : 'sales' }} this month</p>
           </div>
 
           {{-- Gross Profit MTD --}}
