@@ -289,7 +289,7 @@
               <label class="block text-xs font-medium ob-label mb-1">Password</label>
               <input name="owner_password" type="password"
                      class="ob-input {{ $errors->has('owner_password') ? 'error' : '' }}"
-                     placeholder="Choose a strong password (min 6 chars)" required>
+                     placeholder="Min 8 chars, uppercase, number & symbol" required>
               @error('owner_password')
                 <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
               @enderror

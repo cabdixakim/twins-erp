@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Password;
 
 class AccountRecoveryController extends Controller
 {
@@ -19,7 +20,7 @@ class AccountRecoveryController extends Controller
         $data = $request->validate([
             'email'    => 'required|email',
             'token'    => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
         ]);
 
         $user = User::where('email', $data['email'])->first();

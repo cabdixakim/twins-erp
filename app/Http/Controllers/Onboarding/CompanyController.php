@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Depot;
+use Illuminate\Validation\Rules\Password;
 
 class CompanyController extends Controller
 {
@@ -34,7 +35,7 @@ class CompanyController extends Controller
             'base_currency'  => 'required|string|max:10',
             'owner_name'     => 'required|string|max:255',
             'owner_email'    => 'required|email|max:255|unique:users,email',
-            'owner_password' => 'required|string|min:6',
+            'owner_password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
         ]);
 
         // 2) Create owner user — ensure owner role exists regardless of migration state

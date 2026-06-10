@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -79,7 +80,7 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|max:255|unique:users,email',
             'role_id'  => 'required|exists:roles,id',
-            'password' => 'nullable|string|min:6',
+            'password' => ['nullable', Password::min(8)->mixedCase()->numbers()->symbols()],
         ]);
 
         $plainPassword = $data['password'] ?: Str::password(12);

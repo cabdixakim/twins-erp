@@ -356,7 +356,7 @@
                            class="{{ $input }}">
 
                     <p class="mt-1 text-[10px] {{ $muted }}">
-                        If left blank, Twins will generate a strong password.
+                        If left blank, Twins generates one. If you set it: min 8 chars, uppercase, number &amp; symbol.
                     </p>
                 </div>
 

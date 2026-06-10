@@ -64,7 +64,7 @@
                 @error('current_password') <p class="mt-1 text-[11px] text-rose-500 font-semibold">{{ $message }}</p> @enderror
             </div>
             <div>
-                <label class="text-xs font-semibold {{ $muted }}">New password <span class="{{ $muted }}">(min 8 chars)</span></label>
+                <label class="text-xs font-semibold {{ $muted }}">New password <span class="{{ $muted }}">(min 8 chars, uppercase, number &amp; symbol)</span></label>
                 <input type="password" name="password" required minlength="8"
                     class="{{ $fieldBase }} @error('password') border-rose-500/40 ring-2 ring-rose-500/20 @enderror"
                     autocomplete="new-password">
