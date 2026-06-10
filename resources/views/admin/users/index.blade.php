@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Users')
-@section('subtitle', 'Manage who can sign in to Twins and what they can do.')
+@section('subtitle', 'Manage who can sign in and what they can do.')
 
 @section('content')
 @php
@@ -315,7 +315,7 @@
 
         <div class="p-4 space-y-3">
             <p class="text-[11px] {{ $muted }}">
-                You can type a password or let Twins generate one.
+                You can type a password or let the system generate one.
                 The final password will be shown after you save the user.
             </p>
 
@@ -356,7 +356,7 @@
                            class="{{ $input }}">
 
                     <p class="mt-1 text-[10px] {{ $muted }}">
-                        If left blank, Twins generates one. If you set it: min 8 chars, uppercase, number &amp; symbol.
+                        If left blank, a secure password is generated. If you set it: min 8 chars, uppercase, number &amp; symbol.
                     </p>
                 </div>
 
@@ -440,7 +440,7 @@
 
         <div class="p-4 space-y-3">
             <p class="text-[11px] {{ $muted }}">
-                You can type a new password or let Twins generate a secure one.
+                You can type a new password or let the system generate a secure one.
                 The final password will be shown after saving.
             </p>
 

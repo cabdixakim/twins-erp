@@ -137,7 +137,7 @@
                         </h2>
 
                         <p class="text-[11px] {{ $muted }} truncate">
-                            What can <span class="font-semibold {{ $fg }}">{{ $currentRole->name }}</span> do in Twins?
+                            What can <span class="font-semibold {{ $fg }}">{{ $currentRole->name }}</span> do in {{ $company->name ?? config('app.name') }}?
                         </p>
                     </div>
 

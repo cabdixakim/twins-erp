@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign in • Twins</title>
+  <title>Sign in • {{ config('app.name') }}</title>
   @vite(['resources/css/app.css'])
 
   {{-- Apply saved theme before first paint to avoid flash --}}
@@ -158,12 +158,12 @@
               Tw
             </div>
             <div>
-              <div class="text-sm font-semibold text-slate-50 tracking-wide">Twins</div>
+              <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name') }}</div>
               <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
             </div>
           </div>
 
-          <h1 class="text-xl font-semibold text-slate-50 mb-2">Sign in to Twins</h1>
+          <h1 class="text-xl font-semibold text-slate-50 mb-2">Sign in to {{ config('app.name') }}</h1>
           <p class="text-xs leading-relaxed text-slate-400 mb-6">
             Access your fuel stock, depot positions, local &amp; international transport,
             and profitability in one clean workspace.
@@ -186,7 +186,7 @@
         </div>
 
         <p class="mt-6 text-[11px] text-slate-500">
-          Don't have an account yet? Ask your Twins owner to add you.
+          Don't have an account yet? Ask your {{ config('app.name') }} administrator to add you.
         </p>
       </div>
 
@@ -198,9 +198,9 @@
           <div class="flex items-center justify-between mb-3">
             <div class="inline-flex items-center gap-2">
               <div class="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
-                          flex items-center justify-center text-slate-950 font-bold text-xs">Tw</div>
+                          flex items-center justify-center text-slate-950 font-bold text-xs">{{ mb_strtoupper(mb_substr(config('app.name'), 0, 2)) }}</div>
               <div>
-                <div class="text-sm font-semibold login-heading">Twins</div>
+                <div class="text-sm font-semibold login-heading">{{ config('app.name') }}</div>
                 <div class="text-[11px] login-muted">Fuel &amp; Transport ERP</div>
               </div>
             </div>
@@ -284,7 +284,7 @@
               Login
             </button>
             <p class="text-[11px] login-muted text-center">
-              Having trouble? Confirm your email &amp; password with your Twins owner.
+              Having trouble? Confirm your email &amp; password with your administrator.
             </p>
           </div>
         </form>

@@ -59,7 +59,7 @@
           </svg>
       </div>
       <div>
-          <h1 class="text-base font-bold tw-fg">Welcome to Twins</h1>
+          <h1 class="text-base font-bold tw-fg">Welcome to {{ $company->name ?? config('app.name') }}</h1>
           <p class="text-xs tw-muted mt-0.5">Here's a quick snapshot of what needs your attention today.</p>
       </div>
   </div>

@@ -25,10 +25,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     @php
-        $appName = config('app.name', 'Twins');
+        $appName = (isset($company) && $company) ? $company->name : config('app.name');
     @endphp
 
-    <title>{{ config('app.name', 'Twins') }} - @yield('title','Dashboard')</title>
+    <title>{{ $appName }} — @yield('title','Dashboard')</title>
 
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
 

@@ -1,6 +1,6 @@
 {{-- resources/views/layouts/partials/brand.blade.php --}}
 @php
-    $name = $company->name ?? 'Twins ERP';
+    $name = $company->name ?? config('app.name');
     $initial = strtoupper(mb_substr(trim($name), 0, 1));
 
     // stable “icon tile” container (works for white/black/transparent logos)

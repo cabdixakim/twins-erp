@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Setup • {{ config('app.name', 'Twins') }}</title>
+  <title>Setup • {{ config('app.name') }}</title>
   @vite(['resources/css/app.css'])
 
   <script>
@@ -130,9 +130,9 @@
         <div>
           <div class="inline-flex items-center gap-2 mb-6">
             <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
-                        flex items-center justify-center text-slate-950 font-bold text-sm">Tw</div>
+                        flex items-center justify-center text-slate-950 font-bold text-sm">{{ mb_strtoupper(mb_substr(config('app.name'), 0, 2)) }}</div>
             <div>
-              <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name', 'Twins') }}</div>
+              <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name') }}</div>
               <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
             </div>
           </div>
@@ -172,9 +172,9 @@
           <div class="flex items-center justify-between mb-3">
             <div class="inline-flex items-center gap-2">
               <div class="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
-                          flex items-center justify-center text-slate-950 font-bold text-xs">Tw</div>
+                          flex items-center justify-center text-slate-950 font-bold text-xs">{{ mb_strtoupper(mb_substr(config('app.name'), 0, 2)) }}</div>
               <div>
-                <div class="text-sm font-semibold ob-heading">{{ config('app.name', 'Twins') }}</div>
+                <div class="text-sm font-semibold ob-heading">{{ config('app.name') }}</div>
                 <div class="text-[11px] ob-muted">Fuel &amp; Transport ERP</div>
               </div>
             </div>
@@ -305,7 +305,7 @@
               Create workspace
             </button>
             <p class="text-[11px] ob-muted text-center">
-              This sets up {{ config('app.name', 'Twins') }} for your company. Additional users can be added afterwards.
+              This sets up {{ config('app.name') }} for your company. Additional users can be added afterwards.
             </p>
           </div>
 

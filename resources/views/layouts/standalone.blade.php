@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>{{ config('app.name', 'Twins') }} - @yield('title', config('twins.brand.name'))</title>
+    <title>{{ config('app.name') }} — @yield('title')</title>
 
     {{-- NOTE: If your main app already compiles Tailwind + app.css tokens, prefer @vite(...) instead of CDN --}}
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
@@ -58,10 +58,10 @@
             <div class="mb-6 flex items-center justify-between">
                 <div class="min-w-0">
                     <div class="text-[12px] uppercase tracking-[0.18em] text-[color:var(--tw-muted)]">
-                        {{ config('app.name', 'Twins') }}
+                        {{ config('app.name') }}
                     </div>
                     <div class="text-[18px] font-semibold tracking-tight">
-                        @yield('title', config('app.name', 'Twins'))
+                        @yield('title', config('app.name'))
                     </div>
                 </div>
 
@@ -94,7 +94,7 @@
             </div>
 
             <div class="mt-6 text-[11px] text-[color:var(--tw-muted)]">
-                © {{ date('Y') }} {{ config('app.name', 'Twins') }}. All rights reserved.
+                © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
             </div>
         </div>
     </main>

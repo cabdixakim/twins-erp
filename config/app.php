@@ -1,6 +1,6 @@
 <?php
 return [
-    'name' => env('APP_NAME', 'Twins'),
+    'name' => env('APP_NAME', 'Kim'),
     'env' => env('APP_ENV', 'local'),
     'debug' => (bool) env('APP_DEBUG', true),
     'url' => env('APP_URL', 'http://127.0.0.1:8000'),

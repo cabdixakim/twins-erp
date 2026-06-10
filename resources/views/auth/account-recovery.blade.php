@@ -10,7 +10,7 @@
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Account Recovery — Twins ERP</title>
+<title>Account Recovery — {{ config('app.name') }}</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full flex items-center justify-center p-4" style="background:var(--tw-bg)">

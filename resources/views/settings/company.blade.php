@@ -1,6 +1,6 @@
 @php
     $title = 'Company profile';
-    $subtitle = 'Branding, base currency and home timezone for Twins.';
+    $subtitle = 'Branding, base currency and home timezone for ' . ($company->name ?? config('app.name')) . '.';
 
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
