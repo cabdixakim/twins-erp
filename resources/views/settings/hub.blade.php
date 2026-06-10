@@ -154,6 +154,29 @@
         </div>
     </section>
 
+    {{-- ── Data Export ─────────────────────────────────────────── --}}
+    <section>
+        <h2 class="text-[11px] font-semibold uppercase tracking-widest mb-3" style="color:var(--tw-muted)">Data Export</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <a href="{{ route('settings.full-export') }}"
+               class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
+                <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
+                             bg-emerald-500/10 border border-emerald-500/20">
+                    <svg class="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--tw-fg)">Export All Data</div>
+                    <div class="text-xs mt-0.5 leading-relaxed" style="color:var(--tw-muted)">Download a ZIP of every table as CSV files</div>
+                </div>
+                <svg class="w-4 h-4 ml-auto mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-60 transition" style="color:var(--tw-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+            </a>
+
+        </div>
+    </section>
+
     {{-- ── Access Control ───────────────────────────────────────── --}}
     @if(auth()->user()?->role?->slug === 'owner')
     <section>

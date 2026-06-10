@@ -119,6 +119,9 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 
             Route::get('/', fn() => view('settings.hub'))->name('hub');
 
+            Route::get('/full-export', [\App\Http\Controllers\ExportController::class, 'fullDump'])
+                ->name('full-export');
+
             Route::get('/company', [CompanySettingsController::class, 'edit'])
                 ->name('company.edit');
 
