@@ -37,11 +37,19 @@ class SalesController extends Controller
             ->orderBy('name')
             ->get();
 
+        $filterStatus = $request->query('status', '');
+        $filterSearch = $request->query('q', '');
+
         $sales = Sale::query()
             ->where('company_id', $cid)
             ->with(['depot', 'product', 'transporter', 'invoice'])
+            ->when($filterStatus, fn($q) => $q->where('status', $filterStatus))
+            ->when($filterSearch, fn($q) => $q->where(function ($q2) use ($filterSearch) {
+                $q2->where('reference', 'ilike', "%{$filterSearch}%")
+                   ->orWhere('client_name', 'ilike', "%{$filterSearch}%");
+            }))
             ->latest('id')
-            ->paginate(20)
+            ->paginate(50)
             ->withQueryString();
 
         $selected = null;

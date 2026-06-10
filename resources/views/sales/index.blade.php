@@ -1,5 +1,4 @@
 {{-- resources/views/sales/index.blade.php --}}
-
 @extends('layouts.app')
 
 @php
@@ -16,237 +15,322 @@
   $errText   = "mt-1 text-[11px] text-rose-600 font-bold";
 
   $statusPill = fn($s) => match($s) {
-    'draft'     => 'border-gray-400/30 bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300',
-    'posted'    => 'border-emerald-500/30 bg-emerald-600/15 text-emerald-700 dark:text-emerald-400',
-    'delivered' => 'border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-400',
-    'cancelled' => 'border-rose-500/30 bg-rose-500/15 text-rose-700 dark:text-rose-400',
-    default     => 'border-gray-400/30 bg-gray-100 text-gray-600',
+    'draft'     => 'border-gray-400/40 bg-gray-500/10 text-gray-500',
+    'posted'    => 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    'delivered' => 'border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-400',
+    'cancelled' => 'border-rose-500/40 bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    default     => 'border-gray-400/40 bg-gray-500/10 text-gray-500',
   };
 
   $invoicePill = fn($s) => match($s) {
-    'paid'    => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-    'overdue' => 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
-    'sent'    => 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-    'void'    => 'border-gray-400/30 bg-gray-100 text-gray-500',
-    default   => 'border-gray-400/30 bg-gray-100 text-gray-500',
+    'paid'    => 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    'overdue' => 'border-rose-500/40 bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    'sent'    => 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400',
+    'void'    => 'border-gray-400/40 bg-gray-500/10 text-gray-500',
+    default   => 'border-gray-400/40 bg-gray-500/10 text-gray-500',
   };
+
+  $filterStatus = request('status', '');
+  $filterSearch = request('q', '');
 @endphp
 
 @section('title', 'Sales')
-@section('subtitle', 'Track and manage fuel sales')
+@section('subtitle', 'Fuel sales — stock issues from depot')
 
 @section('content')
 
 @if(session('status'))
-  <div class="alert-ok mb-4 rounded-xl px-4 py-3 text-sm font-semibold flex items-center gap-2">
-    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-    <span>{{ session('status') }}</span>
+  <div class="alert-ok mb-3 rounded-xl px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
+    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    {{ session('status') }}
   </div>
 @endif
 @if(session('error'))
-  <div class="alert-err mb-4 rounded-xl p-3 text-sm font-medium">{{ session('error') }}</div>
+  <div class="alert-err mb-3 rounded-xl px-4 py-2.5 text-sm font-medium">{{ session('error') }}</div>
 @endif
 
-{{-- ══ SPLIT VIEW when a sale is selected ══ --}}
+{{-- ═══════════════════════════════════════════════════════
+     SPLIT VIEW — when a specific sale is selected
+     ═══════════════════════════════════════════════════════ --}}
 @if($selected)
-<div class="grid gap-6 md:grid-cols-3">
+<div class="grid gap-5 md:grid-cols-3">
 
-  {{-- LEFT: compact list --}}
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="flex items-center justify-between gap-3 mb-4">
-      <div class="text-sm font-semibold {{ $fg }}">All Sales</div>
-      <div class="flex items-center gap-2">
-        <a href="{{ route('sales.export') }}"
-           class="inline-flex items-center gap-1 h-8 px-2.5 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
-          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
-          CSV
-        </a>
-        <button type="button" id="btnNewSale"
-          class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition">
-          + New
-        </button>
-      </div>
-    </div>
-
-    <div class="space-y-1.5">
-      @forelse($sales as $s)
-        @php $isActive = $selectedId === $s->id; $pill = $statusPill($s->status); @endphp
-        <a href="{{ route('sales.index', ['sale' => $s->id]) }}"
-           class="block rounded-xl border {{ $border }} {{ $isActive ? 'ring-2 ring-emerald-500/40 '.$surface2 : '' }} p-2.5 hover:bg-[color:var(--tw-surface-2)] transition">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <div class="text-[11px] {{ $muted }}">#{{ $s->reference }}</div>
-              <div class="mt-0.5 text-xs font-semibold {{ $fg }} truncate">
-                {{ $s->client_name ?: ($s->client?->name ?: '—') }}
-              </div>
-              <div class="mt-0.5 text-[10px] {{ $muted }}">{{ $s->product?->name }} · {{ number_format((float)$s->qty, 0) }} L</div>
-            </div>
-            <span class="shrink-0 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold {{ $pill }}">
-              {{ ucfirst($s->status) }}
-            </span>
-          </div>
-        </a>
-      @empty
-        <div class="text-xs {{ $muted }}">No sales yet.</div>
-      @endforelse
-    </div>
-
-    <div class="mt-3">{{ $sales->links() }}</div>
-  </div>
-
-  {{-- RIGHT: detail panel --}}
-  <div class="md:col-span-2 space-y-4">
-    @include('sales.partials.details', ['sale' => $selected])
-  </div>
-
-</div>
-
-{{-- ══ TABLE VIEW by default (no selection) ══ --}}
-@else
-<div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-
-  {{-- Header --}}
-  <div class="px-5 py-4 border-b {{ $border }} flex items-center justify-between gap-4 flex-wrap">
-    <div>
-      <div class="text-sm font-semibold {{ $fg }}">Sales</div>
-      <div class="text-xs {{ $muted }} mt-0.5">{{ $sales->total() }} total · click a row to view details</div>
-    </div>
-    <div class="flex items-center gap-2">
-      <a href="{{ route('sales.export') }}"
-         class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
-        Export CSV
+  {{-- Left: compact sidebar list --}}
+  <div class="rounded-xl border {{ $border }} {{ $surface }} overflow-hidden">
+    <div class="px-3 py-2.5 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between gap-2">
+      <a href="{{ route('sales.index') }}" class="text-xs font-semibold {{ $fg }} hover:text-emerald-500 transition flex items-center gap-1">
+        <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        All sales
       </a>
       <button type="button" id="btnNewSale"
-        class="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 hover:border-emerald-700 transition">
-        + New Sale
+        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition">
+        + New
       </button>
     </div>
+    <div class="divide-y divide-[color:var(--tw-border)]">
+      @forelse($sales as $s)
+        @php $isActive = $selectedId === $s->id; @endphp
+        <a href="{{ route('sales.index', ['sale' => $s->id]) }}"
+           class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-[color:var(--tw-surface-2)] transition {{ $isActive ? 'bg-[color:var(--tw-surface-2)]' : '' }}">
+          <div class="min-w-0 flex-1">
+            <div class="font-mono text-[10px] {{ $muted }}">{{ $s->reference }}</div>
+            <div class="font-semibold {{ $fg }} truncate">{{ $s->client_name ?: ($s->client?->name ?: '—') }}</div>
+            <div class="{{ $muted }} text-[10px]">{{ number_format((float)$s->qty, 0) }} L · {{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 0) }}</div>
+          </div>
+          <span class="shrink-0 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold {{ $statusPill($s->status) }}">
+            {{ ucfirst($s->status) }}
+          </span>
+        </a>
+      @empty
+        <div class="px-3 py-4 text-xs {{ $muted }}">No sales.</div>
+      @endforelse
+    </div>
+    @if($sales->hasPages())
+      <div class="px-3 py-2 border-t {{ $border }}">{{ $sales->links() }}</div>
+    @endif
   </div>
 
-  {{-- Desktop table --}}
+  {{-- Right: detail panel --}}
+  <div class="md:col-span-2">
+    @include('sales.partials.details', ['sale' => $selected])
+  </div>
+</div>
+
+{{-- ═══════════════════════════════════════════════════════
+     TABLE VIEW — default (no selection)
+     ═══════════════════════════════════════════════════════ --}}
+@else
+
+{{-- Toolbar --}}
+<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+
+  {{-- Status filter tabs --}}
+  <div class="flex items-center gap-1 flex-wrap">
+    @foreach([''=>'All', 'draft'=>'Draft', 'posted'=>'Posted', 'delivered'=>'Delivered', 'cancelled'=>'Cancelled'] as $val => $label)
+      @php
+        $active = $filterStatus === $val;
+        $tabClass = $active
+          ? 'border-emerald-600 bg-emerald-500 text-white'
+          : 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] text-[color:var(--tw-muted)] hover:bg-[color:var(--tw-surface-2)]';
+      @endphp
+      <a href="{{ route('sales.index', array_filter(['status' => $val ?: null, 'q' => $filterSearch ?: null])) }}"
+         class="inline-flex h-8 items-center px-3 rounded-lg border text-xs font-semibold transition {{ $tabClass }}">
+        {{ $label }}
+      </a>
+    @endforeach
+  </div>
+
+  {{-- Right controls --}}
+  <div class="flex items-center gap-2">
+    {{-- Search --}}
+    <form method="GET" action="{{ route('sales.index') }}" class="flex items-center gap-1">
+      @if($filterStatus)<input type="hidden" name="status" value="{{ $filterStatus }}">@endif
+      <input type="text" name="q" value="{{ $filterSearch }}" placeholder="Search ref / client…"
+             class="h-8 w-44 rounded-lg border {{ $border }} {{ $surface }} px-2.5 text-xs {{ $fg }} placeholder:{{ $muted }} focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+      <button type="submit" class="h-8 px-2 rounded-lg border {{ $border }} {{ $surface }} {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+    </form>
+    <a href="{{ route('sales.export') }}"
+       class="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg border {{ $border }} {{ $surface }} text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+      CSV
+    </a>
+    <button type="button" id="btnNewSale"
+      class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-emerald-600 bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition">
+      + New Sale
+    </button>
+  </div>
+</div>
+
+{{-- Data table --}}
+<div class="rounded-xl border {{ $border }} {{ $surface }} overflow-hidden">
+
+  {{-- Stats bar --}}
+  <div class="px-4 py-2 border-b {{ $border }} {{ $surface2 }} flex items-center gap-4 text-[11px] {{ $muted }}">
+    <span><span class="font-semibold {{ $fg }}">{{ $sales->total() }}</span> sales</span>
+    @if($filterStatus)
+      <span>Filtered: <span class="font-semibold {{ $fg }}">{{ ucfirst($filterStatus) }}</span></span>
+    @endif
+    @if($filterSearch)
+      <span>Search: <span class="font-semibold {{ $fg }}">"{{ $filterSearch }}"</span></span>
+    @endif
+  </div>
+
+  {{-- ── DESKTOP TABLE ── --}}
   <div class="hidden md:block overflow-x-auto">
-    <table class="w-full text-sm">
+    <table class="w-full border-collapse">
       <thead>
-        <tr class="border-b {{ $border }} {{ $surface2 }} text-[11px] {{ $muted }} uppercase tracking-wide">
-          <th class="px-4 py-3 text-left font-semibold">Reference</th>
-          <th class="px-4 py-3 text-left font-semibold">Date</th>
-          <th class="px-4 py-3 text-left font-semibold">Client</th>
-          <th class="px-4 py-3 text-left font-semibold">Product · Depot</th>
-          <th class="px-4 py-3 text-right font-semibold">Qty (L)</th>
-          <th class="px-4 py-3 text-right font-semibold">Total</th>
-          <th class="px-4 py-3 text-center font-semibold">Status</th>
-          <th class="px-4 py-3 text-center font-semibold">Invoice</th>
+        <tr class="{{ $surface2 }} border-b {{ $border }}">
+          <th class="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:140px">Reference</th>
+          <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:85px">Date</th>
+          <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}">Client</th>
+          <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}">Product / Depot</th>
+          <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Qty (L)</th>
+          <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:120px">Total</th>
+          <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Margin</th>
+          <th class="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Status</th>
+          <th class="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:120px">Invoice</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-[color:var(--tw-border)]">
-        @forelse($sales as $s)
-          @php $pill = $statusPill($s->status); $inv = $s->invoice; @endphp
-          <tr class="hover:bg-[color:var(--tw-surface-2)] transition cursor-pointer"
-              onclick="window.location='{{ route('sales.index', ['sale' => $s->id]) }}'">
-            <td class="px-4 py-3">
-              <div class="font-mono text-xs {{ $fg }}">{{ $s->reference }}</div>
+      <tbody>
+        @forelse($sales as $i => $s)
+          @php
+            $inv      = $s->invoice;
+            $margin   = (float)$s->total > 0 ? round((float)$s->gross_profit / (float)$s->total * 100, 1) : null;
+            $rowBg    = $i % 2 === 0 ? '' : 'bg-[color:var(--tw-surface-2)]/50';
+          @endphp
+          <tr class="border-b {{ $border }} {{ $rowBg }} hover:bg-emerald-500/5 cursor-pointer transition-colors"
+              onclick="window.location='{{ route('sales.index', ['sale' => $s->id, 'status' => $filterStatus ?: null, 'q' => $filterSearch ?: null]) }}'">
+
+            <td class="px-4 py-2">
+              <span class="font-mono text-[11px] font-semibold {{ $fg }}">{{ $s->reference }}</span>
             </td>
-            <td class="px-4 py-3 text-xs {{ $muted }} whitespace-nowrap">
-              {{ $s->sale_date?->format('d M Y') ?? '—' }}
+
+            <td class="px-3 py-2 whitespace-nowrap">
+              <span class="text-xs {{ $muted }}">{{ $s->sale_date?->format('d M Y') ?? '—' }}</span>
             </td>
-            <td class="px-4 py-3 text-xs {{ $fg }}">
-              {{ $s->client_name ?: ($s->client?->name ?: '—') }}
+
+            <td class="px-3 py-2 max-w-[160px]">
+              <div class="text-xs font-semibold {{ $fg }} truncate">{{ $s->client_name ?: ($s->client?->name ?: '—') }}</div>
             </td>
-            <td class="px-4 py-3 text-xs {{ $muted }}">
-              <div>{{ $s->product?->name ?? '—' }}</div>
-              <div class="text-[10px]">{{ $s->depot?->name ?? '—' }}</div>
+
+            <td class="px-3 py-2">
+              <div class="text-xs {{ $fg }}">{{ $s->product?->name ?? '—' }}</div>
+              <div class="text-[10px] {{ $muted }}">{{ $s->depot?->name ?? '—' }}</div>
             </td>
-            <td class="px-4 py-3 text-right text-xs {{ $fg }} font-semibold whitespace-nowrap">
-              {{ number_format((float)$s->qty, 0) }}
+
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <span class="text-xs font-semibold {{ $fg }} tabular-nums">{{ number_format((float)$s->qty, 0) }}</span>
             </td>
-            <td class="px-4 py-3 text-right text-xs {{ $fg }} font-semibold whitespace-nowrap">
-              {{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 2) }}
+
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <span class="text-xs font-semibold {{ $fg }} tabular-nums">{{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 2) }}</span>
             </td>
-            <td class="px-4 py-3 text-center">
-              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $pill }}">
+
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              @if($margin !== null)
+                <span class="text-xs tabular-nums {{ $margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500' }}">{{ $margin }}%</span>
+              @else
+                <span class="text-xs {{ $muted }}">—</span>
+              @endif
+            </td>
+
+            <td class="px-3 py-2 text-center">
+              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold {{ $statusPill($s->status) }}">
                 {{ ucfirst($s->status) }}
               </span>
             </td>
-            <td class="px-4 py-3 text-center">
+
+            <td class="px-3 py-2 text-center" onclick="event.stopPropagation()">
               @if($inv)
                 <a href="{{ route('invoices.show', $inv) }}"
-                   onclick="event.stopPropagation()"
-                   class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold hover:opacity-80 transition {{ $invoicePill($inv->status) }}">
+                   class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold hover:opacity-75 transition {{ $invoicePill($inv->status) }}">
                   {{ $inv->invoice_number }}
                 </a>
               @else
-                <span class="text-[10px] {{ $muted }}">—</span>
+                <span class="text-[11px] {{ $muted }}">No invoice</span>
               @endif
             </td>
+
           </tr>
         @empty
           <tr>
-            <td colspan="8" class="px-4 py-8 text-center text-sm {{ $muted }}">No sales yet.</td>
+            <td colspan="9" class="px-4 py-10 text-center text-sm {{ $muted }}">
+              @if($filterStatus || $filterSearch)
+                No sales match your filters.
+                <a href="{{ route('sales.index') }}" class="ml-1 text-emerald-500 hover:underline">Clear filters</a>
+              @else
+                No sales yet. <button type="button" id="btnNewSaleEmpty" class="ml-1 text-emerald-500 hover:underline">Create the first one.</button>
+              @endif
+            </td>
           </tr>
         @endforelse
       </tbody>
     </table>
   </div>
 
-  {{-- Mobile card list --}}
-  <div class="md:hidden divide-y divide-[color:var(--tw-border)]">
-    @forelse($sales as $s)
-      @php $pill = $statusPill($s->status); $inv = $s->invoice; @endphp
-      <a href="{{ route('sales.index', ['sale' => $s->id]) }}"
-         class="block px-4 py-3 hover:bg-[color:var(--tw-surface-2)] transition">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <div class="text-[11px] {{ $muted }}">{{ $s->reference }}</div>
-            <div class="mt-0.5 text-sm font-semibold {{ $fg }} truncate">
-              {{ $s->client_name ?: ($s->client?->name ?: '—') }}
+  {{-- ── MOBILE LIST ── compact, no cards --}}
+  <div class="md:hidden">
+    {{-- Mini column headers --}}
+    <div class="flex items-center gap-2 px-3 py-1.5 border-b {{ $border }} {{ $surface2 }} text-[9px] font-bold uppercase tracking-wider {{ $muted }}">
+      <span class="flex-1">Reference / Client</span>
+      <span class="w-16 text-right">Total</span>
+      <span class="w-16 text-center">Status</span>
+    </div>
+    <div class="divide-y divide-[color:var(--tw-border)]">
+      @forelse($sales as $s)
+        @php $inv = $s->invoice; @endphp
+        <a href="{{ route('sales.index', ['sale' => $s->id, 'status' => $filterStatus ?: null, 'q' => $filterSearch ?: null]) }}"
+           class="flex items-center gap-2 px-3 py-2 hover:bg-[color:var(--tw-surface-2)] transition">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline gap-1.5">
+              <span class="font-mono text-[10px] {{ $muted }}">{{ $s->reference }}</span>
+              @if($inv)
+                <span class="inline-flex items-center rounded-full border px-1.5 py-0 text-[9px] font-bold {{ $invoicePill($inv->status) }}">
+                  {{ strtoupper($inv->status) }}
+                </span>
+              @endif
             </div>
-            <div class="mt-1 text-xs {{ $muted }}">
-              {{ $s->product?->name }} · {{ $s->depot?->name }} · {{ $s->sale_date?->format('d M Y') }}
-            </div>
-            <div class="mt-1 text-xs font-semibold {{ $fg }}">
-              {{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 2) }}
-              <span class="{{ $muted }} font-normal">({{ number_format((float)$s->qty, 0) }} L)</span>
-            </div>
+            <div class="text-xs font-semibold {{ $fg }} truncate">{{ $s->client_name ?: ($s->client?->name ?: '—') }}</div>
+            <div class="text-[10px] {{ $muted }}">{{ $s->product?->name }} · {{ $s->sale_date?->format('d M Y') }}</div>
           </div>
-          <div class="shrink-0 flex flex-col items-end gap-1.5">
-            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $pill }}">
+          <div class="w-16 text-right shrink-0">
+            <div class="text-xs font-semibold {{ $fg }} tabular-nums">{{ number_format((float)$s->total, 0) }}</div>
+            <div class="text-[10px] {{ $muted }}">{{ strtoupper($s->currency) }}</div>
+          </div>
+          <div class="w-16 text-center shrink-0">
+            <span class="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold {{ $statusPill($s->status) }}">
               {{ ucfirst($s->status) }}
             </span>
-            @if($inv)
-              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $invoicePill($inv->status) }}">
-                {{ $inv->invoice_number }}
-              </span>
-            @endif
           </div>
+        </a>
+      @empty
+        <div class="px-3 py-6 text-center text-sm {{ $muted }}">
+          @if($filterStatus || $filterSearch)
+            No results. <a href="{{ route('sales.index') }}" class="text-emerald-500">Clear filters</a>
+          @else
+            No sales yet.
+          @endif
         </div>
-      </a>
-    @empty
-      <div class="px-4 py-8 text-center text-sm {{ $muted }}">No sales yet.</div>
-    @endforelse
+      @endforelse
+    </div>
   </div>
 
+  {{-- Pagination --}}
   @if($sales->hasPages())
-    <div class="px-5 py-3 border-t {{ $border }}">{{ $sales->links() }}</div>
+    <div class="px-4 py-3 border-t {{ $border }} {{ $surface2 }}">{{ $sales->links() }}</div>
   @endif
 </div>
+
 @endif
 
-{{-- Extracted modal --}}
+{{-- ── MODAL ── --}}
 @include('sales.partials.sale-modal', [
-  'border' => $border,
-  'surface' => $surface,
-  'surface2' => $surface2,
-  'fg' => $fg,
-  'muted' => $muted,
+  'border'    => $border,
+  'surface'   => $surface,
+  'surface2'  => $surface2,
+  'fg'        => $fg,
+  'muted'     => $muted,
   'fieldBase' => $fieldBase,
-  'fieldErr' => $fieldErr,
-  'errText' => $errText,
-  'depots' => $depots,
-  'products' => $products,
+  'fieldErr'  => $fieldErr,
+  'errText'   => $errText,
+  'depots'    => $depots,
+  'products'  => $products,
   'transporters' => $transporters,
-  'clients' => $clients ?? collect(),
-  'selected' => $selected,
+  'clients'   => $clients ?? collect(),
+  'selected'  => $selected,
 ])
+
+@push('scripts')
+<script>
+// Wire "btnNewSaleEmpty" (empty state button) to same modal trigger
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnNewSaleEmpty');
+  const main = document.getElementById('btnNewSale');
+  if (btn && main) btn.addEventListener('click', () => main.click());
+});
+</script>
+@endpush
 
 @endsection
