@@ -101,6 +101,19 @@
         <p class="text-xs {{ $muted }} leading-relaxed">Outstanding balances, payment history, and printable statements for each supplier.</p>
     </a>
 
+    {{-- AP Aging --}}
+    <a href="{{ route('reports.ap-aging') }}"
+       class="group rounded-2xl border {{ $border }} {{ $surface }} p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 block">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+             style="background:rgba(239,68,68,.10); border:1px solid rgba(239,68,68,.20)">
+            <svg class="w-6 h-6" style="color:#ef4444" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-rose-400 transition">AP Aging</h3>
+        <p class="text-xs {{ $muted }} leading-relaxed">Outstanding payables to suppliers, transporters and depots bucketed by age — current, 31–60, 61–90, 90+.</p>
+    </a>
+
 </div>
 
 @endsection

@@ -79,16 +79,17 @@
     $onReports       = request()->routeIs('reports.*');
     $onPettyCash     = request()->routeIs('petty-cash.*');
     $onBanks         = request()->routeIs('banks.*');
+    $onAccounting    = request()->routeIs('accounting.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">

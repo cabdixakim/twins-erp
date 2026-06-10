@@ -176,6 +176,130 @@ class ReportController extends Controller
         return view('reports.ar-aging', compact('byClient', 'grandTotal', 'asOf', 'clients'));
     }
 
+    /** AP Aging — outstanding supplier + transporter payables bucketed by age */
+    public function apAging(Request $request)
+    {
+        $cid  = $this->cid();
+        $asOf = $request->input('as_of', today()->toDateString());
+
+        // ── Supplier AP ──────────────────────────────────────────────────
+        // Net balance = sum of all entries per supplier (invoices positive, payments negative)
+        $supplierEntries = DB::table('supplier_ledger_entries')
+            ->join('suppliers', 'suppliers.id', '=', 'supplier_ledger_entries.supplier_id')
+            ->where('suppliers.company_id', $cid)
+            ->whereDate('supplier_ledger_entries.entry_date', '<=', $asOf)
+            ->selectRaw('
+                supplier_ledger_entries.supplier_id,
+                suppliers.name as supplier_name,
+                SUM(supplier_ledger_entries.amount) as balance,
+                MIN(CASE WHEN supplier_ledger_entries.type = \'purchase_invoice\' THEN supplier_ledger_entries.entry_date ELSE NULL END) as oldest_invoice
+            ')
+            ->groupBy('supplier_ledger_entries.supplier_id', 'suppliers.name')
+            ->having(DB::raw('SUM(supplier_ledger_entries.amount)'), '>', 0)
+            ->orderByDesc('balance')
+            ->get();
+
+        $asOfDate = \Carbon\Carbon::parse($asOf);
+
+        $supplierRows = $supplierEntries->map(function ($row) use ($asOfDate) {
+            $daysAge = $row->oldest_invoice
+                ? (int) \Carbon\Carbon::parse($row->oldest_invoice)->diffInDays($asOfDate)
+                : 0;
+
+            return (object)[
+                'name'    => $row->supplier_name,
+                'balance' => round((float)$row->balance, 2),
+                'days'    => $daysAge,
+                'bucket'  => match(true) {
+                    $daysAge <= 30  => 'current',
+                    $daysAge <= 60  => '31_60',
+                    $daysAge <= 90  => '61_90',
+                    default         => '90_plus',
+                },
+            ];
+        });
+
+        // ── Transporter AP ────────────────────────────────────────────────
+        $transporterEntries = DB::table('transporter_ledger_entries')
+            ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id', $cid)
+            ->whereDate('transporter_ledger_entries.entry_date', '<=', $asOf)
+            ->selectRaw("
+                transporter_ledger_entries.transporter_id,
+                transporters.name as transporter_name,
+                SUM(CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END) as balance,
+                MIN(CASE WHEN transporter_ledger_entries.type = 'freight_charge' THEN transporter_ledger_entries.entry_date ELSE NULL END) as oldest_charge
+            ")
+            ->groupBy('transporter_ledger_entries.transporter_id', 'transporters.name')
+            ->having(DB::raw("SUM(CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END)"), '>', 0)
+            ->orderByDesc('balance')
+            ->get();
+
+        $transporterRows = $transporterEntries->map(function ($row) use ($asOfDate) {
+            $daysAge = $row->oldest_charge
+                ? (int) \Carbon\Carbon::parse($row->oldest_charge)->diffInDays($asOfDate)
+                : 0;
+
+            return (object)[
+                'name'    => $row->transporter_name,
+                'balance' => round((float)$row->balance, 2),
+                'days'    => $daysAge,
+                'bucket'  => match(true) {
+                    $daysAge <= 30  => 'current',
+                    $daysAge <= 60  => '31_60',
+                    $daysAge <= 90  => '61_90',
+                    default         => '90_plus',
+                },
+            ];
+        });
+
+        // Depot payables
+        $depotEntries = DB::table('depot_ledger_entries')
+            ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
+            ->where('depots.company_id', $cid)
+            ->where('depots.is_system', false)
+            ->whereDate('depot_ledger_entries.created_at', '<=', $asOf)
+            ->selectRaw("
+                depot_ledger_entries.depot_id,
+                depots.name as depot_name,
+                SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END) as balance,
+                MIN(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.created_at ELSE NULL END) as oldest_charge
+            ")
+            ->groupBy('depot_ledger_entries.depot_id', 'depots.name')
+            ->having(DB::raw("SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END)"), '>', 0)
+            ->orderByDesc('balance')
+            ->get();
+
+        $depotRows = $depotEntries->map(function ($row) use ($asOfDate) {
+            $daysAge = $row->oldest_charge
+                ? (int) \Carbon\Carbon::parse($row->oldest_charge)->diffInDays($asOfDate)
+                : 0;
+
+            return (object)[
+                'name'    => $row->depot_name,
+                'balance' => round((float)$row->balance, 2),
+                'days'    => $daysAge,
+                'bucket'  => match(true) {
+                    $daysAge <= 30  => 'current',
+                    $daysAge <= 60  => '31_60',
+                    $daysAge <= 90  => '61_90',
+                    default         => '90_plus',
+                },
+            ];
+        });
+
+        $grandTotals = [
+            'supplier'    => $supplierRows->sum('balance'),
+            'transporter' => $transporterRows->sum('balance'),
+            'depot'       => $depotRows->sum('balance'),
+            'total'       => $supplierRows->sum('balance') + $transporterRows->sum('balance') + $depotRows->sum('balance'),
+        ];
+
+        return view('reports.ap-aging', compact(
+            'supplierRows', 'transporterRows', 'depotRows', 'grandTotals', 'asOf'
+        ));
+    }
+
     /** Volume throughput — purchases received vs. sales posted by month */
     public function throughput(Request $request)
     {

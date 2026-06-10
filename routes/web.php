@@ -419,7 +419,30 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
         Route::get('/', [\App\Http\Controllers\ReportController::class, 'index'])->name('index');
         Route::get('/pl', [\App\Http\Controllers\ReportController::class, 'plByBatch'])->name('pl');
         Route::get('/ar-aging', [\App\Http\Controllers\ReportController::class, 'arAging'])->name('ar-aging');
+        Route::get('/ap-aging', [\App\Http\Controllers\ReportController::class, 'apAging'])->name('ap-aging');
         Route::get('/throughput', [\App\Http\Controllers\ReportController::class, 'throughput'])->name('throughput');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Accounting
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'company.setup', 'active.company'])
+    ->prefix('accounting')
+    ->name('accounting.')
+    ->group(function () {
+        Route::get('/',                    [\App\Http\Controllers\AccountingController::class, 'index'])->name('index');
+        Route::get('/chart-of-accounts',   [\App\Http\Controllers\AccountingController::class, 'chartOfAccounts'])->name('coa');
+        Route::post('/chart-of-accounts',  [\App\Http\Controllers\AccountingController::class, 'storeAccount'])->name('coa.store');
+        Route::patch('/chart-of-accounts/{account}', [\App\Http\Controllers\AccountingController::class, 'updateAccount'])->name('coa.update');
+        Route::delete('/chart-of-accounts/{account}', [\App\Http\Controllers\AccountingController::class, 'destroyAccount'])->name('coa.destroy');
+        Route::post('/chart-of-accounts/seed', [\App\Http\Controllers\AccountingController::class, 'seedAccounts'])->name('coa.seed');
+        Route::get('/pl',                  [\App\Http\Controllers\AccountingController::class, 'pl'])->name('pl');
+        Route::get('/balance-sheet',       [\App\Http\Controllers\AccountingController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/journals',            [\App\Http\Controllers\AccountingController::class, 'journals'])->name('journals');
+        Route::post('/journals',           [\App\Http\Controllers\AccountingController::class, 'storeJournal'])->name('journals.store');
+        Route::get('/trial-balance',       [\App\Http\Controllers\AccountingController::class, 'trialBalance'])->name('trial-balance');
     });
 
 /*
