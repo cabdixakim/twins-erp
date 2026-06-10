@@ -37,14 +37,17 @@ class CompanyController extends Controller
             'owner_password' => 'required|string|min:6',
         ]);
 
-        // 2) Create owner user
-        $ownerRoleId = Role::where('slug', 'owner')->value('id');
+        // 2) Create owner user — ensure owner role exists regardless of migration state
+        $ownerRole = Role::firstOrCreate(
+            ['slug' => 'owner'],
+            ['name' => 'Owner', 'description' => 'Company owner with full access.', 'is_system' => true, 'is_active' => true]
+        );
 
         $user = User::create([
             'name'     => $data['owner_name'],
             'email'    => $data['owner_email'],
             'password' => Hash::make($data['owner_password']),
-            'role_id'  => $ownerRoleId,
+            'role_id'  => $ownerRole->id,
             'status'   => 'active',
         ]);
 
