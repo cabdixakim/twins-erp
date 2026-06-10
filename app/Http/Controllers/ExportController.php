@@ -115,8 +115,9 @@ class ExportController extends Controller
     private function rowsCompanies(): array
     {
         return DB::select("
-            SELECT id, name, code, country, city, address, phone, email,
-                   base_currency, costing_method, is_active, created_at
+            SELECT id, name, code, country, address, phone, email, website,
+                   base_currency, costing_method, timezone,
+                   rccm, id_nat, nif, created_at
             FROM companies WHERE id = ?
         ", [$this->companyId]);
     }
