@@ -14,23 +14,32 @@
         'adjustment'     => ['label' => 'Adjustment',   'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
     ];
 
-    // Fix #4 — currency symbol mapping
+    $advanceTypeMeta = [
+        'trip'    => ['label' => 'Trip advance',    'color' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'],
+        'fuel'    => ['label' => 'Fuel advance',    'color' => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30'],
+        'driver'  => ['label' => 'Driver advance',  'color' => 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border border-yellow-500/30'],
+        'general' => ['label' => 'General advance', 'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
+        'other'   => ['label' => 'Advance',         'color' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'],
+    ];
+
     $currencySymbols = [
         'USD' => '$', 'EUR' => '€', 'GBP' => '£',
         'ZAR' => 'R ', 'CDF' => 'FC ', 'ZMW' => 'K ', 'ZWL' => 'ZWL ',
     ];
     $sym = fn(string $code) => $currencySymbols[$code] ?? ($code . ' ');
+
+    $activeTab = request('tab', 'trips');
 @endphp
 
 @extends('layouts.app')
 
 @section('title', $transporter->name . ' — Ledger')
-@section('subtitle', 'Freight, advances, short charges & payments')
+@section('subtitle', 'Trip advances, freight & payments')
 
 @section('content')
 
 @if(session('status'))
-    <div class="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-600 text-white px-4 py-2.5 text-xs font-semibold">
+    <div class="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300 px-4 py-2.5 text-xs font-semibold">
         {{ session('status') }}
     </div>
 @endif
@@ -50,13 +59,13 @@
         </svg>
         All transporters
     </a>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
         <a href="{{ route('transporters.statement', $transporter) }}" target="_blank"
            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
             </svg>
-            Print statement
+            Statement
         </a>
         <a href="{{ route('transporters.export', $transporter) }}"
            class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
@@ -82,7 +91,7 @@
         <button type="button" onclick="openPaymentModal()"
                 class="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             Payment
         </button>
@@ -99,14 +108,25 @@
                 : 'bg-[color:var(--tw-surface-2)] ' . $muted . ' border ' . $border }}">
             {{ $transporter->is_active ? 'Active' : 'Inactive' }}
         </span>
+        @if($transporter->type)
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
+            {{ $transporter->type === 'local'
+                ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'
+                : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30' }}">
+            {{ $transporter->type === 'local' ? 'Local' : 'International' }}
+        </span>
+        @endif
     </div>
     <p class="text-xs {{ $muted }}">
-        {{ $transporter->type === 'intl' ? 'International transporter' : ($transporter->type === 'local' ? 'Local transporter' : 'Transporter') }}
         @if($transporter->city || $transporter->country)
-            · {{ $transporter->city }}{{ $transporter->city && $transporter->country ? ', ' : '' }}{{ $transporter->country }}
+            {{ $transporter->city }}{{ $transporter->city && $transporter->country ? ', ' : '' }}{{ $transporter->country }}
         @endif
         @if($transporter->contact_person)
-            · {{ $transporter->contact_person }}
+            @if($transporter->city || $transporter->country) · @endif
+            {{ $transporter->contact_person }}
+        @endif
+        @if($transporter->phone)
+            · {{ $transporter->phone }}
         @endif
     </p>
 </div>
@@ -116,22 +136,22 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Freight earned</div>
         <div class="text-base font-bold {{ $fg }}">{{ $sym($currency) }}{{ number_format($freightTotal, 2) }}</div>
-        <div class="text-[10px] {{ $muted }}">Gross from deliveries</div>
+        <div class="text-[10px] {{ $muted }}">Gross from trips</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Advances paid</div>
         <div class="text-base font-bold text-amber-500">{{ $sym($currency) }}{{ number_format($advanceTotal, 2) }}</div>
-        <div class="text-[10px] {{ $muted }}">Upfront payments made</div>
+        <div class="text-[10px] {{ $muted }}">Trip + fuel + driver</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Short charges</div>
         <div class="text-base font-bold text-rose-500">{{ $sym($currency) }}{{ number_format($shortChargeTotal, 2) }}</div>
-        <div class="text-[10px] {{ $muted }}">Deducted for excess loss</div>
+        <div class="text-[10px] {{ $muted }}">Deducted for loss</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Payments made</div>
         <div class="text-base font-bold text-sky-500">{{ $sym($currency) }}{{ number_format($paymentTotal, 2) }}</div>
-        <div class="text-[10px] {{ $muted }}">Settled invoices</div>
+        <div class="text-[10px] {{ $muted }}">Settled to date</div>
     </div>
     <div class="rounded-2xl border {{ $netPayable > 0.005 ? 'border-amber-500/40' : $border }} {{ $surface }} p-4 sm:col-span-1 col-span-2">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">Net payable</div>
@@ -148,16 +168,194 @@
     </div>
 </div>
 
-{{-- Ledger entries --}}
+{{-- Tabs --}}
+<div class="flex gap-1 mb-4 border-b {{ $border }}">
+    <a href="{{ request()->fullUrlWithQuery(['tab' => 'trips']) }}"
+       class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px
+              {{ $activeTab === 'trips'
+                  ? 'border-[color:var(--tw-accent)] text-[color:var(--tw-accent)]'
+                  : 'border-transparent ' . $muted . ' hover:text-[color:var(--tw-fg)]' }}">
+        Trips
+        @if(count($trips) > 0)
+            <span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold
+                {{ $activeTab === 'trips' ? 'bg-[color:var(--tw-accent)]/15 text-[color:var(--tw-accent)]' : 'bg-[color:var(--tw-surface-2)] ' . $muted }}">
+                {{ count($trips) }}
+            </span>
+        @endif
+    </a>
+    <a href="{{ request()->fullUrlWithQuery(['tab' => 'ledger']) }}"
+       class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px
+              {{ $activeTab === 'ledger'
+                  ? 'border-[color:var(--tw-accent)] text-[color:var(--tw-accent)]'
+                  : 'border-transparent ' . $muted . ' hover:text-[color:var(--tw-fg)]' }}">
+        Full ledger
+        <span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold
+            {{ $activeTab === 'ledger' ? 'bg-[color:var(--tw-accent)]/15 text-[color:var(--tw-accent)]' : 'bg-[color:var(--tw-surface-2)] ' . $muted }}">
+            {{ $entries->total() }}
+        </span>
+    </a>
+</div>
+
+{{-- ══ TRIPS TAB ══ --}}
+@if($activeTab === 'trips')
+
+@if(count($trips) === 0)
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} px-5 py-14 text-center">
+        <div class="text-sm font-semibold {{ $fg }} mb-1">No trips yet</div>
+        <div class="text-xs {{ $muted }} max-w-xs mx-auto">
+            Trips appear here when a sale is posted with this transporter. You can also give a
+            <button type="button" onclick="openAdvanceModal()"
+                    class="text-amber-600 dark:text-amber-300 underline underline-offset-2">general advance</button>
+            before any trip is created.
+        </div>
+    </div>
+@else
+    <div class="space-y-3">
+        @foreach($trips as $saleId => $trip)
+            @php
+                $sale     = $trip['sale'];
+                $net      = $trip['net'];
+                $freight  = $trip['freight'];
+                $advTotal = $trip['advances_total'];
+            @endphp
+            <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+                {{-- Trip header --}}
+                <div class="flex items-start justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex-wrap gap-2">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-bold {{ $fg }}">
+                                {{ $sale ? ($sale->reference ?: 'Sale #' . $sale->id) : 'Sale #' . $saleId }}
+                            </span>
+                            @if($sale)
+                                <span class="text-[10px] {{ $muted }}">
+                                    {{ $sale->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('d M Y') : '' }}
+                                </span>
+                                @if($sale->status === 'posted')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">Posted</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">Draft</span>
+                                @endif
+                            @endif
+                        </div>
+                        <div class="text-[11px] {{ $muted }} mt-0.5 flex items-center gap-2 flex-wrap">
+                            @if($sale?->product)
+                                <span>{{ $sale->product->name }}</span>
+                            @endif
+                            @if($sale?->qty)
+                                <span>{{ number_format($sale->qty, 0) }}L</span>
+                            @endif
+                            @if($sale?->depot)
+                                <span>→ {{ $sale->depot->name }}</span>
+                            @endif
+                            @if($sale?->truck_no)
+                                <span class="font-mono">{{ $sale->truck_no }}</span>
+                            @endif
+                            @if($sale?->driver_name)
+                                <span>{{ $sale->driver_name }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-right flex-wrap">
+                        <div class="text-xs">
+                            <div class="{{ $muted }} text-[10px]">Freight</div>
+                            <div class="font-bold {{ $fg }}">{{ $sym($currency) }}{{ number_format($freight, 2) }}</div>
+                        </div>
+                        @if($advTotal > 0)
+                        <div class="text-xs">
+                            <div class="{{ $muted }} text-[10px]">Advances</div>
+                            <div class="font-bold text-amber-500">− {{ $sym($currency) }}{{ number_format($advTotal, 2) }}</div>
+                        </div>
+                        @endif
+                        <div class="text-xs border-l {{ $border }} pl-3">
+                            <div class="{{ $muted }} text-[10px]">Net owed</div>
+                            @if(abs($net) < 0.005)
+                                <div class="font-bold text-emerald-500">Settled</div>
+                            @elseif($net > 0)
+                                <div class="font-bold text-amber-600 dark:text-amber-400">{{ $sym($currency) }}{{ number_format($net, 2) }}</div>
+                            @else
+                                <div class="font-bold text-emerald-500">Overpaid {{ $sym($currency) }}{{ number_format(abs($net), 2) }}</div>
+                            @endif
+                        </div>
+                        <button type="button"
+                                onclick="openAdvanceModal({{ $saleId }}, '{{ addslashes($sale ? ($sale->reference ?: 'Sale #' . $sale->id) : 'Sale #' . $saleId) }}')"
+                                class="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-[11px] font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 transition">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add advance
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Advances for this trip --}}
+                @if($trip['advances']->isNotEmpty())
+                <div class="divide-y divide-[color:var(--tw-border)]">
+                    @foreach($trip['advances'] as $adv)
+                        @php
+                            $am = $advanceTypeMeta[$adv->advance_type ?? 'other'] ?? $advanceTypeMeta['other'];
+                        @endphp
+                        <div class="flex items-center justify-between px-5 py-3 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $am['color'] }}">
+                                    {{ $am['label'] }}
+                                </span>
+                                <span class="text-xs {{ $fg }}">{{ $adv->description }}</span>
+                                <span class="text-[10px] {{ $muted }}">{{ $adv->entry_date->format('d M Y') }}</span>
+                            </div>
+                            <span class="text-xs font-semibold text-rose-500">− {{ $sym($adv->currency) }}{{ number_format(abs($adv->amount), 2) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+                @else
+                <div class="px-5 py-3 text-[11px] {{ $muted }} italic">No advances recorded for this trip.</div>
+                @endif
+            </div>
+        @endforeach
+    </div>
+@endif
+
+{{-- General advances (not linked to a trip) --}}
+@php
+    $generalAdvances = $entries->getCollection()
+        ->where('type', 'advance')
+        ->whereNull('sale_id');
+@endphp
+@if($generalAdvances->isNotEmpty())
+<div class="mt-4 rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+    <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
+        <div class="text-xs font-semibold {{ $fg }}">General advances</div>
+        <div class="text-[10px] {{ $muted }}">Not linked to a specific trip</div>
+    </div>
+    <div class="divide-y divide-[color:var(--tw-border)]">
+        @foreach($generalAdvances as $adv)
+            @php $am = $advanceTypeMeta[$adv->advance_type ?? 'general'] ?? $advanceTypeMeta['general']; @endphp
+            <div class="flex items-center justify-between px-5 py-3 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $am['color'] }}">
+                        {{ $am['label'] }}
+                    </span>
+                    <span class="text-xs {{ $fg }}">{{ $adv->description }}</span>
+                    <span class="text-[10px] {{ $muted }}">{{ $adv->entry_date->format('d M Y') }}</span>
+                </div>
+                <span class="text-xs font-semibold text-rose-500">− {{ $sym($adv->currency) }}{{ number_format(abs($adv->amount), 2) }}</span>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
+{{-- ══ LEDGER TAB ══ --}}
+@else
+
 <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
     <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
-        <div class="text-sm font-semibold {{ $fg }}">Ledger entries</div>
+        <div class="text-sm font-semibold {{ $fg }}">All ledger entries</div>
         <div class="text-xs {{ $muted }}">{{ $entries->total() }} {{ $entries->total() === 1 ? 'entry' : 'entries' }}</div>
     </div>
 
     @if($entries->isEmpty())
         <div class="px-5 py-12 text-center">
-            <div class="text-xs {{ $muted }}">No entries yet. Entries are created automatically when import trucks are delivered, or when you record a payment above.</div>
+            <div class="text-xs {{ $muted }}">No entries yet.</div>
         </div>
     @else
         <div class="overflow-x-auto">
@@ -167,31 +365,52 @@
                         <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
                         <th class="text-left py-2.5 pr-3 font-semibold">Type</th>
                         <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
-                        <th class="text-left py-2.5 pr-3 font-semibold">Reference</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Trip</th>
+                        <th class="text-left py-2.5 pr-3 font-semibold">Ref</th>
                         <th class="text-right py-2.5 pr-5 font-semibold">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($entries as $entry)
                         @php
-                            $meta    = $typeMeta[$entry->type] ?? ['label' => ucfirst($entry->type), 'color' => 'bg-[color:var(--tw-surface-2)] ' . $muted . ' border ' . $border];
-                            $isDebit = $entry->amount > 0;
-                            // Fix #3 — resolve clickable ref link
-                            $linkKey = $entry->ref_type && $entry->ref_id ? $entry->ref_type . ':' . $entry->ref_id : null;
-                            $refUrl  = $linkKey ? ($refLinks[$linkKey] ?? null) : null;
+                            $meta     = $typeMeta[$entry->type] ?? ['label' => ucfirst($entry->type), 'color' => 'bg-[color:var(--tw-surface-2)] ' . $muted . ' border ' . $border];
+                            $isDebit  = $entry->amount > 0;
+                            $linkKey  = $entry->ref_type && $entry->ref_id ? $entry->ref_type . ':' . $entry->ref_id : null;
+                            $refUrl   = $linkKey ? ($refLinks[$linkKey] ?? null) : null;
                             $refLabel = $entry->ref_type ? (class_basename($entry->ref_type) . ' #' . $entry->ref_id) : null;
+
+                            // For advances with an advance_type, show that as a sub-label
+                            $advMeta = $entry->type === 'advance' && $entry->advance_type
+                                ? ($advanceTypeMeta[$entry->advance_type] ?? null)
+                                : null;
                         @endphp
                         <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                             <td class="py-2.5 pl-5 pr-3 {{ $muted }} whitespace-nowrap">
                                 {{ $entry->entry_date->format('d M Y') }}
                             </td>
                             <td class="py-2.5 pr-3 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $meta['color'] }}">
-                                    {{ $meta['label'] }}
-                                </span>
+                                @if($advMeta)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $advMeta['color'] }}">
+                                        {{ $advMeta['label'] }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $meta['color'] }}">
+                                        {{ $meta['label'] }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-2.5 pr-3 {{ $fg }} max-w-xs">
                                 {{ $entry->description }}
+                            </td>
+                            <td class="py-2.5 pr-3 whitespace-nowrap">
+                                @if($entry->sale_id)
+                                    <a href="{{ route('sales.index', ['sale' => $entry->sale_id]) }}"
+                                       class="font-mono text-[10px] text-[color:var(--tw-accent)] hover:underline">
+                                        Sale #{{ $entry->sale_id }}
+                                    </a>
+                                @else
+                                    <span class="{{ $muted }}">—</span>
+                                @endif
                             </td>
                             <td class="py-2.5 pr-3 whitespace-nowrap">
                                 @if($refLabel)
@@ -228,14 +447,16 @@
     @endif
 </div>
 
+@endif
+
 {{-- ── Record advance modal ── --}}
 <div id="advanceModal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
         <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
             <div>
                 <div class="text-sm font-semibold {{ $fg }}">Record advance</div>
-                <div class="text-[10px] {{ $muted }}">Cash paid out before freight is fully earned</div>
+                <div id="advanceModalSubtitle" class="text-[10px] {{ $muted }}">Cash paid out before freight is fully earned</div>
             </div>
             <button type="button" onclick="closeAdvanceModal()"
                     class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
@@ -246,6 +467,70 @@
         </div>
         <form method="POST" action="{{ route('transporters.advances.store', $transporter) }}" class="p-5 space-y-4">
             @csrf
+
+            {{-- Hidden sale_id, populated by JS --}}
+            <input type="hidden" name="sale_id" id="advanceSaleId" value="">
+
+            {{-- Trip indicator (shown when advance is linked to a trip) --}}
+            <div id="advanceTripRow" class="hidden rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 1 2-1m2 0h4m4 0l2 1 1-1V8h-3l-2-3h-4"/>
+                    </svg>
+                    <span id="advanceTripLabel" class="text-xs font-semibold text-amber-600 dark:text-amber-300"></span>
+                </div>
+                <button type="button" onclick="clearTripFromAdvanceModal()"
+                        class="text-[10px] text-amber-600 dark:text-amber-300 underline underline-offset-2">
+                    Change to general
+                </button>
+            </div>
+
+            {{-- Trip selector (shown when no trip pre-selected) --}}
+            <div id="advanceTripSelectRow" class="{{ count($openSales) > 0 ? '' : 'hidden' }}">
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">
+                    Link to a trip <span class="{{ $muted }}">(optional)</span>
+                </label>
+                <select id="advanceTripSelect" onchange="onTripSelectChange(this)"
+                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+                    <option value="">— General advance (not trip-specific) —</option>
+                    @foreach($openSales as $s)
+                        @php
+                            $sLabel = ($s->reference ?: 'Sale #' . $s->id)
+                                . ($s->product ? ' · ' . $s->product->name : '')
+                                . ($s->qty ? ' · ' . number_format($s->qty, 0) . 'L' : '')
+                                . ($s->depot ? ' → ' . $s->depot->name : '');
+                        @endphp
+                        <option value="{{ $s->id }}" data-label="{{ $s->reference ?: 'Sale #' . $s->id }}">
+                            {{ $sLabel }}
+                        </option>
+                    @endforeach
+                </select>
+                <p class="text-[10px] {{ $muted }} mt-1">Linking to a trip shows this advance in the trip breakdown.</p>
+            </div>
+
+            {{-- Advance type --}}
+            <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Advance type</label>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    @foreach([
+                        'trip'    => 'Trip advance',
+                        'fuel'    => 'Fuel advance',
+                        'driver'  => 'Driver advance',
+                        'general' => 'General',
+                        'other'   => 'Other',
+                    ] as $val => $lbl)
+                    <label class="flex items-center gap-2 h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} cursor-pointer text-xs {{ $fg }}">
+                        <input type="radio" name="advance_type" value="{{ $val }}"
+                               class="accent-amber-500"
+                               {{ $val === 'trip' ? 'checked' : '' }}>
+                        {{ $lbl }}
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Amount --}}
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
                 <div class="flex items-center gap-2">
@@ -256,29 +541,42 @@
                            class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
                 </div>
             </div>
+
+            {{-- Date --}}
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Date</label>
                 <input type="date" name="entry_date" required value="{{ date('Y-m-d') }}"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
+
+            {{-- Note --}}
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Note <span class="{{ $muted }}">(optional)</span></label>
-                <input type="text" name="description" placeholder="e.g. Fuel advance for trip to Lubumbashi"
+                <input type="text" name="description" placeholder="e.g. Driver cash before Lubumbashi trip"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
+
+            {{-- Petty cash source --}}
             @if($pettyCashAccounts->isNotEmpty())
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Pay from petty cash <span class="{{ $muted }}">(optional)</span></label>
                 <select name="petty_cash_account_id"
                         class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40">
-                    <option value="">— Cash out separately —</option>
+                    <option value="">— Record cash separately —</option>
                     @foreach($pettyCashAccounts as $pca)
                         <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
                     @endforeach
                 </select>
-                <p class="text-[10px] {{ $muted }} mt-1">If selected, a matching expense is posted to that petty cash account.</p>
+                <p class="text-[10px] {{ $muted }} mt-1">If selected, deducted from that cash float automatically.</p>
             </div>
             @endif
+
+            @if($errors->any())
+                <div class="text-xs text-rose-500 space-y-0.5">
+                    @foreach($errors->all() as $err)<div>{{ $err }}</div>@endforeach
+                </div>
+            @endif
+
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="closeAdvanceModal()"
                         class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
@@ -339,7 +637,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason <span class="text-rose-400">*</span></label>
-                <input type="text" name="description" required placeholder="e.g. Overcharge correction — Trip #4"
+                <input type="text" name="description" required placeholder="e.g. Overcharge correction"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
             <div class="flex justify-end gap-2 pt-1">
@@ -360,7 +658,6 @@
 <div id="paymentModal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-
         <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
             <div class="text-sm font-semibold {{ $fg }}">Record payment</div>
             <button type="button" onclick="closePaymentModal()"
@@ -370,10 +667,8 @@
                 </svg>
             </button>
         </div>
-
         <form method="POST" action="{{ route('transporters.payments.store', $transporter) }}" class="p-5 space-y-4">
             @csrf
-
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
                 <div class="flex items-center gap-2">
@@ -384,23 +679,19 @@
                            placeholder="0.00"
                            class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
                 </div>
-                <p class="text-[10px] {{ $muted }} mt-1">Currency locked to this transporter's default ({{ $currency }}).</p>
             </div>
-
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Payment date</label>
                 <input type="date" name="entry_date" required
                        value="{{ date('Y-m-d') }}"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
-
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Note <span class="{{ $muted }}">(optional)</span></label>
                 <input type="text" name="description"
-                       placeholder="e.g. Bank transfer, Ref #12345"
+                       placeholder="e.g. Bank transfer ref #12345"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
-
             @if($pettyCashAccounts->isNotEmpty())
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Pay from petty cash <span class="{{ $muted }}">(optional)</span></label>
@@ -411,16 +702,13 @@
                         <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
                     @endforeach
                 </select>
-                <p class="text-[10px] {{ $muted }} mt-1">If selected, a matching expense is posted to that petty cash account.</p>
             </div>
             @endif
-
             @if($errors->any())
                 <div class="text-xs text-rose-500 space-y-0.5">
                     @foreach($errors->all() as $err)<div>{{ $err }}</div>@endforeach
                 </div>
             @endif
-
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="closePaymentModal()"
                         class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
@@ -439,10 +727,46 @@
 <script>
 function openPaymentModal()    { document.getElementById('paymentModal').classList.remove('hidden'); }
 function closePaymentModal()   { document.getElementById('paymentModal').classList.add('hidden'); }
-function openAdvanceModal()    { document.getElementById('advanceModal').classList.remove('hidden'); }
-function closeAdvanceModal()   { document.getElementById('advanceModal').classList.add('hidden'); }
 function openAdjustmentModal() { document.getElementById('adjustmentModal').classList.remove('hidden'); }
 function closeAdjustmentModal(){ document.getElementById('adjustmentModal').classList.add('hidden'); }
+
+function openAdvanceModal(saleId, saleLabel) {
+    const modal = document.getElementById('advanceModal');
+    modal.classList.remove('hidden');
+
+    if (saleId) {
+        // Pre-link to this trip
+        document.getElementById('advanceSaleId').value = saleId;
+        document.getElementById('advanceTripLabel').textContent = saleLabel || ('Sale #' + saleId);
+        document.getElementById('advanceTripRow').classList.remove('hidden');
+        document.getElementById('advanceTripSelectRow').classList.add('hidden');
+        document.getElementById('advanceModalSubtitle').textContent = 'Advance for: ' + (saleLabel || 'Trip #' + saleId);
+    } else {
+        // General / user picks trip from dropdown
+        document.getElementById('advanceSaleId').value = '';
+        document.getElementById('advanceTripRow').classList.add('hidden');
+        document.getElementById('advanceTripSelectRow').classList.remove('hidden');
+        document.getElementById('advanceModalSubtitle').textContent = 'Cash paid out before freight is fully earned';
+        // Reset select
+        const sel = document.getElementById('advanceTripSelect');
+        if (sel) sel.value = '';
+    }
+}
+
+function closeAdvanceModal() {
+    document.getElementById('advanceModal').classList.add('hidden');
+}
+
+function clearTripFromAdvanceModal() {
+    document.getElementById('advanceSaleId').value = '';
+    document.getElementById('advanceTripRow').classList.add('hidden');
+    document.getElementById('advanceTripSelectRow').classList.remove('hidden');
+    document.getElementById('advanceModalSubtitle').textContent = 'Cash paid out before freight is fully earned';
+}
+
+function onTripSelectChange(sel) {
+    document.getElementById('advanceSaleId').value = sel.value;
+}
 
 ['paymentModal','advanceModal','adjustmentModal'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', function(e) {

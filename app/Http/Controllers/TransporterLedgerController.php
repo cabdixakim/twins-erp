@@ -10,6 +10,7 @@ use App\Models\ImportTruck;
 use App\Models\ImportNomination;
 use App\Models\PettyCashAccount;
 use App\Models\PettyCashTransaction;
+use App\Models\Sale;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransporterLedgerController extends Controller
@@ -46,7 +47,7 @@ class TransporterLedgerController extends Controller
             ->where('transporter_id', $transporter->id)
             ->orderByDesc('entry_date')
             ->orderByDesc('id')
-            ->paginate(30);
+            ->paginate(50);
 
         $breakdown = TransporterLedgerEntry::where('company_id', $cid)
             ->where('transporter_id', $transporter->id)
@@ -62,7 +63,62 @@ class TransporterLedgerController extends Controller
 
         $currency = $transporter->default_currency ?: 'USD';
 
-        // Build clickable reference links
+        // Build per-trip summary: group freight_charge entries by sale_id
+        // Then find advances linked to the same sale_id
+        $tripSaleIds = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->where('type', 'freight_charge')
+            ->whereNotNull('ref_id')
+            ->where('ref_type', Sale::class)
+            ->pluck('ref_id')
+            ->unique();
+
+        $tripSales = Sale::whereIn('id', $tripSaleIds)
+            ->with(['product', 'depot'])
+            ->orderByDesc('sale_date')
+            ->get()
+            ->keyBy('id');
+
+        // Load all entries for trip sales (freight + advances)
+        $tripEntries = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->where(function ($q) use ($tripSaleIds) {
+                $q->whereIn('sale_id', $tripSaleIds)
+                  ->orWhere(function ($q2) use ($tripSaleIds) {
+                      $q2->where('type', 'freight_charge')
+                         ->where('ref_type', Sale::class)
+                         ->whereIn('ref_id', $tripSaleIds);
+                  });
+            })
+            ->get();
+
+        // Build trip rows
+        $trips = [];
+        foreach ($tripSaleIds as $saleId) {
+            $sale    = $tripSales[$saleId] ?? null;
+            $freight = $tripEntries
+                ->where('type', 'freight_charge')
+                ->where('ref_type', Sale::class)
+                ->where('ref_id', $saleId)
+                ->sum('amount');
+            $tripAdvances = $tripEntries
+                ->where('sale_id', $saleId)
+                ->where('type', 'advance');
+            $advancesTotal = abs($tripAdvances->sum('amount'));
+            $trips[$saleId] = [
+                'sale'           => $sale,
+                'freight'        => (float) $freight,
+                'advances'       => $tripAdvances->values(),
+                'advances_total' => $advancesTotal,
+                'net'            => (float) $freight - $advancesTotal,
+            ];
+        }
+        // Sort trips by sale date desc
+        uasort($trips, fn($a, $b) =>
+            ($b['sale']?->sale_date ?? now()) <=> ($a['sale']?->sale_date ?? now())
+        );
+
+        // Build clickable reference links for ledger tab
         $allEntries = $entries->getCollection();
 
         $truckIds = $allEntries
@@ -100,16 +156,23 @@ class TransporterLedgerController extends Controller
             }
         }
 
-        // Sale freight charge reference links
-        $saleEntries = $allEntries->where('ref_type', \App\Models\Sale::class);
+        $saleEntries = $allEntries->where('ref_type', Sale::class);
         foreach ($saleEntries as $e) {
-            $key = \App\Models\Sale::class . ':' . $e->ref_id;
+            $key = Sale::class . ':' . $e->ref_id;
             if (!isset($refLinks[$key])) {
                 $refLinks[$key] = route('sales.index', ['sale' => $e->ref_id]);
             }
         }
 
-        // Load petty cash accounts for payment/advance modals
+        // Load open/posted sales for this transporter (for advance trip selector)
+        $openSales = Sale::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->whereIn('status', ['draft', 'posted'])
+            ->with(['product', 'depot'])
+            ->orderByDesc('sale_date')
+            ->limit(50)
+            ->get();
+
         $pettyCashAccounts = PettyCashAccount::where('company_id', $cid)
             ->where('is_active', true)
             ->orderBy('name')
@@ -118,7 +181,8 @@ class TransporterLedgerController extends Controller
         return view('transporters.show', compact(
             'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
-            'netPayable', 'currency', 'pettyCashAccounts'
+            'netPayable', 'currency', 'pettyCashAccounts',
+            'trips', 'openSales'
         ));
     }
 
@@ -128,9 +192,9 @@ class TransporterLedgerController extends Controller
         abort_if((int) $transporter->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'               => 'required|numeric|min:0.01',
-            'entry_date'           => 'required|date',
-            'description'          => 'nullable|string|max:500',
+            'amount'                => 'required|numeric|min:0.01',
+            'entry_date'            => 'required|date',
+            'description'           => 'nullable|string|max:500',
             'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
@@ -180,22 +244,50 @@ class TransporterLedgerController extends Controller
         abort_if((int) $transporter->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'               => 'required|numeric|min:0.01',
-            'entry_date'           => 'required|date',
-            'description'          => 'nullable|string|max:500',
+            'amount'                => 'required|numeric|min:0.01',
+            'entry_date'            => 'required|date',
+            'advance_type'          => 'required|in:trip,fuel,driver,general,other',
+            'sale_id'               => 'nullable|integer|exists:sales,id',
+            'description'           => 'nullable|string|max:500',
             'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
+        // Validate sale belongs to this company + transporter
+        $sale = null;
+        if (!empty($data['sale_id'])) {
+            $sale = Sale::where('company_id', $cid)
+                ->where('transporter_id', $transporter->id)
+                ->where('id', (int) $data['sale_id'])
+                ->first();
+            if (!$sale) {
+                return back()->withErrors(['sale_id' => 'Invalid trip selected.'])->withInput();
+            }
+        }
+
         $currency = $transporter->default_currency ?: 'USD';
 
-        DB::transaction(function () use ($cid, $transporter, $data, $currency) {
+        $advanceLabels = [
+            'trip'    => 'Trip advance',
+            'fuel'    => 'Fuel advance',
+            'driver'  => 'Driver advance',
+            'general' => 'General advance',
+            'other'   => 'Advance',
+        ];
+        $label = $advanceLabels[$data['advance_type']] ?? 'Advance';
+
+        $defaultDesc = $label . ' — ' . $transporter->name
+            . ($sale ? ' · Sale ' . ($sale->reference ?: '#' . $sale->id) : '');
+
+        DB::transaction(function () use ($cid, $transporter, $data, $currency, $sale, $defaultDesc) {
             $entry = TransporterLedgerEntry::create([
                 'company_id'     => $cid,
                 'transporter_id' => $transporter->id,
                 'type'           => 'advance',
+                'advance_type'   => $data['advance_type'],
+                'sale_id'        => $sale?->id,
                 'amount'         => -(float) $data['amount'],
                 'currency'       => $currency,
-                'description'    => $data['description'] ?: 'Advance to transporter',
+                'description'    => $data['description'] ?: $defaultDesc,
                 'entry_date'     => $data['entry_date'],
                 'created_by'     => auth()->id(),
             ]);
@@ -211,8 +303,7 @@ class TransporterLedgerController extends Controller
                     'type'             => 'transporter_advance',
                     'amount'           => -(float) $data['amount'],
                     'currency'         => $currency,
-                    'description'      => 'Driver advance — ' . $transporter->name
-                                         . ($data['description'] ? ' · ' . $data['description'] : ''),
+                    'description'      => $entry->description,
                     'transaction_date' => $data['entry_date'],
                     'ref_type'         => TransporterLedgerEntry::class,
                     'ref_id'           => $entry->id,
@@ -223,7 +314,7 @@ class TransporterLedgerController extends Controller
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
-            ->with('status', 'Advance of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
+            ->with('status', $label . ' of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
     }
 
     public function recordAdjustment(Request $request, Transporter $transporter)
@@ -308,13 +399,15 @@ class TransporterLedgerController extends Controller
 
         return response()->streamDownload(function () use ($entries, &$running) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Date', 'Type', 'Description', 'Debit', 'Credit', 'Running Balance', 'Currency']);
+            fputcsv($out, ['Date', 'Type', 'Advance Type', 'Trip (Sale Ref)', 'Description', 'Debit', 'Credit', 'Running Balance', 'Currency']);
             foreach ($entries as $e) {
                 $running += (float) $e->amount;
                 $isDebit  = $e->amount > 0;
                 fputcsv($out, [
                     $e->entry_date->format('Y-m-d'),
                     $e->type,
+                    $e->advance_type ?? '',
+                    $e->sale_id ? ('Sale #' . $e->sale_id) : '',
                     $e->description,
                     $isDebit  ? number_format((float) $e->amount,        2, '.', '') : '',
                     !$isDebit ? number_format(abs((float) $e->amount), 2, '.', '') : '',

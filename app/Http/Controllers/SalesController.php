@@ -439,6 +439,7 @@ class SalesController extends Controller
                             'company_id'     => (int) $sale->company_id,
                             'transporter_id' => (int) $sale->transporter_id,
                             'type'           => 'freight_charge',
+                            'sale_id'        => $sale->id,
                             'amount'         => (float) $sale->freight_amount,
                             'currency'       => $sale->freight_currency ?: 'USD',
                             'description'    => 'Freight — Sale ' . $sale->reference,
