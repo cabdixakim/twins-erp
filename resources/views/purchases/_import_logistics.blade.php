@@ -503,26 +503,6 @@
           </div>
         </div>
 
-        {{-- Hospitality --}}
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Hospitality / border fee <span class="{{ $muted }}">per truck</span></label>
-            <input type="number" name="hospitality_rate" step="0.01" min="0"
-                   value="{{ $nom ? $nom->hospitality_rate : '0' }}"
-                   placeholder="0.00"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Hospitality currency</label>
-            <select name="hospitality_currency"
-                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-              @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
-                <option value="{{ $cur }}" {{ ($nom ? ($nom->hospitality_currency ?? 'USD') : 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
-              @endforeach
-            </select>
-          </div>
-        </div>
-
         <div class="grid grid-cols-2 gap-3">
           {{-- Advances --}}
           <div>
@@ -993,9 +973,6 @@
           <div class="alert-warn rounded-xl p-3 text-xs space-y-1">
             <div class="font-semibold">Shortfall rule (from nomination — edit nomination to change):</div>
             <div>Allowed loss: <strong>{{ $nom->allowed_loss_pct }}%</strong> of qty loaded. Excess charged at <strong>{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}{{ $rateLabel }}</strong>.</div>
-            @if((float)$nom->hospitality_rate > 0)
-              <div>Hospitality per truck: {{ $nom->hospitality_currency }} {{ number_format($nom->hospitality_rate, 2) }}.</div>
-            @endif
           </div>
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">

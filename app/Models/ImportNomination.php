@@ -28,6 +28,9 @@ class ImportNomination extends Model
         'volume_unit',
     ];
 
+    // Note: hospitality_rate / hospitality_currency removed — storage fee
+    // is a depot charge config, not a per-nomination field.
+
     protected $casts = [
         'rate_per_1000l'    => 'decimal:4',
         'allowed_loss_pct'  => 'decimal:4',

@@ -28,14 +28,10 @@ class ImportNominationController extends Controller
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
             'short_charge_rate'     => 'required|numeric|min:0',
             'short_charge_currency' => 'required|string|max:8',
-            'hospitality_rate'      => 'nullable|numeric|min:0',
-            'hospitality_currency'  => 'nullable|string|max:8',
             'advances'              => 'nullable|numeric|min:0',
             'advances_currency'     => 'required|string|max:8',
             'notes'                 => 'nullable|string|max:2000',
         ]);
-        $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
-        $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
         $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
 
         if ($purchase->importNomination) {
@@ -84,14 +80,10 @@ class ImportNominationController extends Controller
             'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
             'short_charge_rate'     => 'required|numeric|min:0',
             'short_charge_currency' => 'required|string|max:8',
-            'hospitality_rate'      => 'nullable|numeric|min:0',
-            'hospitality_currency'  => 'nullable|string|max:8',
             'advances'              => 'nullable|numeric|min:0',
             'advances_currency'     => 'required|string|max:8',
             'notes'                 => 'nullable|string|max:2000',
         ]);
-        $data['hospitality_rate']     = (float) ($data['hospitality_rate'] ?? 0);
-        $data['hospitality_currency'] = $data['hospitality_currency'] ?? 'USD';
         $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
 
         $nomination->update(array_merge($data, [
@@ -253,36 +245,6 @@ class ImportNominationController extends Controller
         ]);
 
         $truck->update(array_merge($data, ['status' => 'border_cleared']));
-
-        // Auto-post hospitality as a batch cost if a rate is configured (idempotent per truck)
-        if ($purchase->batch_id && (float) $nomination->hospitality_rate > 0) {
-            $hospExists = DB::table('batch_costs')
-                ->where('batch_id', $purchase->batch_id)
-                ->where('truck_id', $truck->id)
-                ->where('category', 'hospitality')
-                ->exists();
-            if (!$hospExists) {
-                DB::table('batch_costs')->insert([
-                    'batch_id'            => $purchase->batch_id,
-                    'purchase_id'         => $purchase->id,
-                    'nomination_id'       => $nomination->id,
-                    'truck_id'            => $truck->id,
-                    'company_id'          => $cid,
-                    'category'            => 'hospitality',
-                    'description'         => "Border hospitality — truck {$truck->truck_reg}",
-                    'amount'              => (float) $nomination->hospitality_rate,
-                    'currency'            => $nomination->hospitality_currency ?? 'USD',
-                    'exchange_rate'       => 1,
-                    'amount_base'         => (float) $nomination->hospitality_rate,
-                    'entry_date'          => $data['border_date'],
-                    'is_included_in_cost' => false,
-                    'auto_posted'         => true,
-                    'created_by'          => auth()->id(),
-                    'created_at'          => now(),
-                    'updated_at'          => now(),
-                ]);
-            }
-        }
 
         return back()->with('status', "Border clearance recorded for {$truck->truck_reg}.");
     }

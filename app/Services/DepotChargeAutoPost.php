@@ -53,14 +53,8 @@ class DepotChargeAutoPost
                 continue;
             }
 
-            // Resolve rate (nomination-level storage override takes priority)
-            if ($config->category === 'storage' && (float) $nomination->hospitality_rate > 0) {
-                $rate     = (float) $nomination->hospitality_rate;
-                $currency = $nomination->hospitality_currency ?? $config->currency;
-            } else {
-                $rate     = (float) $config->rate;
-                $currency = $config->currency;
-            }
+            $rate     = (float) $config->rate;
+            $currency = $config->currency;
 
             // Calculate amount
             $amount = self::calculateAmount($config, $rate, $qtyM3, $deliveryDate);
@@ -290,13 +284,8 @@ class DepotChargeAutoPost
         $rows    = [];
 
         foreach ($configs as $config) {
-            if ($config->category === 'storage' && (float) $nomination->hospitality_rate > 0) {
-                $rate     = (float) $nomination->hospitality_rate;
-                $currency = $nomination->hospitality_currency ?? $config->currency;
-            } else {
-                $rate     = (float) $config->rate;
-                $currency = $config->currency;
-            }
+            $rate     = (float) $config->rate;
+            $currency = $config->currency;
 
             $amount  = self::calculateAmount($config, $rate, $qtyM3, $deliveryDate);
             $rows[]  = [
