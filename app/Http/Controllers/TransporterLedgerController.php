@@ -350,6 +350,55 @@ class TransporterLedgerController extends Controller
             ->with('status', 'Adjustment of ' . $sym . number_format($data['amount'], 2) . ' (' . $data['direction'] . ') recorded.');
     }
 
+    public function settle(Request $request, Transporter $transporter)
+    {
+        $cid = (int) auth()->user()->active_company_id;
+        abort_if((int) $transporter->company_id !== $cid, 403);
+
+        $data = $request->validate([
+            'settlement_date' => 'required|date',
+            'note'            => 'nullable|string|max:500',
+        ]);
+
+        $currency = $transporter->default_currency ?: 'USD';
+
+        $balance = (float) TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->sum('amount');
+
+        if (abs($balance) < 0.01) {
+            return back()->with('error', 'Balance is already zero — nothing to settle.');
+        }
+
+        $description = $data['note'] ?: 'Account settled — balance cleared to zero';
+
+        TransporterLedgerEntry::create([
+            'company_id'     => $cid,
+            'transporter_id' => $transporter->id,
+            'type'           => 'settlement',
+            'amount'         => -$balance,
+            'currency'       => $currency,
+            'description'    => $description,
+            'entry_date'     => $data['settlement_date'],
+            'created_by'     => auth()->id(),
+        ]);
+
+        \App\Models\AuditLog::record(
+            'settled',
+            "Transporter {$transporter->name} account settled — {$currency} " . number_format(abs($balance), 2) . ' cleared',
+            $transporter,
+            "Transporter {$transporter->name}",
+            severity: 'warning',
+            after: ['settled_balance' => $balance, 'currency' => $currency],
+            module: 'Transport',
+        );
+
+        $sym = self::currencySymbol($currency);
+        $dir = $balance > 0 ? 'paid to transporter' : 'recovered from transporter';
+        return redirect()->route('transporters.show', $transporter)
+            ->with('status', 'Account settled. ' . $sym . number_format(abs($balance), 2) . ' ' . $dir . '.');
+    }
+
     public function statement(Transporter $transporter)
     {
         $cid = (int) auth()->user()->active_company_id;

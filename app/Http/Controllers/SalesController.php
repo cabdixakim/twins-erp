@@ -494,6 +494,20 @@ class SalesController extends Controller
                     module: 'Sale',
                 );
             });
+
+            // Auto-post journal entries — non-blocking, silently skips if CoA not seeded
+            try {
+                \App\Services\JournalAutoPost::for((int) $sale->company_id)
+                    ->postSale(
+                        saleId:      $sale->id,
+                        reference:   $sale->reference,
+                        revenue:     (float) $sale->total,
+                        cogs:        (float) ($sale->cogs_total ?? 0),
+                        currency:    $sale->currency ?? 'USD',
+                        description: 'Sale ' . $sale->reference
+                    );
+            } catch (\Throwable) {}
+
         } catch (\RuntimeException $e) {
             if (str_contains($e->getMessage(), 'Insufficient stock')) {
                 return back()->withErrors(['qty' => 'Insufficient stock in depot for this product.'])->withInput();

@@ -368,6 +368,76 @@
       </a>
   </section>
 
+  {{-- ── Financial Snapshot ──────────────────────────────────── --}}
+  <section>
+      <h2 class="text-[11px] font-semibold uppercase tracking-widest tw-muted mb-3">Financial Snapshot — {{ now()->format('F Y') }}</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+          {{-- Revenue MTD --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center gap-3 mb-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.20)">
+                      <svg class="w-4.5 h-4.5" style="color:#10b981;width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
+                      </svg>
+                  </div>
+                  <p class="text-xs tw-muted">Revenue MTD</p>
+              </div>
+              <p class="text-2xl font-bold" style="color:#10b981">
+                  {{ number_format($revenueMtd, 0) }}
+                  <span class="text-sm font-semibold" style="color:#10b981;opacity:.7">USD</span>
+              </p>
+              <p class="text-xs tw-muted mt-2">{{ number_format($salesCountMtd) }} posted {{ Str::plural('sale', $salesCountMtd) }} this month</p>
+          </div>
+
+          {{-- Gross Profit MTD --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center gap-3 mb-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.20)">
+                      <svg class="w-4.5 h-4.5" style="color:#f59e0b;width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"/>
+                      </svg>
+                  </div>
+                  <p class="text-xs tw-muted">Gross Profit MTD</p>
+              </div>
+              <p class="text-2xl font-bold" style="color:#f59e0b">
+                  {{ number_format($grossProfitMtd, 0) }}
+                  <span class="text-sm font-semibold" style="color:#f59e0b;opacity:.7">USD</span>
+              </p>
+              <p class="text-xs tw-muted mt-2">
+                  @if($grossMarginPct > 0)
+                      {{ $grossMarginPct }}% gross margin
+                  @else
+                      No margin data yet
+                  @endif
+              </p>
+          </div>
+
+          {{-- Net Position (AR - AP) --}}
+          <div class="tw-card rounded-2xl p-5">
+              <div class="flex items-center gap-3 mb-3">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                       style="background:{{ $netPosition >= 0 ? 'rgba(14,165,233,.10)' : 'rgba(239,68,68,.10)' }}; border:1px solid {{ $netPosition >= 0 ? 'rgba(14,165,233,.20)' : 'rgba(239,68,68,.20)' }}">
+                      <svg class="w-4.5 h-4.5" style="color:{{ $netPosition >= 0 ? '#0ea5e9' : '#ef4444' }};width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+                      </svg>
+                  </div>
+                  <p class="text-xs tw-muted">Net Position (AR − AP)</p>
+              </div>
+              <p class="text-2xl font-bold" style="color:{{ $netPosition >= 0 ? '#0ea5e9' : '#ef4444' }}">
+                  {{ $netPosition < 0 ? '-' : '' }}{{ number_format(abs($netPosition), 0) }}
+                  <span class="text-sm font-semibold" style="color:{{ $netPosition >= 0 ? '#0ea5e9' : '#ef4444' }};opacity:.7">USD</span>
+              </p>
+              <p class="text-xs tw-muted mt-2">
+                  {{ $netPosition >= 0 ? 'Net creditor position' : 'Net debtor position — AP exceeds AR' }}
+              </p>
+          </div>
+
+      </div>
+  </section>
+
   {{-- ── Throughput Chart ─────────────────────────────────────── --}}
   @php
       $chartLabels    = json_encode($chartLabels ?? []);

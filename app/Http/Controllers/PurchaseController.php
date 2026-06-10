@@ -672,6 +672,18 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         module: 'Purchase',
     );
 
+    // Auto-post journal entries — non-blocking, silently skips if CoA not seeded
+    try {
+        \App\Services\JournalAutoPost::for((int) $purchase->company_id)
+            ->postPurchaseReceipt(
+                purchaseId:  $purchase->id,
+                reference:   $purchase->reference,
+                amount:      round((float) $purchase->qty * (float) $purchase->unit_price, 2),
+                currency:    $purchase->currency ?? 'USD',
+                description: 'Purchase ' . $purchase->reference . ' — depot receipt'
+            );
+    } catch (\Throwable) {}
+
     return redirect()->route('purchases.show', $purchase)
         ->with('status', 'Purchase received into depot. Depot stock updated.');
 }

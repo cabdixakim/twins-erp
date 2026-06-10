@@ -497,15 +497,26 @@
         </button>
     @endif
 
+    @if($canPay && $invoice->type === 'invoice')
+        <button onclick="document.getElementById('modal-credit').classList.add('open')" class="ab-btn ab-btn-ghost">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>
+            Credit Note
+        </button>
+    @endif
+
     @if($canVoid)
         <button onclick="document.getElementById('modal-void').classList.add('open')" class="ab-btn ab-btn-danger">
             Void
         </button>
     @endif
 
+    <a href="{{ route('invoices.pdf', $invoice) }}" class="ab-btn ab-btn-print" target="_blank">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+    </a>
     <button onclick="window.print()" class="ab-btn ab-btn-print">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Print / PDF
+        Print
     </button>
 </div>
 
@@ -772,6 +783,44 @@
 </div>
 
 {{-- Void modal --}}
+{{-- ── Credit Note Modal ──────────────────────────────────────────────────── --}}
+<div class="modal-overlay" id="modal-credit">
+    <div class="modal-box">
+        <h3 class="modal-title">Issue Credit Note</h3>
+        <p class="modal-sub">Creates a credit note reducing the outstanding balance on this invoice.</p>
+        <form method="POST" action="{{ route('invoices.credit-note', $invoice) }}">
+            @csrf
+            <div class="form-group">
+                <label class="form-label">Amount to credit ({{ $invoice->currency }})</label>
+                <input type="number" name="amount" step="0.01" min="0.01"
+                       max="{{ number_format(max(0, (float)$invoice->total - (float)$invoice->paid_amount), 2, '.', '') }}"
+                       value="{{ number_format(max(0, (float)$invoice->total - (float)$invoice->paid_amount), 2, '.', '') }}"
+                       class="form-input" required>
+                <p style="font-size:11px;color:#94a3b8;margin-top:4px">
+                    Balance due: {{ $invoice->currency }} {{ number_format(max(0,(float)$invoice->total-(float)$invoice->paid_amount),2) }}
+                </p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason</label>
+                <input type="text" name="reason" placeholder="e.g. Return, pricing error, early payment discount…"
+                       class="form-input" required maxlength="500">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Credit Note Date</label>
+                <input type="date" name="issued_date" value="{{ now()->format('Y-m-d') }}"
+                       class="form-input" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="document.getElementById('modal-credit').classList.remove('open')"
+                        class="btn-sm btn-cancel-modal">Cancel</button>
+                <button type="submit" class="btn-sm" style="background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3)">
+                    Issue Credit Note
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modal-void">
     <div class="modal-card">
         <div class="modal-title">Void Invoice?</div>
@@ -789,6 +838,72 @@
         </form>
     </div>
 </div>
+
+{{-- ── Credit Notes issued ────────────────────────────────────────────────── --}}
+@if($creditNotes->isNotEmpty())
+<div class="page-wrap" style="padding-top:0">
+    <div style="width:100%;max-width:820px">
+        <div style="background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden;margin-bottom:24px">
+            <div style="padding:18px 24px;border-bottom:1px solid #e2e8f0">
+                <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0">Credit Notes</h3>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+                <thead>
+                    <tr style="background:#f8fafc">
+                        <th style="padding:10px 16px;text-align:left;color:#64748b;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Number</th>
+                        <th style="padding:10px 16px;text-align:left;color:#64748b;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Date</th>
+                        <th style="padding:10px 16px;text-align:right;color:#64748b;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Amount</th>
+                        <th style="padding:10px 16px;text-align:left;color:#64748b;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($creditNotes as $cn)
+                    <tr style="border-top:1px solid #f1f5f9">
+                        <td style="padding:10px 16px;font-weight:600;color:#3b82f6">{{ $cn->invoice_number }}</td>
+                        <td style="padding:10px 16px;color:#64748b">{{ $cn->issued_date->format('d M Y') }}</td>
+                        <td style="padding:10px 16px;text-align:right;font-weight:700;color:#ef4444">
+                            {{ $cn->currency }} ({{ number_format(abs((float)$cn->total), 2) }})
+                        </td>
+                        <td style="padding:10px 16px;color:#64748b">{{ $cn->notes }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- ── Audit Trail ────────────────────────────────────────────────────────── --}}
+@if($auditLogs->isNotEmpty())
+<div class="page-wrap" style="padding-top:0">
+    <div style="width:100%;max-width:820px">
+        <div style="background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden">
+            <div style="padding:18px 24px;border-bottom:1px solid #e2e8f0">
+                <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0">Audit Trail</h3>
+            </div>
+            <div style="padding:4px 0">
+                @foreach($auditLogs as $log)
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid #f1f5f9">
+                    <div style="width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0;background:{{ match($log->severity) { 'critical' => '#ef4444', 'warning' => '#f59e0b', default => '#10b981' } }}"></div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:11.5px;color:#1e293b;font-weight:500">{{ $log->description }}</div>
+                        <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">
+                            {{ $log->user_name ?? 'System' }} · {{ $log->created_at->format('d M Y, H:i') }}
+                        </div>
+                    </div>
+                    <div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;flex-shrink:0;
+                        background:{{ match($log->severity) { 'critical' => 'rgba(239,68,68,.1)', 'warning' => 'rgba(245,158,11,.1)', default => 'rgba(16,185,129,.1)' } }};
+                        color:{{ match($log->severity) { 'critical' => '#ef4444', 'warning' => '#f59e0b', default => '#10b981' } }}">
+                        {{ $log->event }}
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 <script>
     // Close modal on overlay click

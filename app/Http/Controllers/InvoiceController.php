@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Invoice;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InvoiceController extends Controller
 {
@@ -18,6 +20,7 @@ class InvoiceController extends Controller
         $company = $this->company();
 
         $q = Invoice::where('company_id', $company->id)
+            ->where('type', 'invoice')
             ->with(['client', 'sale'])
             ->orderByDesc('issued_date')
             ->orderByDesc('id');
@@ -37,7 +40,6 @@ class InvoiceController extends Controller
 
         $invoices = $q->paginate(25)->withQueryString();
 
-        // Update overdue status automatically
         Invoice::where('company_id', $company->id)
             ->where('status', 'sent')
             ->whereDate('due_date', '<', now())
@@ -73,13 +75,41 @@ class InvoiceController extends Controller
 
         $invoice->load(['client', 'company', 'items', 'sale']);
 
-        // Auto-flag overdue
         if ($invoice->status === 'sent' && $invoice->due_date->isPast()) {
             $invoice->update(['status' => 'overdue']);
             $invoice->refresh();
         }
 
-        return view('invoices.show', compact('invoice'));
+        $creditNotes = Invoice::where('credit_note_for', $invoice->id)
+            ->orderByDesc('issued_date')
+            ->get();
+
+        $auditLogs = AuditLog::where('company_id', $invoice->company_id)
+            ->where(function ($q) use ($invoice) {
+                $q->where(function ($q2) use ($invoice) {
+                    $q2->where('auditable_type', Invoice::class)
+                       ->where('auditable_id', $invoice->id);
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        return view('invoices.show', compact('invoice', 'creditNotes', 'auditLogs'));
+    }
+
+    public function downloadPdf(Invoice $invoice)
+    {
+        $this->authorizeCompany($invoice);
+
+        $invoice->load(['client', 'company', 'items', 'sale']);
+
+        $pdf = Pdf::loadView('invoices.pdf', compact('invoice'));
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = $invoice->invoice_number . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function updateNotes(Request $request, Invoice $invoice)
@@ -134,6 +164,82 @@ class InvoiceController extends Controller
         );
 
         return back()->with('status', 'Payment recorded on invoice.');
+    }
+
+    public function creditNote(Request $request, Invoice $invoice)
+    {
+        $this->authorizeCompany($invoice);
+
+        if ($invoice->status === 'void') {
+            return back()->with('error', 'Cannot issue a credit note against a voided invoice.');
+        }
+        if ($invoice->type === 'credit_note') {
+            return back()->with('error', 'Cannot issue a credit note against another credit note.');
+        }
+
+        $data = $request->validate([
+            'amount'      => 'required|numeric|min:0.01',
+            'reason'      => 'required|string|max:500',
+            'issued_date' => 'required|date',
+        ]);
+
+        $amount  = min((float) $data['amount'], max(0, (float) $invoice->total - (float) $invoice->paid_amount));
+
+        if ($amount <= 0) {
+            return back()->with('error', 'Invoice is already fully paid or credited — no remaining balance to credit.');
+        }
+
+        DB::transaction(function () use ($invoice, $data, $amount) {
+            $company = $this->company();
+
+            $seq = Invoice::where('company_id', $company->id)
+                ->where('type', 'credit_note')
+                ->count() + 1;
+
+            $cnNumber = 'CN-' . str_pad($seq, 4, '0', STR_PAD_LEFT) . '/' . now()->format('Y');
+
+            $cn = Invoice::create([
+                'company_id'      => $company->id,
+                'client_id'       => $invoice->client_id,
+                'sale_id'         => $invoice->sale_id,
+                'type'            => 'credit_note',
+                'credit_note_for' => $invoice->id,
+                'invoice_number'  => $cnNumber,
+                'currency'        => $invoice->currency,
+                'subtotal'        => -$amount,
+                'tax_rate'        => 0,
+                'tax_amount'      => 0,
+                'total'           => -$amount,
+                'paid_amount'     => 0,
+                'status'          => 'sent',
+                'issued_date'     => $data['issued_date'],
+                'due_date'        => $data['issued_date'],
+                'notes'           => 'Credit note for ' . $invoice->invoice_number . ': ' . $data['reason'],
+                'payment_terms'   => $invoice->payment_terms,
+                'footer_text'     => $invoice->footer_text,
+                'bank_details'    => $invoice->bank_details,
+            ]);
+
+            $newPaid   = min((float) $invoice->total, (float) $invoice->paid_amount + $amount);
+            $newStatus = $newPaid >= (float) $invoice->total ? 'paid' : $invoice->status;
+            $invoice->update([
+                'paid_amount' => $newPaid,
+                'status'      => $newStatus,
+                'updated_by'  => auth()->id(),
+            ]);
+
+            AuditLog::record(
+                'credit_note',
+                "Credit note {$cn->invoice_number} issued against {$invoice->invoice_number} — {$invoice->currency} " . number_format($amount, 2) . ': ' . $data['reason'],
+                $invoice,
+                "Invoice {$invoice->invoice_number}",
+                severity: 'warning',
+                after: ['credit_note' => $cn->invoice_number, 'amount' => $amount, 'reason' => $data['reason']],
+                module: 'Invoice',
+            );
+        });
+
+        return back()->with('status', 'Credit note issued and applied to invoice.');
     }
 
     public function void(Invoice $invoice)

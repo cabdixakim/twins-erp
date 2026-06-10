@@ -275,6 +275,8 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
             ->name('transporters.advances.store');
         Route::post('/transporters/{transporter}/adjustments', [TransporterLedgerController::class, 'recordAdjustment'])
             ->name('transporters.adjustments.store');
+        Route::post('/transporters/{transporter}/settle', [TransporterLedgerController::class, 'settle'])
+            ->name('transporters.settle');
 
         // Supplier ledger
         Route::get('/suppliers', [SupplierLedgerController::class, 'index'])
@@ -360,6 +362,12 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
         Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])
             ->middleware('role:owner,admin')
             ->name('invoices.void');
+        Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])
+            ->middleware('role:owner,admin,manager,accountant')
+            ->name('invoices.pdf');
+        Route::post('/invoices/{invoice}/credit-note', [InvoiceController::class, 'creditNote'])
+            ->middleware('role:owner,admin,manager,accountant')
+            ->name('invoices.credit-note');
 
     });
 });

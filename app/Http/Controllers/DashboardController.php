@@ -205,14 +205,49 @@ class DashboardController extends Controller {
             $topBankAccounts = $bankData->take(3)->values();
         }
 
-        // AP vs AR summary for donut
+        // AP vs AR summary
         $totalAP = $supplierPayableTotal + $depotPayableTotal + $byCurrency->sum();
+
+        // ── Revenue & Gross Profit MTD ─────────────────────────────────────
+        $revenueData = DB::table('sales')
+            ->where('company_id', $cid)
+            ->where('status', 'posted')
+            ->whereMonth('sale_date', now()->month)
+            ->whereYear('sale_date', now()->year)
+            ->selectRaw('
+                COALESCE(SUM(total), 0)        AS revenue_mtd,
+                COALESCE(SUM(gross_profit), 0) AS gross_profit_mtd,
+                COUNT(*)                        AS sales_count_mtd
+            ')
+            ->first();
+
+        $revenueMtd     = (float) ($revenueData->revenue_mtd ?? 0);
+        $grossProfitMtd = (float) ($revenueData->gross_profit_mtd ?? 0);
+        $salesCountMtd  = (int) ($revenueData->sales_count_mtd ?? 0);
+        $grossMarginPct = $revenueMtd > 0 ? round($grossProfitMtd / $revenueMtd * 100, 1) : 0;
+
+        // ── Net Position (AR - AP) ─────────────────────────────────────────
+        $netPosition = $totalAR - $totalAP;
+
+        // ── Petty Cash float total ─────────────────────────────────────────
+        $pettyCashRow = DB::table('petty_cash_transactions as pct')
+            ->join('petty_cash_accounts as pca', 'pct.account_id', '=', 'pca.id')
+            ->where('pca.company_id', $cid)
+            ->selectRaw("COALESCE(SUM(CASE WHEN pct.type='top_up' THEN pct.amount ELSE -pct.amount END), 0) as total")
+            ->first();
+        $pettyCashTotal = (float) ($pettyCashRow->total ?? 0);
 
         return view('dashboard.index', compact(
             'byCurrency',
             'topTransporters',
             'openPurchasesCount',
             'openByStatus',
+            'revenueMtd',
+            'grossProfitMtd',
+            'salesCountMtd',
+            'grossMarginPct',
+            'netPosition',
+            'pettyCashTotal',
             'depotStockRows',
             'totalStockOnHand',
             'supplierByCurrency',

@@ -12,6 +12,7 @@
         'payment'        => ['label' => 'Payment',      'color' => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'],
         'recovery'       => ['label' => 'Recovery',     'color' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'],
         'adjustment'     => ['label' => 'Adjustment',   'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
+        'settlement'     => ['label' => 'Settlement',   'color' => 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30'],
     ];
 
     $advanceTypeMeta = [
@@ -94,6 +95,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             Payment
+        </button>
+        <button type="button" onclick="openSettleModal()"
+                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-teal-500/30 bg-teal-500/10 text-xs font-semibold text-teal-600 dark:text-teal-300 hover:bg-teal-500/20 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            Settle Account
         </button>
     </div>
 </div>
@@ -777,7 +785,47 @@ function onTripSelectChange(sel) {
 @if($errors->any())
 openPaymentModal();
 @endif
+
+function openSettleModal()  { document.getElementById('settleModal').classList.remove('hidden'); }
+function closeSettleModal() { document.getElementById('settleModal').classList.add('hidden'); }
+document.getElementById('settleModal')?.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
 </script>
 @endpush
+
+{{-- ── Settle Account Modal ─────────────────────────────────────────────── --}}
+<div id="settleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="relative w-full max-w-md mx-4 rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6">
+        <h3 class="text-sm font-bold {{ $fg }} mb-1">Settle Account</h3>
+        <p class="text-xs {{ $muted }} mb-5">Records a final entry that zeros the current balance, marking the account as fully settled.</p>
+
+        <form method="POST" action="{{ route('transporters.settle', $transporter) }}">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold {{ $muted }} mb-1.5">Settlement Date</label>
+                    <input type="date" name="settlement_date" value="{{ now()->format('Y-m-d') }}" required
+                           class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold {{ $muted }} mb-1.5">Note (optional)</label>
+                    <input type="text" name="note" placeholder="e.g. Full and final settlement"
+                           class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/30">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button type="button" onclick="closeSettleModal()"
+                        class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="h-9 px-4 rounded-xl border border-teal-500/40 bg-teal-500/10 text-xs font-semibold text-teal-600 dark:text-teal-300 hover:bg-teal-500/20 transition">
+                    Settle Account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @endsection
