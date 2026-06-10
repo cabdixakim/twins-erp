@@ -59,8 +59,8 @@
           </svg>
       </div>
       <div>
-          <h1 class="text-base font-bold tw-fg">Welcome to {{ $company->name ?? config('app.name') }}</h1>
-          <p class="text-xs tw-muted mt-0.5">Here's a quick snapshot of what needs your attention today.</p>
+          <h1 class="text-base font-bold tw-fg">Welcome, {{ explode(' ', auth()->user()->name)[0] }}</h1>
+          <p class="text-xs tw-muted mt-0.5">{{ $company->name ?? config('app.name') }} — here's a quick snapshot of what needs your attention today.</p>
       </div>
   </div>
 
