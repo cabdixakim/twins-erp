@@ -8,16 +8,17 @@ return [
 
         'pgsql' => [
             'driver'         => 'pgsql',
-            'host'           => env('DB_HOST',     env('PGHOST',     '127.0.0.1')),
-            'port'           => env('DB_PORT',     env('PGPORT',     '5432')),
-            'database'       => env('DB_DATABASE', env('PGDATABASE', 'forge')),
-            'username'       => env('DB_USERNAME', env('PGUSER',     'forge')),
-            'password'       => env('DB_PASSWORD', env('PGPASSWORD', '')),
+            'url'            => env('DATABASE_URL'),
+            'host'           => env('PGHOST',     env('DB_HOST',     '127.0.0.1')),
+            'port'           => env('PGPORT',     env('DB_PORT',     '5432')),
+            'database'       => env('PGDATABASE', env('DB_DATABASE', 'forge')),
+            'username'       => env('PGUSER',     env('DB_USERNAME', 'forge')),
+            'password'       => env('PGPASSWORD', env('DB_PASSWORD', '')),
             'charset'        => 'utf8',
             'prefix'         => '',
             'prefix_indexes' => true,
             'search_path'    => 'public',
-            'sslmode'        => env('DB_SSLMODE',  env('PGSSLMODE',  'prefer')),
+            'sslmode'        => env('PGSSLMODE',  env('DB_SSLMODE',  'prefer')),
         ],
 
         'sqlite' => [
