@@ -272,6 +272,20 @@
                         class="w-full rounded-xl border {{ $border }} {{ $bg }} {{ $fg }} text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
                 </div>
             </div>
+            {{-- Bank account dropdown — only shown for Top-up --}}
+            @if($bankAccounts->isNotEmpty())
+            <div id="bankAccountRow" class="hidden">
+                <label class="block text-[11px] {{ $muted }} mb-1">Fund from bank account <span class="{{ $muted }}">(optional)</span></label>
+                <select name="bank_account_id"
+                    class="w-full rounded-xl border {{ $border }} {{ $bg }} {{ $fg }} text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                    <option value="">— Cash / other source —</option>
+                    @foreach($bankAccounts as $ba)
+                        <option value="{{ $ba->id }}">{{ $ba->name }} ({{ $ba->currency }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[10px] {{ $muted }} mt-1">Selecting a bank will also post a matching withdrawal on that account.</p>
+            </div>
+            @endif
             <div class="flex gap-2 pt-2">
                 <button type="submit" id="txSubmitBtn" class="{{ $btnPrimary }} flex-1 justify-center">Save</button>
                 <button type="button" onclick="document.getElementById('txModal').classList.add('hidden')" class="{{ $btnGhost }}">Cancel</button>
@@ -309,6 +323,8 @@ function openTx(type) {
     document.getElementById('txType').value = type;
     const labels = { top_up: 'Record Top-up', expense: 'Record Expense', adjustment: 'Record Adjustment' };
     document.getElementById('txModalTitle').textContent = labels[type] || 'Record Transaction';
+    const bankRow = document.getElementById('bankAccountRow');
+    if (bankRow) bankRow.classList.toggle('hidden', type !== 'top_up');
     document.getElementById('txModal').classList.remove('hidden');
 }
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\PettyCashAccount;
 use App\Models\PettyCashTransaction;
 use Illuminate\Http\Request;
@@ -66,7 +68,12 @@ class PettyCashController extends Controller
             ];
         }
 
-        return view('petty-cash.index', compact('accounts', 'active', 'transactions', 'recentTotals'));
+        $bankAccounts = BankAccount::where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('petty-cash.index', compact('accounts', 'active', 'transactions', 'recentTotals', 'bankAccounts'));
     }
 
     public function storeAccount(Request $request)
@@ -102,28 +109,66 @@ class PettyCashController extends Controller
             'transaction_date' => 'required|date',
             'ref_type'         => 'nullable|string|max:100',
             'ref_id'           => 'nullable|integer',
+            'bank_account_id'  => 'nullable|integer|exists:bank_accounts,id',
         ]);
+
+        $cid = $this->cid();
+
+        // Validate bank account belongs to company (if provided)
+        if (!empty($data['bank_account_id'])) {
+            $bankAccount = BankAccount::where('id', $data['bank_account_id'])
+                ->where('company_id', $cid)
+                ->firstOrFail();
+        }
 
         // Expenses and transfers are negative; top-ups and adjustments positive
         $amount = match($data['type']) {
             'expense'    => -(float) $data['amount'],
             'top_up'     => (float) $data['amount'],
-            'adjustment' => (float) $data['amount'], // can be negative if user wants
+            'adjustment' => (float) $data['amount'],
             default      => (float) $data['amount'],
         };
 
-        $tx = PettyCashTransaction::create([
-            'company_id'       => $this->cid(),
-            'account_id'       => $account->id,
-            'type'             => $data['type'],
-            'amount'           => $amount,
-            'currency'         => $account->currency,
-            'description'      => $data['description'],
-            'transaction_date' => $data['transaction_date'],
-            'ref_type'         => $data['ref_type'] ?? null,
-            'ref_id'           => $data['ref_id'] ?? null,
-            'created_by'       => auth()->id(),
-        ]);
+        $tx = DB::transaction(function () use ($data, $cid, $account, $amount) {
+            $bankTxId = null;
+
+            // If top-up is funded from a bank account, post a matching withdrawal
+            if ($data['type'] === 'top_up' && !empty($data['bank_account_id'])) {
+                $bankAcct = BankAccount::where('id', $data['bank_account_id'])
+                    ->where('company_id', $cid)
+                    ->firstOrFail();
+
+                $bankTx = BankTransaction::create([
+                    'company_id'      => $cid,
+                    'bank_account_id' => $bankAcct->id,
+                    'type'            => 'withdrawal',
+                    'amount'          => abs($amount),
+                    'currency'        => $bankAcct->currency,
+                    'exchange_rate'   => 1,
+                    'description'     => 'Petty cash top-up — ' . $account->name . ': ' . $data['description'],
+                    'entry_date'      => $data['transaction_date'],
+                    'ref_type'        => 'petty_cash_account',
+                    'ref_id'          => $account->id,
+                    'created_by'      => auth()->id(),
+                ]);
+                $bankTxId = $bankTx->id;
+            }
+
+            return PettyCashTransaction::create([
+                'company_id'         => $cid,
+                'account_id'         => $account->id,
+                'type'               => $data['type'],
+                'amount'             => $amount,
+                'currency'           => $account->currency,
+                'description'        => $data['description'],
+                'transaction_date'   => $data['transaction_date'],
+                'ref_type'           => $data['ref_type'] ?? null,
+                'ref_id'             => $data['ref_id'] ?? null,
+                'created_by'         => auth()->id(),
+                'bank_account_id'    => $data['bank_account_id'] ?? null,
+                'bank_transaction_id'=> $bankTxId,
+            ]);
+        });
 
         $sym = $account->currency;
         AuditLog::record(

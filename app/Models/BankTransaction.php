@@ -10,6 +10,8 @@ class BankTransaction extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'is_reconciled'  => 'boolean',
+        'reconciled_at'  => 'datetime',
         'amount'        => 'float',
         'exchange_rate' => 'float',
         'entry_date'    => 'date',

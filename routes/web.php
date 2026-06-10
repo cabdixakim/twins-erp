@@ -400,8 +400,9 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
         Route::post('/{bank}/toggle-active',                    [\App\Http\Controllers\BankAccountController::class, 'toggleActive'])->name('toggle-active');
         Route::post('/{bank}/transactions',                     [\App\Http\Controllers\BankAccountController::class, 'recordTransaction'])->name('transactions.store');
         Route::post('/{bank}/transactions/{transaction}/void',  [\App\Http\Controllers\BankAccountController::class, 'voidTransaction'])
-            ->middleware('role:owner,admin,accountant')
             ->name('transactions.void');
+        Route::post('/{bank}/reconcile',                        [\App\Http\Controllers\BankAccountController::class, 'reconcile'])
+            ->name('reconcile');
         Route::get('/{bank}/export',                            [\App\Http\Controllers\BankAccountController::class, 'exportCsv'])->name('export');
     });
 

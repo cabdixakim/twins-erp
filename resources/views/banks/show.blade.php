@@ -196,6 +196,114 @@
     @endif
 </div>
 
+{{-- ── RECONCILIATION SECTION ──────────────────────────────────────────── --}}
+@php
+    $unreconciled = $transactions->getCollection()->filter(fn($t) => !$t->isVoided() && !$t->is_reconciled);
+    $unreconciledSum = $unreconciled->sum(fn($t) => $t->signedAmount());
+    $reconciledCount = $transactions->getCollection()->filter(fn($t) => !$t->isVoided() && $t->is_reconciled)->count();
+@endphp
+
+<div class="mt-5 rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+    <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold {{ $fg }}">Reconciliation</span>
+            @if($reconciledCount > 0)
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    {{ $reconciledCount }} reconciled
+                </span>
+            @endif
+            @if($unreconciled->count() > 0)
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    {{ $unreconciled->count() }} unreconciled
+                </span>
+            @endif
+        </div>
+        <button type="button" onclick="toggleReconcilePanel()"
+                class="text-[11px] font-semibold {{ $muted }} hover:text-[color:var(--tw-fg)] transition">
+            Reconcile →
+        </button>
+    </div>
+
+    <div id="reconcilePanel" class="hidden">
+        @if($unreconciled->isEmpty())
+            <div class="px-5 py-8 text-center text-xs {{ $muted }}">All transactions on this page are reconciled.</div>
+        @else
+        <form method="POST" action="{{ route('banks.reconcile', $bank) }}" id="reconcileForm">
+            @csrf
+            <input type="hidden" name="action" id="reconcileAction" value="reconcile">
+
+            {{-- Statement ref + balance --}}
+            <div class="px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex flex-wrap gap-4 items-end">
+                <div>
+                    <label class="block text-[11px] {{ $muted }} mb-1 font-semibold">Statement reference</label>
+                    <input type="text" name="statement_ref" placeholder="e.g. Bank stmt June 2026"
+                           class="rounded-xl border {{ $border }} bg-[color:var(--tw-surface-2)] px-3 py-1.5 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40 w-56">
+                </div>
+                <div class="ml-auto flex items-center gap-3 text-xs {{ $muted }}">
+                    <span>Unreconciled movement:</span>
+                    <span class="font-bold text-sm {{ $unreconciledSum >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500' }}">
+                        {{ $unreconciledSum >= 0 ? '+' : '' }}{{ $sym($bank->currency) }}{{ number_format(abs($unreconciledSum), 2) }}
+                    </span>
+                </div>
+            </div>
+
+            {{-- Unreconciled transactions --}}
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="border-b {{ $border }} {{ $surface2 }} text-[10px] uppercase tracking-wide {{ $muted }}">
+                            <th class="py-2.5 pl-5 pr-2 w-8">
+                                <input type="checkbox" id="selectAllRecon" onchange="toggleAll(this)"
+                                       class="rounded border-[color:var(--tw-border)] accent-emerald-500">
+                            </th>
+                            <th class="text-left py-2.5 pr-3 font-semibold">Date</th>
+                            <th class="text-left py-2.5 pr-3 font-semibold">Type</th>
+                            <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
+                            <th class="text-right py-2.5 pr-5 font-semibold">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($unreconciled as $tx)
+                        <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition">
+                            <td class="py-2.5 pl-5 pr-2">
+                                <input type="checkbox" name="transaction_ids[]" value="{{ $tx->id }}"
+                                       class="recon-checkbox rounded border-[color:var(--tw-border)] accent-emerald-500">
+                            </td>
+                            <td class="py-2.5 pr-3 {{ $muted }} whitespace-nowrap">{{ $tx->entry_date->format('d M Y') }}</td>
+                            <td class="py-2.5 pr-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $typeMeta[$tx->type]['color'] ?? '' }}">
+                                    {{ $typeMeta[$tx->type]['label'] ?? $tx->type }}
+                                </span>
+                            </td>
+                            <td class="py-2.5 pr-3 {{ $fg }} max-w-[220px] truncate">{{ $tx->description ?? ($tx->reference ?? '—') }}</td>
+                            <td class="py-2.5 pr-5 text-right font-semibold whitespace-nowrap
+                                {{ in_array($tx->type, ['deposit','transfer_in']) ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500' }}">
+                                {{ in_array($tx->type, ['deposit','transfer_in']) ? '+' : '-' }}{{ $sym($tx->currency) }}{{ number_format($tx->amount, 2) }}
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-5 py-3 border-t {{ $border }} {{ $surface2 }} flex items-center justify-between gap-3 flex-wrap">
+                <span id="reconSelectedCount" class="text-[11px] {{ $muted }}">0 selected</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="submitReconcile('unreconcile')"
+                            class="h-8 px-3 rounded-xl border {{ $border }} text-[11px] font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition hidden" id="unreconcileBtn">
+                        Mark unreconciled
+                    </button>
+                    <button type="button" onclick="submitReconcile('reconcile')" id="reconcileBtn"
+                            class="h-8 px-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                        Mark reconciled
+                    </button>
+                </div>
+            </div>
+        </form>
+        @endif
+    </div>
+</div>
+
 {{-- ── DEPOSIT MODAL ──────────────────────────────────────────────────── --}}
 <div id="depositModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
     <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6">
@@ -378,6 +486,33 @@ function openVoid(txId) {
     document.getElementById('voidForm').action =
         '{{ url("/banks/{$bank->id}/transactions") }}/' + txId + '/void';
     document.getElementById('voidModal').classList.remove('hidden');
+}
+
+function toggleReconcilePanel() {
+    const p = document.getElementById('reconcilePanel');
+    p.classList.toggle('hidden');
+}
+
+function toggleAll(master) {
+    document.querySelectorAll('.recon-checkbox').forEach(cb => cb.checked = master.checked);
+    updateReconCount();
+}
+
+function updateReconCount() {
+    const checked = document.querySelectorAll('.recon-checkbox:checked').length;
+    const el = document.getElementById('reconSelectedCount');
+    if (el) el.textContent = checked + ' selected';
+}
+
+document.querySelectorAll('.recon-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateReconCount);
+});
+
+function submitReconcile(action) {
+    const checked = document.querySelectorAll('.recon-checkbox:checked');
+    if (!checked.length) { alert('Select at least one transaction.'); return; }
+    document.getElementById('reconcileAction').value = action;
+    document.getElementById('reconcileForm').submit();
 }
 </script>
 

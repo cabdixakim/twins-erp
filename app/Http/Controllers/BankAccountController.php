@@ -272,6 +272,57 @@ class BankAccountController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // Reconcile transactions against a bank statement
+    // ─────────────────────────────────────────────────────────────────────
+    public function reconcile(Request $request, BankAccount $bank)
+    {
+        $this->authorise($bank);
+
+        $data = $request->validate([
+            'statement_ref'    => 'nullable|string|max:100',
+            'statement_balance'=> 'nullable|numeric',
+            'transaction_ids'  => 'required|array|min:1',
+            'transaction_ids.*'=> 'integer|exists:bank_transactions,id',
+            'action'           => 'required|in:reconcile,unreconcile',
+        ]);
+
+        $uid = auth()->id();
+        $now = now();
+
+        $transactions = BankTransaction::whereIn('id', $data['transaction_ids'])
+            ->where('bank_account_id', $bank->id)
+            ->get();
+
+        if ($transactions->count() !== count($data['transaction_ids'])) {
+            return back()->withErrors(['error' => 'One or more transactions do not belong to this account.']);
+        }
+
+        if ($data['action'] === 'reconcile') {
+            foreach ($transactions as $tx) {
+                $tx->update([
+                    'is_reconciled'  => true,
+                    'reconciled_at'  => $now,
+                    'reconciled_by'  => $uid,
+                    'statement_ref'  => $data['statement_ref'] ?? null,
+                ]);
+            }
+            $count = $transactions->count();
+            return back()->with('status', $count . ' transaction' . ($count > 1 ? 's' : '') . ' marked as reconciled.');
+        } else {
+            foreach ($transactions as $tx) {
+                $tx->update([
+                    'is_reconciled' => false,
+                    'reconciled_at' => null,
+                    'reconciled_by' => null,
+                    'statement_ref' => null,
+                ]);
+            }
+            $count = $transactions->count();
+            return back()->with('status', $count . ' transaction' . ($count > 1 ? 's' : '') . ' marked as unreconciled.');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Helper
     // ─────────────────────────────────────────────────────────────────────
     private function authorise(BankAccount $bank): void
