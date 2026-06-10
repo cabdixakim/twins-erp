@@ -3,177 +3,348 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Setup {{ config('app.name', 'Twins') }}</title>
+  <title>Setup • {{ config('app.name', 'Twins') }}</title>
   @vite(['resources/css/app.css'])
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('tw-theme');
+      var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+    })();
+  </script>
+
+  <style>
+    .ob-page {
+      background: #f0f2f5;
+      transition: background 0.2s;
+    }
+    html.dark .ob-page {
+      background: #0f172a;
+    }
+
+    .ob-card {
+      background: #ffffff;
+      border-color: #d1d5db;
+      box-shadow: 0 20px 60px rgba(0,0,0,.10);
+    }
+    html.dark .ob-card {
+      background: rgba(15,23,42,.85);
+      border-color: #1e293b;
+      box-shadow: 0 20px 60px rgba(0,0,0,.50), 0 0 0 1px rgba(52,211,153,.06);
+    }
+
+    .ob-right {
+      background: #ffffff;
+    }
+    html.dark .ob-right {
+      background: transparent;
+    }
+
+    .ob-divider {
+      border-right: 1px solid #e5e7eb;
+    }
+    html.dark .ob-divider {
+      border-right-color: #1e293b;
+    }
+
+    .ob-label { color: #374151; }
+    html.dark .ob-label { color: #cbd5e1; }
+
+    .ob-muted { color: #6b7280; }
+    html.dark .ob-muted { color: #64748b; }
+
+    .ob-heading { color: #111827; }
+    html.dark .ob-heading { color: #f8fafc; }
+
+    .ob-section-title { color: #6b7280; }
+    html.dark .ob-section-title { color: #475569; }
+
+    .ob-divider-line { border-color: #e5e7eb; }
+    html.dark .ob-divider-line { border-color: #1e293b; }
+
+    .ob-input {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+      color: #111827;
+      border-radius: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ob-input::placeholder { color: #9ca3af; }
+    .ob-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+    }
+    .ob-input.error {
+      border-color: #f43f5e;
+    }
+    html.dark .ob-input {
+      background: #020617;
+      border-color: #334155;
+      color: #f1f5f9;
+    }
+    html.dark .ob-input::placeholder { color: #475569; }
+    html.dark .ob-input:focus {
+      border-color: #34d399;
+      box-shadow: 0 0 0 3px rgba(52,211,153,.18);
+    }
+
+    .ob-theme-btn {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
+      border-radius: 0.5rem;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, color .15s;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .ob-theme-btn:hover { background: #e5e7eb; color: #374151; }
+    html.dark .ob-theme-btn {
+      background: rgba(255,255,255,.06);
+      border-color: #334155;
+      color: #94a3b8;
+    }
+    html.dark .ob-theme-btn:hover {
+      background: rgba(255,255,255,.10);
+      color: #e2e8f0;
+    }
+  </style>
 </head>
-<body class="h-full bg-slate-950 flex items-center justify-center px-4">
-  <div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-emerald-500/10 overflow-hidden">
+<body class="ob-page min-h-full flex items-center justify-center px-4 py-8">
+
+  <div class="ob-card w-full max-w-3xl rounded-3xl border overflow-hidden">
     <div class="grid grid-cols-1 md:grid-cols-5">
-      {{-- Left side: brand + copy --}}
-      <div class="hidden md:flex md:col-span-2 flex-col justify-between bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950/90 px-6 py-6 border-r border-slate-800">
+
+      {{-- Left panel — always dark brand panel --}}
+      <div class="hidden md:flex md:col-span-2 ob-divider flex-col justify-between
+                  bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 px-6 py-6">
         <div>
           <div class="inline-flex items-center gap-2 mb-6">
-            <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-bold text-sm">
-              Tw
-            </div>
+            <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
+                        flex items-center justify-center text-slate-950 font-bold text-sm">Tw</div>
             <div>
               <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name', 'Twins') }}</div>
               <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
             </div>
           </div>
 
-          <h1 class="text-xl font-semibold text-slate-50 mb-2">
-            Welcome to {{ config('app.name', 'Twins') }}
-          </h1>
+          <h1 class="text-xl font-semibold text-slate-50 mb-2">First-time setup</h1>
           <p class="text-xs leading-relaxed text-slate-400 mb-6">
-            We’ll start by creating your <span class="text-emerald-400 font-medium">company</span> and
-            your <span class="text-emerald-400 font-medium">owner account</span>. You can add more users
-            and details later inside the app.
+            Create your company and owner account. Everything else — depots, suppliers, products — can be configured inside the app.
           </p>
 
           <div class="space-y-3 text-xs text-slate-300">
             <div class="flex items-center gap-2">
-              <span class="h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/60 flex items-center justify-center text-[10px] text-emerald-300">1</span>
+              <span class="h-5 w-5 rounded-full bg-emerald-500/15 border border-emerald-500/50
+                           flex items-center justify-center text-[10px] text-emerald-300 font-semibold">1</span>
               <span>Company &amp; owner details</span>
             </div>
-            <div class="flex items-center gap-2 opacity-60">
-              <span class="h-5 w-5 rounded-full border border-slate-700 flex items-center justify-center text-[10px] text-slate-500">2</span>
-              <span>Configure depots, clients &amp; transport (inside {{ config('app.name', 'Twins') }})</span>
+            <div class="flex items-center gap-2 opacity-50">
+              <span class="h-5 w-5 rounded-full border border-slate-700
+                           flex items-center justify-center text-[10px] text-slate-500 font-semibold">2</span>
+              <span>Configure depots, products &amp; suppliers</span>
+            </div>
+            <div class="flex items-center gap-2 opacity-50">
+              <span class="h-5 w-5 rounded-full border border-slate-700
+                           flex items-center justify-center text-[10px] text-slate-500 font-semibold">3</span>
+              <span>Start recording purchases &amp; sales</span>
             </div>
           </div>
         </div>
 
-        <p class="mt-6 text-[11px] text-slate-500">
-          Step 1 of 1 • Setup takes less than a minute.
-        </p>
+        <p class="mt-6 text-[11px] text-slate-500">Takes less than a minute.</p>
       </div>
 
-      {{-- Right side: form --}}
-      <div class="md:col-span-3 px-5 py-6 md:px-7 md:py-7">
+      {{-- Right panel — form --}}
+      <div class="ob-right md:col-span-3 px-5 py-6 md:px-7 md:py-7">
+
+        {{-- Mobile header --}}
+        <div class="md:hidden mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="inline-flex items-center gap-2">
+              <div class="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
+                          flex items-center justify-center text-slate-950 font-bold text-xs">Tw</div>
+              <div>
+                <div class="text-sm font-semibold ob-heading">{{ config('app.name', 'Twins') }}</div>
+                <div class="text-[11px] ob-muted">Fuel &amp; Transport ERP</div>
+              </div>
+            </div>
+            <button type="button" id="obThemeToggle" class="ob-theme-btn" aria-label="Toggle theme">
+              <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+              </svg>
+              <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+              </svg>
+            </button>
+          </div>
+          <h1 class="text-lg font-semibold ob-heading">First-time setup</h1>
+          <p class="text-xs ob-muted">Create your company and owner account.</p>
+        </div>
+
+        {{-- Desktop header --}}
+        <div class="hidden md:flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-base font-semibold ob-heading">Create your workspace</h2>
+            <p class="text-xs ob-muted mt-0.5">This runs once — you can't undo it, so double-check your details.</p>
+          </div>
+          <button type="button" id="obThemeToggleDesktop" class="ob-theme-btn" aria-label="Toggle theme">
+            <svg data-icon="moon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a7 7 0 009.8 9.8z"/>
+            </svg>
+            <svg data-icon="sun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+            </svg>
+          </button>
+        </div>
+
+        @if($errors->any())
+          <div class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 mb-4">
+            {{ $errors->first() }}
+          </div>
+        @endif
+
         <form method="post" action="{{ route('company.store') }}" class="space-y-5">
           @csrf
 
-          <div class="md:hidden mb-2">
-            <h1 class="text-lg font-semibold text-slate-50">Welcome to {{ config('app.name', 'Twins') }}</h1>
-            <p class="text-xs text-slate-400">Create your company and owner account.</p>
-          </div>
-
-          @if($errors->any())
-            <div class="rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-100">
-              {{ $errors->first() }}
-            </div>
-          @endif
-
+          {{-- Company section --}}
           <div class="space-y-3">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
-              Company
-            </p>
+            <p class="text-[10px] uppercase tracking-widest font-semibold ob-section-title">Company</p>
+
             <div>
-              <label class="block text-xs text-slate-300 mb-1">Company name</label>
-              <input
-                name="company_name"
-                value="{{ old('company_name') }}"
-                class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                placeholder="e.g. Optima Diesel Congo SARL"
-                required
-              >
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Company code <span class="text-rose-400">*</span></label>
-              <input
-                name="code"
-                value="{{ old('code') }}"
-                class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition @error('code') border-rose-500 @enderror"
-                placeholder="Short unique code, e.g. {{ strtoupper(config('app.name', 'Twins')) }}"
-                required
-              >
-              @error('code')
-                <div class="text-xs text-rose-400 mt-1">{{ $message }}</div>
+              <label class="block text-xs font-medium ob-label mb-1">Company name</label>
+              <input name="company_name" value="{{ old('company_name') }}"
+                     class="ob-input {{ $errors->has('company_name') ? 'error' : '' }}"
+                     placeholder="e.g. Optima Diesel Congo SARL" required>
+              @error('company_name')
+                <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
               @enderror
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label class="block text-xs text-slate-300 mb-1">Base currency</label>
-                <input
-                  name="base_currency"
-                  value="{{ old('base_currency','USD') }}"
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                  placeholder="USD, EUR, CDF…"
-                  required
-                >
+                <label class="block text-xs font-medium ob-label mb-1">
+                  Code
+                  <span class="ob-muted font-normal">— short unique ID</span>
+                </label>
+                <input name="code" value="{{ old('code') }}"
+                       class="ob-input {{ $errors->has('code') ? 'error' : '' }}"
+                       placeholder="e.g. TWE" required>
+                @error('code')
+                  <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
+                @enderror
               </div>
               <div>
-                <label class="block text-xs text-slate-300 mb-1">Timezone</label>
-                <input
-                  name="timezone"
-                  value="{{ old('timezone','Africa/Lubumbashi') }}"
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                  placeholder="Africa/Lubumbashi"
-                >
+                <label class="block text-xs font-medium ob-label mb-1">Base currency</label>
+                <input name="base_currency" value="{{ old('base_currency','USD') }}"
+                       class="ob-input"
+                       placeholder="USD" required>
+              </div>
+              <div>
+                <label class="block text-xs font-medium ob-label mb-1">Timezone</label>
+                <input name="timezone" value="{{ old('timezone','Africa/Lubumbashi') }}"
+                       class="ob-input"
+                       placeholder="Africa/Lubumbashi">
               </div>
             </div>
           </div>
 
-          <div class="border-t border-slate-800 pt-4 space-y-3">
-            <p class="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
-              Owner account
-            </p>
+          {{-- Divider --}}
+          <div class="border-t ob-divider-line"></div>
+
+          {{-- Owner section --}}
+          <div class="space-y-3">
+            <p class="text-[10px] uppercase tracking-widest font-semibold ob-section-title">Owner account</p>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs text-slate-300 mb-1">Owner name</label>
-                <input
-                  name="owner_name"
-                  value="{{ old('owner_name') }}"
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                  placeholder="Your full name"
-                  required
-                >
+                <label class="block text-xs font-medium ob-label mb-1">Full name</label>
+                <input name="owner_name" value="{{ old('owner_name') }}"
+                       class="ob-input {{ $errors->has('owner_name') ? 'error' : '' }}"
+                       placeholder="Your full name" required>
               </div>
               <div>
-                <label class="block text-xs text-slate-300 mb-1">Owner email</label>
-                <input
-                  name="owner_email"
-                  type="email"
-                  value="{{ old('owner_email') }}"
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                  placeholder="you@example.com"
-                  required
-                >
+                <label class="block text-xs font-medium ob-label mb-1">Email</label>
+                <input name="owner_email" type="email" value="{{ old('owner_email') }}"
+                       class="ob-input {{ $errors->has('owner_email') ? 'error' : '' }}"
+                       placeholder="you@example.com" required>
+                @error('owner_email')
+                  <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
+                @enderror
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-slate-300 mb-1">Owner password</label>
-                <input
-                  name="owner_password"
-                  type="password"
-                  class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 transition"
-                  placeholder="Choose a strong password"
-                  required
-                >
-              </div>
-              <div class="flex items-end">
-                <p class="text-[11px] text-slate-500">
-                  This will be your <span class="text-slate-300 font-medium">owner login</span>.
-                  You can add managers and staff later with limited roles.
-                </p>
-              </div>
+
+            <div>
+              <label class="block text-xs font-medium ob-label mb-1">Password</label>
+              <input name="owner_password" type="password"
+                     class="ob-input {{ $errors->has('owner_password') ? 'error' : '' }}"
+                     placeholder="Choose a strong password (min 6 chars)" required>
+              @error('owner_password')
+                <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
+              @enderror
             </div>
           </div>
 
-          <div class="pt-2 space-y-2">
-            <button
-              class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm font-semibold text-slate-950 tracking-wide transition shadow-md shadow-emerald-500/20 active:scale-[0.99]"
-            >
-              Start {{ config('app.name', 'Twins') }}
+          {{-- Submit --}}
+          <div class="pt-1 space-y-2">
+            <button type="submit"
+                    class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400
+                           text-sm font-semibold text-slate-950 tracking-wide transition
+                           shadow-md shadow-emerald-500/20 active:scale-[0.99]">
+              Create workspace
             </button>
-            <p class="text-[11px] text-slate-500 text-center">
-              By continuing you confirm you’re setting up {{ config('app.name', 'Twins') }} for your own company.
+            <p class="text-[11px] ob-muted text-center">
+              This sets up {{ config('app.name', 'Twins') }} for your company. Additional users can be added afterwards.
             </p>
           </div>
+
         </form>
       </div>
+
     </div>
   </div>
+
+  <script>
+    (function(){
+      var THEME_KEY = 'tw-theme';
+      var root = document.documentElement;
+      var btns = [
+        document.getElementById('obThemeToggle'),
+        document.getElementById('obThemeToggleDesktop')
+      ].filter(Boolean);
+
+      function isDark(){ return root.classList.contains('dark'); }
+
+      function applyIcons(){
+        btns.forEach(function(btn){
+          btn.querySelector('[data-icon="moon"]').classList.toggle('hidden', isDark());
+          btn.querySelector('[data-icon="sun"]').classList.toggle('hidden', !isDark());
+        });
+      }
+
+      applyIcons();
+
+      btns.forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var dark = !isDark();
+          root.classList.toggle('dark', dark);
+          localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+          applyIcons();
+        });
+      });
+    })();
+  </script>
+
 </body>
 </html>
