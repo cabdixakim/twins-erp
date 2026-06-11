@@ -6,8 +6,9 @@
 @section('content')
 @php
     $authUser      = auth()->user();
-    $authRoleName  = $authUser?->role?->name;
-    $isAdmin       = in_array($authRoleName, ['Admin', 'Owner']);
+    $authRoleSlug  = $authUser?->role?->slug;
+    $isAdmin       = in_array($authRoleSlug, ['admin', 'owner']);
+    $authIsOwner   = $authRoleSlug === 'owner';
 
     // Theme tokens (premium + theme aware)
     $border   = 'border-[color:var(--tw-border)]';
@@ -80,8 +81,9 @@
                 <tbody class="divide-y divide-[color:var(--tw-border)]">
                     @forelse($users as $user)
                         @php
-                            $isOwnerAccount = $user->id === 1;
+                            $isOwnerAccount = $user->role?->slug === 'owner';
                             $isActive = ($user->status === 'active');
+                            $canActOnUser = $isAdmin && (!$isOwnerAccount || $authIsOwner);
                             $initials = collect(explode(' ', trim($user->name ?? 'U')))
                                 ->filter()
                                 ->map(fn($p) => mb_strtoupper(mb_substr($p,0,1)))
@@ -89,20 +91,24 @@
                                 ->join('');
                         @endphp
 
-                        <tr class="hover:bg-[color:var(--tw-btn-hover)] transition">
+                        <tr class="hover:bg-[color:var(--tw-btn-hover)] transition {{ $isOwnerAccount ? 'bg-amber-500/5' : '' }}">
                             {{-- USER --}}
                             <td class="px-4 py-3 {{ $fg }}">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="h-9 w-9 rounded-2xl border {{ $border }} {{ $surface2 }} grid place-items-center shrink-0">
-                                        <span class="text-[12px] font-extrabold tracking-tight {{ $fg }}">{{ $initials }}</span>
+                                    <div class="h-9 w-9 rounded-2xl shrink-0 grid place-items-center
+                                        {{ $isOwnerAccount
+                                            ? 'border border-amber-400/60 bg-amber-500/15'
+                                            : 'border '.$border.' '.$surface2 }}">
+                                        <span class="text-[12px] font-extrabold tracking-tight
+                                            {{ $isOwnerAccount ? 'text-amber-400' : $fg }}">{{ $initials }}</span>
                                     </div>
 
                                     <div class="min-w-0">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span class="font-semibold text-[13px] truncate">{{ $user->name }}</span>
+                                            <span class="font-semibold text-[13px] truncate {{ $isOwnerAccount ? 'text-amber-400' : '' }}">{{ $user->name }}</span>
 
                                             @if($isOwnerAccount)
-                                                <span class="text-[10px] px-2 py-0.5 rounded-full border {{ $border }} {{ $surface2 }} {{ $muted }}">
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full border border-amber-400/50 bg-amber-500/15 text-amber-400 font-semibold shrink-0">
                                                     owner
                                                 </span>
                                             @endif
@@ -123,8 +129,8 @@
                             </td>
 
                             {{-- ROLE --}}
-                            <td class="px-4 py-3 {{ $fg }}">
-                                <span class="text-[12px]">{{ $user->role?->name ?? '—' }}</span>
+                            <td class="px-4 py-3">
+                                <span class="text-[12px] {{ $isOwnerAccount ? 'text-amber-400 font-semibold' : $fg }}">{{ $user->role?->name ?? '—' }}</span>
                             </td>
 
                             {{-- STATUS --}}
@@ -142,7 +148,7 @@
 
                             {{-- ACTIONS --}}
                             <td class="px-4 py-3 text-right">
-                                @if($isAdmin)
+                                @if($canActOnUser)
                                     <div class="inline-flex items-center justify-end gap-2 whitespace-nowrap">
 
                                         {{-- Edit --}}
@@ -185,6 +191,8 @@
                                             </button>
                                         @endif
                                     </div>
+                                @elseif($isOwnerAccount && !$authIsOwner)
+                                    <span class="text-[11px] text-amber-400/70 italic">Owner account</span>
                                 @else
                                     <span class="text-[11px] {{ $muted }} italic">No permission</span>
                                 @endif
@@ -206,8 +214,9 @@
     <div class="md:hidden space-y-2">
         @forelse($users as $user)
             @php
-                $isOwnerAccount = $user->id === 1;
+                $isOwnerAccount = $user->role?->slug === 'owner';
                 $isActive = ($user->status === 'active');
+                $canActOnUser = $isAdmin && (!$isOwnerAccount || $authIsOwner);
                 $initials = collect(explode(' ', trim($user->name ?? 'U')))
                     ->filter()
                     ->map(fn($p) => mb_strtoupper(mb_substr($p,0,1)))
@@ -215,18 +224,20 @@
                     ->join('');
             @endphp
 
-            <div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 space-y-2">
+            <div class="rounded-2xl border {{ $isOwnerAccount ? 'border-amber-400/40' : $border }} {{ $surface }} p-3 space-y-2
+                {{ $isOwnerAccount ? 'bg-amber-500/5' : '' }}">
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
-                        <div class="h-10 w-10 rounded-2xl border {{ $border }} {{ $surface2 }} grid place-items-center shrink-0">
-                            <span class="text-[12px] font-extrabold tracking-tight {{ $fg }}">{{ $initials }}</span>
+                        <div class="h-10 w-10 rounded-2xl shrink-0 grid place-items-center
+                            {{ $isOwnerAccount ? 'border border-amber-400/60 bg-amber-500/15' : 'border '.$border.' '.$surface2 }}">
+                            <span class="text-[12px] font-extrabold tracking-tight {{ $isOwnerAccount ? 'text-amber-400' : $fg }}">{{ $initials }}</span>
                         </div>
 
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
-                                <div class="text-[13px] {{ $fg }} font-semibold truncate">{{ $user->name }}</div>
+                                <div class="text-[13px] font-semibold truncate {{ $isOwnerAccount ? 'text-amber-400' : $fg }}">{{ $user->name }}</div>
                                 @if($isOwnerAccount)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full border {{ $border }} {{ $surface2 }} {{ $muted }}">owner</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full border border-amber-400/50 bg-amber-500/15 text-amber-400 font-semibold shrink-0">owner</span>
                                 @endif
                                 <span class="h-2 w-2 rounded-full {{ $isActive ? 'bg-emerald-400' : 'bg-[color:var(--tw-border)]' }}"></span>
                             </div>
@@ -235,7 +246,9 @@
                     </div>
 
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0
-                        {{ $isActive ? 'bg-emerald-600 text-white border border-emerald-500/50' : 'border '.$border.' '.$surface2.' '.$fg }}">
+                        {{ $isOwnerAccount
+                            ? 'border border-amber-400/50 bg-amber-500/15 text-amber-400'
+                            : ($isActive ? 'bg-emerald-600 text-white border border-emerald-500/50' : 'border '.$border.' '.$surface2.' '.$fg) }}">
                         {{ $user->role?->name ?? 'No role' }}
                     </span>
                 </div>
@@ -247,7 +260,7 @@
                     </span>
                 </div>
 
-                @if($isAdmin)
+                @if($canActOnUser)
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <button type="button"
                                 class="btnEditUser {{ $btnGhost }} h-9 px-3 text-[12px]"
@@ -282,6 +295,10 @@
                                 Delete
                             </button>
                         @endif
+                    </div>
+                @elseif($isOwnerAccount && !$authIsOwner)
+                    <div class="pt-1 text-[11px] text-amber-400/70 italic">
+                        Owner account — protected
                     </div>
                 @else
                     <div class="pt-1 text-[11px] {{ $muted }} italic">
