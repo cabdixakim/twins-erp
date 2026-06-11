@@ -117,6 +117,8 @@ class ClientController extends Controller
             'is_active'    => true,
         ]));
 
+        \App\Models\AuditLog::record('created', "Client '{$client->name}' created.", $client, "Client {$client->name}", severity: 'info', module: 'Client');
+
         return redirect()->route('settings.clients.index', ['client' => $client->id])
             ->with('status', 'Client "' . $client->name . '" created.');
     }
@@ -154,6 +156,8 @@ class ClientController extends Controller
             'currency'     => strtoupper($data['currency'] ?? $client->currency ?? 'USD'),
             'credit_limit' => $data['credit_limit'] ?? $client->credit_limit,
         ]));
+
+        \App\Models\AuditLog::record('updated', "Client '{$client->name}' updated.", $client, "Client {$client->name}", severity: 'info', module: 'Client');
 
         return redirect()->route('settings.clients.index', ['client' => $client->id])
             ->with('status', 'Client updated.');

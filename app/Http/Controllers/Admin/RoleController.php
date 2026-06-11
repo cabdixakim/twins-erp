@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
@@ -71,6 +72,8 @@ class RoleController extends Controller
         // Attach permissions if provided
         $role->permissions()->sync($data['permissions'] ?? []);
 
+        AuditLog::record('created', "Role '{$role->name}' created.", $role, "Role {$role->name}", severity: 'info', module: 'Admin');
+
         return redirect()
             ->route('admin.roles.index')
             ->with('status', 'Role created.');
@@ -127,6 +130,8 @@ class RoleController extends Controller
             $role->permissions()->sync($data['permissions'] ?? []);
         }
 
+        AuditLog::record('updated', "Role '{$role->name}' updated.", $role, "Role {$role->name}", severity: 'info', module: 'Admin');
+
         return redirect()
             ->route('admin.roles.index')
             ->with('status', 'Role updated.');
@@ -144,8 +149,11 @@ class RoleController extends Controller
                 ->with('status', 'Owner role cannot be deleted.');
         }
 
+        $roleName = $role->name;
         $role->permissions()->detach();
         $role->delete();
+
+        AuditLog::record('deleted', "Role '{$roleName}' deleted.", severity: 'warning', module: 'Admin');
 
         return redirect()
             ->route('admin.roles.index')
@@ -166,6 +174,8 @@ class RoleController extends Controller
         ]);
 
         $role->permissions()->sync($data['permissions'] ?? []);
+
+        AuditLog::record('updated', "Permissions updated for role '{$role->name}' (" . count($data['permissions'] ?? []) . " selected).", $role, "Role {$role->name}", severity: 'info', module: 'Admin');
 
         return redirect()
             ->route('admin.roles.index')

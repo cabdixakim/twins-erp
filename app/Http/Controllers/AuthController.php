@@ -45,7 +45,7 @@ class AuthController extends Controller
             Auth::logout();
             $request->session()->invalidate();
             return back()
-                ->withErrors(['email' => 'Your account has been deactivated. Contact your administrator.'])
+                ->withErrors(['email' => 'Your account has been locked by an administrator. Please contact them to regain access.'])
                 ->onlyInput('email');
         }
 

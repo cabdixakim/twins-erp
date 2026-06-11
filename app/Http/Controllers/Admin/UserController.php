@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -104,6 +105,8 @@ class UserController extends Controller
             }
         }
 
+        AuditLog::record('created', "User '{$user->name}' ({$user->email}) created with role '{$user->role?->name}'.", $user, "User {$user->name}", severity: 'info', module: 'Admin');
+
         return redirect()
             ->route('admin.users.index')
             ->with('status', 'User created successfully.')
@@ -127,6 +130,8 @@ class UserController extends Controller
 
         $user->update($data);
 
+        AuditLog::record('updated', "User '{$user->name}' ({$user->email}) profile updated.", $user, "User {$user->name}", severity: 'info', module: 'Admin');
+
         return redirect()
             ->route('admin.users.index')
             ->with('status', 'User updated.');
@@ -143,8 +148,17 @@ class UserController extends Controller
                 ->with('error', 'The owner account cannot be deactivated.');
         }
 
-        $user->status = $user->status === 'active' ? 'inactive' : 'active';
+        $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+        $user->status = $newStatus;
         $user->save();
+
+        AuditLog::record(
+            $newStatus === 'inactive' ? 'updated' : 'updated',
+            "User '{$user->name}' ({$user->email}) was " . ($newStatus === 'inactive' ? 'deactivated' : 'reactivated') . ".",
+            $user, "User {$user->name}",
+            severity: $newStatus === 'inactive' ? 'warning' : 'info',
+            module: 'Admin'
+        );
 
         return redirect()
             ->route('admin.users.index')
@@ -162,6 +176,8 @@ class UserController extends Controller
 
         $user->password = Hash::make($newPassword);
         $user->save();
+
+        AuditLog::record('updated', "Password reset for user '{$user->name}' ({$user->email}).", $user, "User {$user->name}", severity: 'warning', module: 'Admin');
 
         return redirect()
             ->route('admin.users.index')
@@ -214,7 +230,11 @@ class UserController extends Controller
         }
 
         // No remaining company memberships → delete user record
+        $userName  = $user->name;
+        $userEmail = $user->email;
         $user->delete();
+
+        AuditLog::record('deleted', "User '{$userName}' ({$userEmail}) permanently deleted.", severity: 'critical', module: 'Admin');
 
         return redirect()
             ->route('admin.users.index')

@@ -19,7 +19,7 @@ class EnsureUserIsActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['email' => 'Your account has been deactivated. Contact your administrator.']);
+                ->withErrors(['email' => 'Your account has been locked by an administrator. Please contact them to regain access.']);
         }
 
         return $next($request);

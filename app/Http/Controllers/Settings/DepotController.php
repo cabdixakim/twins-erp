@@ -77,7 +77,9 @@ class DepotController extends Controller
         // New depots are active by default unless explicitly unchecked
         $data['is_active'] = $request->boolean('is_active', true);
 
-        Depot::create($data);
+        $depot = Depot::create($data);
+
+        \App\Models\AuditLog::record('created', "Depot '{$depot->name}' created.", $depot, "Depot {$depot->name}", severity: 'info', module: 'Depot');
 
         return redirect()
             ->route('settings.depots.index')
@@ -102,6 +104,8 @@ class DepotController extends Controller
 
         $depot->update($data);
 
+        \App\Models\AuditLog::record('updated', "Depot '{$depot->name}' updated.", $depot, "Depot {$depot->name}", severity: 'info', module: 'Depot');
+
         return redirect()
             ->route('settings.depots.index', ['depot' => $depot->id])
             ->with('status', 'Depot updated.');
@@ -116,6 +120,8 @@ class DepotController extends Controller
 
         $depot->is_active = ! $depot->is_active;
         $depot->save();
+
+        \App\Models\AuditLog::record('updated', "Depot '{$depot->name}' " . ($depot->is_active ? 're-activated' : 'deactivated') . ".", $depot, "Depot {$depot->name}", severity: 'info', module: 'Depot');
 
         if ($request->wantsJson()) {
             return response()->json([

@@ -73,6 +73,8 @@ class SupplierController extends Controller
 
         $supplier = Supplier::create($data);
 
+        \App\Models\AuditLog::record('created', "Supplier '{$supplier->name}' created.", $supplier, "Supplier {$supplier->name}", severity: 'info', module: 'Supplier');
+
         return redirect()
             ->route('settings.suppliers.index', ['supplier' => $supplier->id])
             ->with('status', 'Supplier created.');
@@ -95,6 +97,8 @@ class SupplierController extends Controller
 
         $supplier->update($data);
 
+        \App\Models\AuditLog::record('updated', "Supplier '{$supplier->name}' updated.", $supplier, "Supplier {$supplier->name}", severity: 'info', module: 'Supplier');
+
         return redirect()
             ->route('settings.suppliers.index', ['supplier' => $supplier->id])
             ->with('status', 'Supplier updated.');
@@ -106,6 +110,8 @@ class SupplierController extends Controller
 
         $supplier->is_active = ! $supplier->is_active;
         $supplier->save();
+
+        \App\Models\AuditLog::record('updated', "Supplier '{$supplier->name}' " . ($supplier->is_active ? 're-activated' : 'deactivated') . ".", $supplier, "Supplier {$supplier->name}", severity: 'info', module: 'Supplier');
 
         return redirect()
             ->route('settings.suppliers.index', ['supplier' => $supplier->id])
