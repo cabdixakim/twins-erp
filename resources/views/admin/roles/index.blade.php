@@ -149,7 +149,7 @@
                         </h2>
 
                         <p class="text-[11px] {{ $muted }} truncate">
-                            What can <span class="font-semibold {{ $fg }}">{{ $currentRole->name }}</span> do in {{ $company->name ?? config('app.name') }}?
+                            What can <span class="font-semibold {{ $fg }}">{{ $currentRole->name }}</span> do?
                         </p>
                     </div>
 
