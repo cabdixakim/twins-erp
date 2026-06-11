@@ -6,8 +6,9 @@
   (function () {
     const root = document.documentElement;
     const stored = localStorage.getItem('tw-theme'); // 'dark' | 'light' | null
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
-    const theme = stored || (prefersDark ? 'dark' : 'light');
+    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)')?.matches;
+    // Default to dark; only switch to light if system explicitly says light
+    const theme = stored || (prefersLight ? 'light' : 'dark');
     const isDark = root.classList.contains('dark');
 
     // Only animate if theme is actually changing
