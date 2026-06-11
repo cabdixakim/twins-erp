@@ -80,8 +80,8 @@ class User extends Authenticatable
             return false;
         }
 
-        // owner = god-mode
-        if ($this->role->slug === 'owner') {
+        // owner + admin = full access
+        if (in_array($this->role->slug, ['owner', 'admin'], true)) {
             return true;
         }
 

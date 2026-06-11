@@ -24,7 +24,7 @@
         <h2 class="text-[11px] font-semibold uppercase tracking-widest mb-3" style="color:var(--tw-muted)">Organisation</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-            @if(auth()->user()?->role?->slug === 'owner')
+            @if(in_array(auth()->user()?->role?->slug, ['owner','admin'], true))
             <a href="{{ route('settings.company.edit') }}"
                class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
                 <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
@@ -41,7 +41,7 @@
             </a>
             @endif
 
-            @if(auth()->user()?->role?->slug === 'owner')
+            @if(in_array(auth()->user()?->role?->slug, ['owner','admin'], true))
             <a href="{{ route('settings.inventory.index') }}"
                class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
                 <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
@@ -178,7 +178,7 @@
     </section>
 
     {{-- ── Access Control ───────────────────────────────────────── --}}
-    @if(auth()->user()?->role?->slug === 'owner')
+    @if(in_array(auth()->user()?->role?->slug, ['owner','admin'], true))
     <section>
         <h2 class="text-[11px] font-semibold uppercase tracking-widest mb-3" style="color:var(--tw-muted)">Access Control</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
