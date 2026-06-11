@@ -477,24 +477,24 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'role:owner,admin'
         Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])
-            ->middleware('role:owner') // delete = owner only
+            ->middleware('role:owner,admin')
             ->name('users.destroy');
 
-        // Roles management — owner only
+        // Roles management — owner + admin
         Route::get('/roles', [RoleController::class, 'index'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('roles.index');
         Route::post('/roles', [RoleController::class, 'store'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('roles.store');
         Route::match(['put', 'patch'], '/roles/{role}', [RoleController::class, 'update'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('roles.update');
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('roles.destroy');
         Route::post('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])
-            ->middleware('role:owner')
+            ->middleware('role:owner,admin')
             ->name('roles.permissions.sync');
 
         // Audit log — owner + admin + manager can view

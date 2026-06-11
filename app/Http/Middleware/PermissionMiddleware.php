@@ -16,8 +16,8 @@ class PermissionMiddleware
             abort(403);
         }
 
-        // owner bypass
-        if ($user->role && $user->role->slug === 'owner') {
+        // owner + admin bypass — full access
+        if ($user->role && in_array($user->role->slug, ['owner', 'admin'], true)) {
             return $next($request);
         }
 
