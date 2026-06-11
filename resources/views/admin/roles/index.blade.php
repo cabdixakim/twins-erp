@@ -40,11 +40,23 @@
         </div>
     @endif
 
+    {{-- Mobile tab bar (hidden on md+) --}}
+    <div class="flex md:hidden rounded-2xl border {{ $border }} {{ $surface }} p-1 gap-1 mb-4">
+        <button type="button" id="tab-roles"
+            class="flex-1 rounded-xl py-2 text-[13px] font-semibold transition tab-btn tab-active">
+            Roles
+        </button>
+        <button type="button" id="tab-perms"
+            class="flex-1 rounded-xl py-2 text-[13px] font-semibold transition tab-btn">
+            Permissions
+        </button>
+    </div>
+
     {{-- Layout: roles ≈ 35%, permissions ≈ 65% on desktop --}}
     <div class="grid gap-5 md:grid-cols-[minmax(0,280px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,320px)_minmax(0,1.2fr)]">
 
         {{-- ROLES PANEL --}}
-        <div>
+        <div id="panel-roles">
             <div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
@@ -118,7 +130,7 @@
         </div>
 
         {{-- PERMISSIONS PANEL --}}
-        <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 space-y-4">
+        <div id="panel-perms" class="rounded-2xl border {{ $border }} {{ $surface }} p-4 space-y-4">
             @if(!$currentRole)
                 <div class="rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-[12px] {{ $muted }}">
                     No role selected. Create or pick a role on the left to edit its permissions.
@@ -311,7 +323,45 @@
   </div>
 </div>
 
+    <style>
+        .tab-btn { color: var(--tw-muted); }
+        .tab-btn.tab-active { background: var(--tw-accent, #059669); color: #fff; }
+        @media (min-width: 768px) {
+            #panel-roles, #panel-perms { display: block !important; }
+        }
+    </style>
     <script>
+        (function () {
+            const btnRoles = document.getElementById('tab-roles');
+            const btnPerms = document.getElementById('tab-perms');
+            const panelRoles = document.getElementById('panel-roles');
+            const panelPerms = document.getElementById('panel-perms');
+
+            function isMobile() { return window.innerWidth < 768; }
+
+            function showPanel(which) {
+                if (!isMobile()) return;
+                if (which === 'roles') {
+                    panelRoles.style.display = '';
+                    panelPerms.style.display = 'none';
+                    btnRoles.classList.add('tab-active');
+                    btnPerms.classList.remove('tab-active');
+                } else {
+                    panelRoles.style.display = 'none';
+                    panelPerms.style.display = '';
+                    btnPerms.classList.add('tab-active');
+                    btnRoles.classList.remove('tab-active');
+                }
+            }
+
+            if (btnRoles && btnPerms) {
+                btnRoles.addEventListener('click', () => showPanel('roles'));
+                btnPerms.addEventListener('click', () => showPanel('perms'));
+                // Init: hide permissions on mobile by default
+                if (isMobile()) showPanel('roles');
+            }
+        })();
+
         (function () {
             const modal = document.getElementById('createRoleModal');
             const backdrop = document.getElementById('createRoleBackdrop');
