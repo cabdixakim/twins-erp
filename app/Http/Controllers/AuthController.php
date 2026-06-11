@@ -40,6 +40,15 @@ class AuthController extends Controller
                 ->onlyInput('email');
         }
 
+        // Block inactive accounts immediately after credential check
+        if (Auth::user()->status !== 'active') {
+            Auth::logout();
+            $request->session()->invalidate();
+            return back()
+                ->withErrors(['email' => 'Your account has been deactivated. Contact your administrator.'])
+                ->onlyInput('email');
+        }
+
         $request->session()->regenerate();
 
         // ✅ multi-company login routing (keep your logic)

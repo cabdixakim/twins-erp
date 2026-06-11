@@ -49,5 +49,8 @@ class Kernel extends HttpKernel
 
         // First-run setup gate (no companies => force wizard)
         'company.setup'  => \App\Http\Middleware\EnsureCompanySetup::class,
+
+        // Kick out deactivated users on every authenticated request
+        'user.active'    => \App\Http\Middleware\EnsureUserIsActive::class,
     ];
 }

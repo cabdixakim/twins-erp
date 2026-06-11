@@ -85,7 +85,7 @@ Route::post('/account-recovery', [AccountRecoveryController::class, 'recover'])
 | Protected area
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup'])->group(function () {
+Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
 
     // Profile — any authenticated user
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
@@ -384,7 +384,7 @@ Route::middleware(['auth', 'company.setup'])->group(function () {
 | Petty Cash
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
     ->prefix('petty-cash')
     ->name('petty-cash.')
     ->group(function () {
@@ -403,7 +403,7 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
 | Banks
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
     ->prefix('banks')
     ->name('banks.')
     ->group(function () {
@@ -427,7 +427,7 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
 | Reports
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
     ->prefix('reports')
     ->name('reports.')
     ->group(function () {
@@ -443,7 +443,7 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
 | Accounting
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
     ->prefix('accounting')
     ->name('accounting.')
     ->group(function () {
@@ -465,7 +465,7 @@ Route::middleware(['auth', 'company.setup', 'active.company'])
 | Admin area — owners and admins
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'company.setup', 'active.company', 'role:owner,admin'])
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active', 'role:owner,admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
