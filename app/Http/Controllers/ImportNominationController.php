@@ -523,6 +523,144 @@ class ImportNominationController extends Controller
         return back()->with('status', $msg);
     }
 
+    // ── Bulk quick post (nominated → delivered in one step, multiple trucks) ──
+
+    public function bulkQuickPost(Request $request, Purchase $purchase, ImportNomination $nomination)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+
+        $rows = $request->input('trucks', []);
+        if (empty($rows)) {
+            return back()->with('error', 'No truck data submitted.');
+        }
+
+        $volumeUnit  = $nomination->volume_unit ?? 'L';
+        $rateDivisor = 1;
+        $lossPct     = (float) $nomination->allowed_loss_pct / 100;
+
+        $posted = 0;
+        $errors = [];
+
+        foreach ($rows as $truckId => $row) {
+            if (empty($row['include'])) continue;
+
+            $truck = ImportTruck::where('nomination_id', $nomination->id)
+                ->where('id', (int) $truckId)
+                ->where('status', 'nominated')
+                ->first();
+
+            if (!$truck) {
+                $errors[] = "Truck #$truckId not found or already past nominated status.";
+                continue;
+            }
+
+            $qtyLoaded    = (float) ($row['qty_loaded']    ?? 0);
+            $qtyDelivered = (float) ($row['qty_delivered']  ?? 0);
+            $depotId      = (int)   ($row['depot_id']       ?? 0);
+            $date         = $row['date'] ?? null;
+
+            if ($qtyLoaded < 1 || $qtyDelivered < 0 || !$depotId || !$date) {
+                $errors[] = "Truck {$truck->truck_reg}: missing required fields (qty loaded, qty delivered, date, depot).";
+                continue;
+            }
+
+            $depotOk = DB::table('depots')
+                ->where('company_id', $cid)
+                ->where('id', $depotId)
+                ->where('is_active', true)
+                ->exists();
+            if (!$depotOk) {
+                $errors[] = "Truck {$truck->truck_reg}: invalid depot selected.";
+                continue;
+            }
+
+            $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
+            $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
+            $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
+            $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
+
+            $truck->update([
+                'status'           => 'delivered',
+                'qty_loaded'       => $qtyLoaded,
+                'pickup_date'      => $date,
+                'qty_delivered'    => $qtyDelivered,
+                'delivery_date'    => $date,
+                'depot_id'         => $depotId,
+                'delivery_notes'   => $row['notes'] ?? null,
+                'shortfall_qty'    => $shortfallQty,
+                'allowed_loss_qty' => $allowedLossQty,
+                'excess_loss_qty'  => $excessLossQty,
+                'shortfall_charge' => $shortfallCharge,
+            ]);
+
+            $freightAmt = 0;
+            if ($nomination->transporter_id) {
+                $ledgerCurrency = DB::table('transporters')
+                    ->where('id', $nomination->transporter_id)
+                    ->value('default_currency') ?? 'USD';
+                $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
+                if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
+                    TransporterLedgerEntry::create([
+                        'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
+                        'type'           => 'freight_charge', 'amount' => $freightAmt,
+                        'currency'       => $ledgerCurrency,
+                        'description'    => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
+                        'entry_date'     => $date, 'ref_type' => ImportTruck::class,
+                        'ref_id'         => $truck->id, 'created_by' => auth()->id(),
+                    ]);
+                }
+                if ($shortfallCharge > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'short_charge')->exists()) {
+                    TransporterLedgerEntry::create([
+                        'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
+                        'type'           => 'short_charge', 'amount' => -$shortfallCharge,
+                        'currency'       => $ledgerCurrency,
+                        'description'    => "Shortfall charge — {$truck->truck_reg} ({$excessLossQty} L excess)",
+                        'entry_date'     => $date, 'ref_type' => ImportTruck::class,
+                        'ref_id'         => $truck->id, 'created_by' => auth()->id(),
+                    ]);
+                }
+            }
+
+            if ($purchase->batch_id && $freightAmt > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'freight')->exists()) {
+                $freightCurrency = ($nomination->transporter_id)
+                    ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD')
+                    : ($nomination->currency ?? 'USD');
+                DB::table('batch_costs')->insert([
+                    'batch_id'             => $purchase->batch_id, 'purchase_id'    => $purchase->id,
+                    'nomination_id'        => $nomination->id,     'truck_id'        => $truck->id,
+                    'company_id'           => $cid,                'category'        => 'freight',
+                    'description'          => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
+                    'amount'               => $freightAmt,         'currency'        => $freightCurrency,
+                    'exchange_rate'        => 1,                   'amount_base'     => $freightAmt,
+                    'entry_date'           => $date,               'is_included_in_cost' => false,
+                    'auto_posted'          => true,                'created_by'      => auth()->id(),
+                    'created_at'           => now(),               'updated_at'      => now(),
+                ]);
+            }
+
+            DepotChargeAutoPost::postForDelivery(
+                truck:         $truck,
+                depotId:       $depotId,
+                qtyDeliveredL: $qtyDelivered,
+                deliveryDate:  $date,
+                purchase:      $purchase,
+                nomination:    $nomination,
+                cid:           $cid,
+                createdBy:     (int) auth()->id(),
+            );
+
+            $posted++;
+        }
+
+        $msg = "{$posted} truck(s) quick-posted successfully.";
+        if (!empty($errors)) {
+            $msg .= ' Issues: ' . implode('; ', $errors);
+        }
+
+        return back()->with($errors && $posted === 0 ? 'error' : 'status', $msg);
+    }
+
     // ── Bulk mark in transit ─────────────────────────────────────────────────
 
     public function bulkMarkInTransit(Request $request, Purchase $purchase, ImportNomination $nomination)

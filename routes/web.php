@@ -265,6 +265,10 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             [ImportNominationController::class, 'bulkMarkBorderCleared'])
             ->name('purchases.import-nomination.trucks.bulk-border-cleared');
 
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/bulk-quick-post',
+            [ImportNominationController::class, 'bulkQuickPost'])
+            ->name('purchases.import-nomination.trucks.bulk-quick-post');
+
         // Clients moved to settings group above
 
         // Transporter ledger (balance, entries, payments, statement, export)

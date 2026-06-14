@@ -208,6 +208,7 @@
          style="border: 1.5px solid color-mix(in srgb, var(--tw-accent) 35%, transparent)">
 
       {{-- Section header bar --}}
+      @php $nominatedTrucks = $trucks->where('status', 'nominated'); @endphp
       <div class="flex items-center justify-between px-4 py-2.5"
            style="background: color-mix(in srgb, var(--tw-accent) 8%, var(--tw-surface-2));
                   border-bottom: 1px solid color-mix(in srgb, var(--tw-accent) 25%, transparent)">
@@ -228,6 +229,12 @@
             {{ $trucks->count() }}
           </span>
         </div>
+        @if($nominatedTrucks->isNotEmpty())
+          <button type="button" onclick="openTruckModal('bulkQuickPostModal')"
+                  class="h-7 px-3 rounded-lg border border-teal-500/40 bg-teal-500/10 text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition">
+            ⚡ Quick post ({{ $nominatedTrucks->count() }})
+          </button>
+        @endif
       </div>
 
       {{-- Table --}}
@@ -352,15 +359,6 @@
                               onclick="openTruckModal('editTruckModal-{{ $truck->id }}')"
                               class="h-7 px-2 rounded-lg border {{ $border }} text-[11px] {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
                         Edit
-                      </button>
-                    @endif
-
-                    @if($truck->status === 'nominated')
-                      <button type="button"
-                              onclick="openTruckModal('quickDeliverModal-{{ $truck->id }}')"
-                              title="Record load + delivery in one step"
-                              class="h-7 px-2 rounded-lg border border-teal-500/40 bg-teal-500/10 text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition">
-                        Quick post
                       </button>
                     @endif
 
@@ -1056,6 +1054,186 @@
 @endforeach
 @endif
 
+{{-- ── Bulk quick post modal ── --}}
+@if($nom && $trucks->where('status','nominated')->isNotEmpty())
+@php $bqpTrucks = $trucks->where('status','nominated'); @endphp
+<div id="bulkQuickPostModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+  <div class="w-full max-w-4xl rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col"
+       style="max-height:90vh;">
+
+    {{-- Header --}}
+    <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }} shrink-0">
+      <div>
+        <div class="text-base font-semibold {{ $fg }}">Quick post — nominated trucks</div>
+        <div class="text-xs {{ $muted }} mt-0.5">
+          Fill in load &amp; delivery for each truck. Uncheck to skip.
+          Shortfall rule: <strong>{{ $nom->allowed_loss_pct }}%</strong> allowed loss ·
+          charged at <strong>{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate,2) }}{{ $rateLabel }}</strong>.
+        </div>
+      </div>
+      <button type="button" onclick="closeTruckModal('bulkQuickPostModal')"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+    </div>
+
+    {{-- Apply defaults bar --}}
+    <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} shrink-0">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="text-[10px] font-semibold {{ $muted }} uppercase tracking-wide self-center">Apply to all:</div>
+        <div>
+          <label class="block text-[10px] {{ $muted }} mb-1">Date</label>
+          <input type="date" id="bqpDefaultDate"
+                 class="h-9 rounded-xl border {{ $border }} {{ $surface }} px-3 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+        </div>
+        <div>
+          <label class="block text-[10px] {{ $muted }} mb-1">Depot</label>
+          <select id="bqpDefaultDepot"
+                  class="h-9 rounded-xl border {{ $border }} {{ $surface }} px-3 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+            <option value="">— pick depot —</option>
+            @foreach($depots as $d)
+              <option value="{{ $d->id }}" {{ ($nom->destination_depot_id == $d->id) ? 'selected' : '' }}>
+                {{ $d->name }}{{ $d->city ? ' ('.$d->city.')' : '' }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+        <button type="button" onclick="bqpApplyDefaults()"
+                class="h-9 px-3 rounded-xl border border-teal-500/40 bg-teal-500/10 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition">
+          Apply to all ↓
+        </button>
+      </div>
+    </div>
+
+    {{-- Scrollable truck list --}}
+    <form method="POST"
+          action="{{ route('purchases.import-nomination.trucks.bulk-quick-post', [$purchase, $nom]) }}"
+          id="bulkQuickPostForm">
+      @csrf
+      <div class="overflow-y-auto flex-1">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="{{ $muted }} border-b {{ $border }} {{ $surface2 }} sticky top-0 z-10">
+              <th class="py-2 pl-5 pr-2 text-center font-semibold">
+                <input type="checkbox" id="bqpSelectAll" checked
+                       class="rounded" onchange="bqpToggleAll(this.checked)"
+                       title="Select / deselect all" />
+              </th>
+              <th class="py-2 pr-3 text-left font-semibold whitespace-nowrap">Truck / Trailer</th>
+              <th class="py-2 pr-3 text-right font-semibold whitespace-nowrap">Capacity</th>
+              <th class="py-2 pr-3 text-left font-semibold whitespace-nowrap">Loaded ({{ $unitLabel }}) *</th>
+              <th class="py-2 pr-3 text-left font-semibold whitespace-nowrap">Delivered ({{ $unitLabel }}) *</th>
+              <th class="py-2 pr-3 text-left font-semibold whitespace-nowrap">Date *</th>
+              <th class="py-2 pr-5 text-left font-semibold whitespace-nowrap">Depot *</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($bqpTrucks as $bqt)
+            <tr class="border-b {{ $border }} last:border-0" id="bqpRow-{{ $bqt->id }}">
+              {{-- Include checkbox --}}
+              <td class="py-3 pl-5 pr-2 text-center">
+                <input type="checkbox" name="trucks[{{ $bqt->id }}][include]" value="1" checked
+                       class="bqp-include rounded"
+                       onchange="bqpRowToggle({{ $bqt->id }}, this.checked)" />
+              </td>
+              {{-- Truck reg --}}
+              <td class="py-3 pr-3 whitespace-nowrap">
+                <div class="font-mono font-bold {{ $fg }}">{{ $bqt->truck_reg ?: '—' }}</div>
+                @if($bqt->trailer_reg)
+                  <div class="text-[10px] {{ $muted }}">{{ $bqt->trailer_reg }}</div>
+                @endif
+                @if($bqt->driver_name)
+                  <div class="text-[10px] {{ $muted }}">{{ $bqt->driver_name }}</div>
+                @endif
+              </td>
+              {{-- Capacity --}}
+              <td class="py-3 pr-3 text-right font-semibold {{ $fg }} whitespace-nowrap">
+                {{ number_format($bqt->capacity, 0) }}
+              </td>
+              {{-- Qty loaded --}}
+              <td class="py-3 pr-3">
+                <input type="number" name="trucks[{{ $bqt->id }}][qty_loaded]"
+                       step="0.001" min="1"
+                       placeholder="{{ number_format($bqt->capacity, 0) }}"
+                       class="bqp-qty-loaded w-28 h-8 rounded-xl border {{ $border }} {{ $surface2 }} px-2 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+              </td>
+              {{-- Qty delivered --}}
+              <td class="py-3 pr-3">
+                <input type="number" name="trucks[{{ $bqt->id }}][qty_delivered]"
+                       step="0.001" min="0"
+                       placeholder="{{ number_format($bqt->capacity, 0) }}"
+                       class="bqp-qty-delivered w-28 h-8 rounded-xl border {{ $border }} {{ $surface2 }} px-2 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+              </td>
+              {{-- Date --}}
+              <td class="py-3 pr-3">
+                <input type="date" name="trucks[{{ $bqt->id }}][date]"
+                       class="bqp-date h-8 rounded-xl border {{ $border }} {{ $surface2 }} px-2 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+              </td>
+              {{-- Depot --}}
+              <td class="py-3 pr-5">
+                <select name="trucks[{{ $bqt->id }}][depot_id]"
+                        class="bqp-depot h-8 rounded-xl border {{ $border }} {{ $surface2 }} px-2 text-xs {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+                  <option value="">— depot —</option>
+                  @foreach($depots as $d)
+                    <option value="{{ $d->id }}" {{ ($nom->destination_depot_id == $d->id) ? 'selected' : '' }}>
+                      {{ $d->name }}
+                    </option>
+                  @endforeach
+                </select>
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+
+      {{-- Footer --}}
+      <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-between gap-3 shrink-0">
+        <div class="text-[11px] {{ $muted }}">
+          <span id="bqpCheckedCount">{{ $bqpTrucks->count() }}</span> truck(s) will be posted
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeTruckModal('bulkQuickPostModal')"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit" id="bqpSubmitBtn"
+                  class="h-10 px-5 rounded-xl border border-teal-600/50 bg-teal-600 text-sm font-bold text-white hover:bg-teal-500 transition">
+            Post trucks
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function bqpApplyDefaults() {
+  const date  = document.getElementById('bqpDefaultDate').value;
+  const depot = document.getElementById('bqpDefaultDepot').value;
+  document.querySelectorAll('.bqp-date').forEach(el  => { if (date)  el.value = date; });
+  document.querySelectorAll('.bqp-depot').forEach(el => { if (depot) el.value = depot; });
+}
+function bqpRowToggle(id, checked) {
+  const row = document.getElementById('bqpRow-' + id);
+  if (row) row.style.opacity = checked ? '1' : '0.4';
+  bqpUpdateCount();
+}
+function bqpToggleAll(checked) {
+  document.querySelectorAll('.bqp-include').forEach(cb => {
+    cb.checked = checked;
+    bqpRowToggle(cb.closest('tr').id.replace('bqpRow-',''), checked);
+  });
+}
+function bqpUpdateCount() {
+  const n = document.querySelectorAll('.bqp-include:checked').length;
+  const el = document.getElementById('bqpCheckedCount');
+  if (el) el.textContent = n;
+}
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('bqp-include')) bqpUpdateCount();
+});
+</script>
+@endif
+
 {{-- ── Import trucks wizard modal ── --}}
 @if($nom)
 <div id="importTrucksModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
@@ -1443,7 +1621,7 @@
   // ESC closes all truck modals
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], [id^="quickDeliverModal-"], #addTruckModal, #nominationModal, #importTrucksModal')
+    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], [id^="quickDeliverModal-"], #addTruckModal, #nominationModal, #importTrucksModal, #bulkQuickPostModal')
       .forEach(el => el.classList.add('hidden'));
     document.documentElement.classList.remove('overflow-hidden');
   });
