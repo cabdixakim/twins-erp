@@ -223,7 +223,10 @@ class ImportNominationController extends Controller
     {
         $this->authorise($purchase);
         abort_if((int) $truck->nomination_id !== $nomination->id, 403);
-        abort_if($truck->status !== 'loaded', 422, 'Truck must be loaded before marking in transit.');
+
+        if ($truck->status !== 'loaded') {
+            return back()->with('error', "Truck {$truck->truck_reg} must be in Loaded status before marking in transit (currently: {$truck->statusLabel()}).");
+        }
 
         $truck->update(['status' => 'in_transit']);
 
@@ -236,7 +239,10 @@ class ImportNominationController extends Controller
     {
         $this->authorise($purchase);
         abort_if((int) $truck->nomination_id !== $nomination->id, 403);
-        abort_if($truck->status !== 'in_transit', 422, 'Truck must be in transit to record border clearance.');
+
+        if ($truck->status !== 'in_transit') {
+            return back()->with('error', "Truck {$truck->truck_reg} must be In Transit before recording border clearance (currently: {$truck->statusLabel()}).");
+        }
 
         $data = $request->validate([
             'tr8_number'  => 'nullable|string|max:80',

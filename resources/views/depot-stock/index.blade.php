@@ -6,16 +6,14 @@
   $surface2 = 'bg-[color:var(--tw-surface-2)]';
   $fg       = 'text-[color:var(--tw-fg)]';
   $muted    = 'text-[color:var(--tw-muted)]';
-
-  // Your “nice green pill/button” style (like screenshot)
   $pillGreen = 'border-emerald-600 bg-emerald-500 text-white';
   $btnGreen  = 'border-emerald-600 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-700';
 @endphp
 
 @extends('layouts.app')
 
-@section('title', 'Depot stock')
-@section('subtitle', 'Live position by depot (batch-aware / FIFO-ready)')
+@section('title', 'Depot movements')
+@section('subtitle', 'Receipts, issues and adjustments by depot')
 
 @section('content')
 
@@ -26,21 +24,12 @@
     <div class="flex items-center justify-between gap-3 px-2 pt-2 pb-3">
       <div class="min-w-0">
         <div class="text-sm font-semibold {{ $fg }}">Depots</div>
-        <div class="mt-0.5 text-xs {{ $muted }}">Pick a depot to view stock</div>
+        <div class="mt-0.5 text-xs {{ $muted }}">Pick a depot to view movements</div>
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <a href="{{ route('depot-stock.export') }}"
-           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border {{ $border }} {{ $surface2 }} text-[10px] font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition">
-          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
-          </svg>
-          CSV
-        </a>
-        <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface2 }} {{ $muted }}">
-          {{ $depots->count() }} total
-        </span>
-      </div>
+      <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold {{ $border }} {{ $surface2 }} {{ $muted }}">
+        {{ $depots->count() }}
+      </span>
     </div>
 
     @if($depots->isEmpty())
@@ -50,10 +39,7 @@
     @else
       <div class="space-y-1">
         @foreach($depots as $d)
-          @php
-            $active = $currentDepot && $currentDepot->id === $d->id;
-          @endphp
-
+          @php $active = $currentDepot && $currentDepot->id === $d->id; @endphp
           <a href="{{ route('depot-stock.index', ['depot' => $d->id]) }}"
              class="group flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition
                     {{ $active ? $pillGreen : $border . ' ' . $surface2 . ' ' . $fg }}
@@ -66,10 +52,10 @@
                 {{ $d->city ?: 'City not set' }}
               </div>
             </div>
-
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
-                         {{ $d->is_active ? ($active ? 'border-white/30 text-white/90' : 'border-emerald-500/30 text-emerald-300')
-                                         : 'border-slate-500/30 text-slate-400' }}">
+                         {{ $d->is_active
+                              ? ($active ? 'border-white/30 text-white/90' : 'border-emerald-500/30 text-emerald-300')
+                              : 'border-slate-500/30 text-slate-400' }}">
               {{ $d->is_active ? 'Active' : 'Inactive' }}
             </span>
           </a>
@@ -81,13 +67,13 @@
   {{-- Main --}}
   <main class="md:col-span-8 lg:col-span-9">
     @include('depot-stock._details', [
-      'border' => $border,
-      'surface' => $surface,
+      'border'   => $border,
+      'surface'  => $surface,
       'surface2' => $surface2,
-      'fg' => $fg,
-      'muted' => $muted,
+      'fg'       => $fg,
+      'muted'    => $muted,
       'btnGreen' => $btnGreen,
-      'pillGreen' => $pillGreen,
+      'pillGreen'=> $pillGreen,
     ])
   </main>
 
