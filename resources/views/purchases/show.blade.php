@@ -4,22 +4,19 @@
   /** @var \App\Models\Purchase $purchase */
   $purchase = $purchase;
 
-  // Theme tokens (from your app.css)
   $border   = 'border-[color:var(--tw-border)]';
   $surface  = 'bg-[color:var(--tw-surface)]';
   $surface2 = 'bg-[color:var(--tw-surface-2)]';
   $fg       = 'text-[color:var(--tw-fg)]';
   $muted    = 'text-[color:var(--tw-muted)]';
 
-  // Labels
   $typeLabel = match($purchase->type) {
-    'import' => 'Import',
+    'import'      => 'Import',
     'local_depot' => 'Local depot',
-    'cross_dock' => 'Cross dock',
-    default => ucfirst(str_replace('_',' ', (string) $purchase->type)),
+    'cross_dock'  => 'Cross dock',
+    default       => ucfirst(str_replace('_',' ', (string) $purchase->type)),
   };
 
-  // Status pill — uses semantic CSS classes from app.css (s-*)
   $statusPill = match($purchase->status) {
     'draft'       => 's-slate',
     'confirmed'   => 's-green',
@@ -32,347 +29,495 @@
     default       => 's-slate',
   };
 
-  $qty   = (float) ($purchase->qty ?? 0);
-  $unit  = (float) ($purchase->unit_price ?? 0);
-  $total = $qty * $unit;
+  $qty      = (float) ($purchase->qty ?? 0);
+  $unit     = (float) ($purchase->unit_price ?? 0);
+  $total    = $qty * $unit;
+  $currency = strtoupper($purchase->currency ?? 'USD');
 
-  $currency     = strtoupper($purchase->currency ?? 'USD');
-
-  // Supplier display
   $supplierName = $purchase->supplier_name ?? ($purchase->supplier?->name ?? ($purchase->supplier ?? '—'));
+  $productName  = data_get($purchase, 'product.name') ?: ('Product #' . (int)($purchase->product_id ?? 0));
+  $depotName    = data_get($purchase, 'depot.name') ?: ($purchase->depot_id ? ('Depot #' . (int)$purchase->depot_id) : '—');
+  $ref          = $purchase->reference ?? ($purchase->display_ref ?? $purchase->id);
 
-  // Safe display values (won't crash even if relations missing)
-  $productName = data_get($purchase, 'product.name') ?: ('Product #' . (int)($purchase->product_id ?? 0));
-  $depotName   = data_get($purchase, 'depot.name') ?: ($purchase->depot_id ? ('Depot #' . (int)$purchase->depot_id) : '—');
-
-  $ref = $purchase->reference ?? ($purchase->display_ref ?? $purchase->id);
+  // Two-column import layout (confirmed/nominated/received only — not draft/cancelled/voided)
+  $importTwoCol = $purchase->type === 'import'
+    && !in_array($purchase->status, ['draft', 'cancelled', 'voided']);
 @endphp
 
 @extends('layouts.app')
 
-@section('title', 'Purchase')
-@section('subtitle', 'Review and confirm')
+@section('title', (string) $ref)
+@section('subtitle', $supplierName . ' · ' . $typeLabel . ' · ' . ucfirst((string)$purchase->status))
 
 @section('content')
 
 <div class="flex flex-col gap-4">
 
-  {{-- Header --}}
-  <div class="flex items-start justify-between gap-4">
-    <div class="min-w-0">
-      <div class="flex items-center gap-3">
-        <h1 class="text-xl font-semibold {{ $fg }}">
-          Purchase #{{ $ref }}
-        </h1>
+  {{-- ══ Action / nav bar ══════════════════════════════════════════════ --}}
+  <div class="flex flex-wrap items-center justify-between gap-3">
 
-        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ $statusPill }}">
-          {{ ucfirst((string)$purchase->status) }}
-        </span>
-
-        @if($purchase->batch_id)
-          <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }} px-2.5 py-1 text-xs font-semibold {{ $fg }}">
-            Batch #{{ $purchase->batch_id }}
-          </span>
-        @endif
-      </div>
-
-      <p class="mt-1 text-sm {{ $muted }}">
-        {{ $typeLabel }} · {{ ucfirst((string)$purchase->status) }}
-      </p>
-    </div>
-
-    <div class="shrink-0 flex flex-wrap items-center gap-2">
+    {{-- Left: breadcrumb + pills --}}
+    <div class="flex flex-wrap items-center gap-2 min-w-0">
       <a href="{{ route('purchases.index') }}"
-         class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $fg }}
-                hover:bg-[color:var(--tw-surface)] transition">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
-        Back
+         class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border {{ $border }} {{ $surface2 }}
+                text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition shrink-0">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+        </svg>
+        Purchases
       </a>
 
-      {{-- DRAFT ACTIONS --}}
+      <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold {{ $statusPill }}">
+        {{ ucfirst((string)$purchase->status) }}
+      </span>
+
+      <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }}
+                   px-2 py-0.5 text-[10px] font-semibold {{ $muted }}">
+        {{ $typeLabel }}
+      </span>
+
+      @if($purchase->batch_id)
+        <span class="inline-flex items-center rounded-full border {{ $border }} {{ $surface2 }}
+                     px-2 py-0.5 text-[10px] font-semibold {{ $muted }}">
+          Batch #{{ $purchase->batch_id }}
+        </span>
+      @endif
+    </div>
+
+    {{-- Right: action buttons ──────────────────────────────────── --}}
+    <div class="flex flex-wrap items-center gap-2 shrink-0">
+
+      {{-- DRAFT: Edit + Confirm --}}
       @if($purchase->status === 'draft')
         <a href="{{ route('purchases.edit', $purchase) }}"
-           class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $fg }}
-                  hover:bg-[color:var(--tw-surface)] transition">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+           class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface2 }}
+                  text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface)] transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
           Edit
         </a>
-
-        {{-- Confirm button --}}
         <form method="POST" action="{{ route('purchases.confirm', $purchase) }}" id="confirmForm">
           @csrf
           <button type="button" id="btnConfirm"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-emerald-500/40 bg-emerald-600
-                         text-sm font-semibold text-white hover:bg-emerald-500 transition">
+                  class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-emerald-500/40
+                         bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-500 transition">
             Confirm
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
           </button>
         </form>
       @endif
 
-      {{-- POST-DRAFT ACTIONS --}}
       @if(!in_array($purchase->status, ['draft', 'cancelled', 'voided']))
 
-        {{-- Receive button (local_depot + confirmed) --}}
+        {{-- Receive (local_depot + confirmed) --}}
         @if($purchase->type === 'local_depot' && $purchase->status === 'confirmed')
           <form method="POST" action="{{ route('purchases.receive', $purchase) }}" id="receiveForm">
             @csrf
             <button type="button" id="btnReceive"
-                    class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-green
-                           text-sm font-semibold transition">
+                    class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border btn-soft-green
+                           text-xs font-semibold transition">
               Receive
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4"/>
+              </svg>
             </button>
           </form>
         @endif
 
-        {{-- Import: old nominate-vessel / deliver-to-depot buttons replaced by inline logistics section --}}
+        {{-- Undo receipt (local_depot + received) --}}
+        @if($purchase->type === 'local_depot' && $purchase->status === 'received')
+          <button type="button" id="btnUndoReceipt"
+                  class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface2 }}
+                         text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+            </svg>
+            Undo receipt
+          </button>
+        @endif
 
-        {{-- Cross-dock actions (confirmed cross_dock) --}}
+        {{-- Cross-dock actions --}}
         @if($purchase->type === 'cross_dock' && $purchase->status === 'confirmed')
           <button type="button" id="btnCrossDockTransfer"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-blue
-                         text-sm font-semibold transition">
+                  class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border btn-soft-blue
+                         text-xs font-semibold transition">
             Transfer to depot
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
+            </svg>
           </button>
           <button type="button" id="btnCrossDockDispatch"
-                  class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-purple
-                         text-sm font-semibold transition">
+                  class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border btn-soft-purple
+                         text-xs font-semibold transition">
             Dispatch out
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-7-7l7 7-7 7"/></svg>
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-7-7l7 7-7 7"/>
+            </svg>
           </button>
         @endif
 
       @endif
 
-      {{-- CANCEL button (draft / confirmed / nominated without deliveries) --}}
+      {{-- Cancel --}}
       @if(in_array($purchase->status, ['draft', 'confirmed', 'nominated']))
         <button type="button" id="btnCancel"
-                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-rose
-                       text-sm font-semibold transition">
-          Cancel purchase
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border btn-soft-rose
+                       text-xs font-semibold transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Cancel
         </button>
       @endif
 
-      {{-- VOID / Return to seller (received local_depot) --}}
+      {{-- Return to seller --}}
       @if($purchase->type === 'local_depot' && $purchase->status === 'received')
         <button type="button" id="btnVoid"
-                class="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border btn-soft-rose
-                       text-sm font-semibold transition">
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border btn-soft-rose
+                       text-xs font-semibold transition">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+          </svg>
           Return to seller
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
         </button>
       @endif
 
     </div>
   </div>
 
+  {{-- Flash messages --}}
   @if(session('status'))
     <div class="alert-ok rounded-xl p-3 text-sm font-medium">
       {!! nl2br(e(session('status'))) !!}
     </div>
   @endif
-
   @if(session('error'))
     <div class="alert-err rounded-xl p-3 text-sm font-medium">
       {{ session('error') }}
     </div>
   @endif
 
-  {{-- ── Main purchase card ── --}}
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+  {{-- ══════════════════════════════════════════════════════════════════
+       IMPORT — two-column: details sidebar + logistics main
+       ══════════════════════════════════════════════════════════════════ --}}
+  @if($importTwoCol)
 
-    {{-- Hero row: supplier + value --}}
-    <div class="px-6 py-5 flex flex-wrap items-start justify-between gap-4 border-b {{ $border }}" style="background:linear-gradient(135deg,var(--tw-surface-2) 0%,var(--tw-surface) 100%)">
-      <div class="min-w-0">
-        <div class="flex items-center gap-2 flex-wrap mb-1">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-semibold {{ $statusPill }}">{{ ucfirst((string)$purchase->status) }}</span>
-          <span class="text-[10px] font-semibold uppercase tracking-wider tw-muted">{{ $typeLabel }}</span>
+  <div class="grid lg:grid-cols-12 gap-4 items-start">
+
+    {{-- ── Sidebar (details) ─────────────────────────────────────── --}}
+    <aside class="lg:col-span-4 xl:col-span-3 space-y-3 lg:sticky lg:top-4">
+
+      {{-- Purchase facts --}}
+      <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+        <div class="px-4 py-4 border-b {{ $border }}"
+             style="background:linear-gradient(135deg,var(--tw-surface-2) 0%,var(--tw-surface) 100%)">
+          <div class="text-[10px] uppercase tracking-wider {{ $muted }} font-semibold">{{ $typeLabel }}</div>
+          <div class="mt-1 text-base font-bold {{ $fg }} leading-tight truncate">{{ $supplierName }}</div>
+          <div class="mt-0.5 text-xs {{ $muted }}">{{ $productName }}</div>
+        </div>
+
+        <dl class="divide-y {{ $border }}">
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Quantity</dt>
+            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 0) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+          </div>
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Unit price</dt>
+            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/L</span></dd>
+          </div>
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Total value</dt>
+            <dd class="text-base font-bold {{ $fg }}">{{ number_format($total, 2) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}</span></dd>
+          </div>
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Date</dt>
+            <dd class="text-sm {{ $fg }}">{{ $purchase->purchase_date?->format('d M Y') ?? '—' }}</dd>
+          </div>
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Reference</dt>
+            <dd class="text-xs font-mono {{ $fg }}">{{ $ref }}</dd>
+          </div>
           @if($purchase->batch_id)
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $border }} text-[10px] font-semibold tw-muted" style="background:var(--tw-surface)">Batch #{{ $purchase->batch_id }}</span>
+          <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <dt class="text-xs {{ $muted }}">Batch</dt>
+            <dd class="text-xs font-mono font-semibold {{ $fg }}">#{{ $purchase->batch_id }}</dd>
+          </div>
+          @endif
+          @if($purchase->notes)
+          <div class="px-4 py-2.5">
+            <dt class="text-[11px] {{ $muted }} mb-0.5">Notes</dt>
+            <dd class="text-xs {{ $fg }}">{{ $purchase->notes }}</dd>
+          </div>
+          @endif
+        </dl>
+      </div>
+
+      {{-- Delivery progress (inline in sidebar for import) --}}
+      @if(in_array($purchase->status, ['nominated', 'received']))
+        @php
+          $qtyDelivered = (float) ($purchase->qty_delivered ?? 0);
+          $pct = $qty > 0 ? min(100, round($qtyDelivered / $qty * 100)) : 0;
+        @endphp
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+          <div class="px-4 py-3 {{ $surface2 }} border-b {{ $border }} flex items-center justify-between gap-2">
+            <span class="text-xs font-semibold {{ $fg }}">Delivery progress</span>
+            <span class="text-xs {{ $muted }}">{{ number_format($qtyDelivered, 0) }} / {{ number_format($qty, 0) }} L
+              <span class="font-semibold {{ $fg }}">{{ $pct }}%</span>
+            </span>
+          </div>
+          <div class="px-4 py-3">
+            <div class="w-full rounded-full h-2 {{ $surface2 }} border {{ $border }} overflow-hidden">
+              <div class="bg-emerald-500 h-full rounded-full transition-all" style="width:{{ $pct }}%"></div>
+            </div>
+          </div>
+          @if(($importMovements ?? collect())->isNotEmpty())
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="{{ $muted }} border-t {{ $border }} {{ $surface2 }}">
+                  <th class="text-left px-4 py-2 font-semibold">Depot</th>
+                  <th class="text-right px-4 py-2 font-semibold">Qty</th>
+                  <th class="text-right px-4 py-2 font-semibold">Date</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y {{ $border }}">
+                @foreach($importMovements as $mv)
+                  <tr>
+                    <td class="px-4 py-2 {{ $fg }}">{{ $mv->toDepot?->name ?? '—' }}</td>
+                    <td class="px-4 py-2 text-right {{ $fg }} font-semibold">{{ number_format($mv->qty, 0) }}</td>
+                    <td class="px-4 py-2 text-right {{ $muted }}">{{ $mv->created_at->format('d M') }}</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
           @endif
         </div>
-        <div class="text-lg font-bold tw-fg truncate">{{ $supplierName }}</div>
-        <div class="text-xs tw-muted mt-0.5">{{ $productName }}</div>
-      </div>
-      <div class="text-right flex-shrink-0">
-        <div class="text-[10px] tw-muted uppercase tracking-wide mb-1">Purchase value</div>
-        <div class="text-2xl font-bold tw-fg leading-none">
-          {{ number_format($total, 2) }}
-          <span class="text-sm font-semibold ml-1 tw-muted">{{ $currency }}</span>
-        </div>
-        <div class="text-[11px] tw-muted mt-1">{{ number_format($qty, 0) }} L · {{ $currency }} {{ number_format($unit, 4) }}/L</div>
-      </div>
-    </div>
-
-    {{-- Metadata strip --}}
-    <div class="px-6 py-3 flex flex-wrap gap-x-6 gap-y-2 border-b {{ $border }} text-xs">
-      <div>
-        <span class="tw-muted">Date </span>
-        <span class="tw-fg font-medium">{{ $purchase->purchase_date?->format('d M Y') ?? '—' }}</span>
-      </div>
-      @if($purchase->type === 'local_depot' && $depotName !== '—')
-        <div>
-          <span class="tw-muted">Depot </span>
-          <span class="tw-fg font-medium">{{ $depotName }}</span>
-        </div>
       @endif
-      <div>
-        <span class="tw-muted">Ref </span>
-        <span class="tw-fg font-mono font-medium">{{ $ref }}</span>
-      </div>
-      @if($purchase->notes)
-        <div class="w-full">
-          <span class="tw-muted">Notes </span>
-          <span class="tw-fg">{{ $purchase->notes }}</span>
-        </div>
-      @endif
-    </div>
 
-    {{-- Workflow hint --}}
-    <div class="px-6 py-3 text-xs flex items-start gap-2">
-      <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 tw-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span class="tw-muted">
-        @if($purchase->type === 'import')
-          @if($purchase->status === 'draft') Confirm to create a batch, then set up the import nomination below.
-          @elseif($purchase->status === 'confirmed') Set up the transporter nomination below, then add trucks to begin tracking.
-          @elseif($purchase->status === 'nominated') Record truck loadings, track transit → border clearance → delivery to depot.
-          @else All trucks delivered. Purchase complete.
-          @endif
-        @elseif($purchase->type === 'local_depot')
-          After confirmation, receive into <strong class="tw-fg">{{ $depotName }}</strong>.
-        @else
-          After confirmation, stock goes directly into <strong class="tw-fg">Cross Dock</strong> and is ready for dispatch.
-        @endif
-      </span>
-    </div>
+      {{-- Vessel / shipping (collapsible, open if data exists) --}}
+      @if($purchase->vessel_name || $purchase->loading_port || $purchase->bl_number)
+      <details class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden group" open>
+        <summary class="px-4 py-3 flex items-center justify-between gap-2 cursor-pointer
+                        {{ $surface2 }} border-b {{ $border }} list-none select-none">
+          <span class="text-xs font-semibold {{ $fg }}">Vessel / shipping</span>
+          <svg class="w-3.5 h-3.5 {{ $muted }} group-open:rotate-180 transition-transform"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <dl class="divide-y {{ $border }}">
+          @foreach([
+            'Vessel'         => $purchase->vessel_name,
+            'Voyage'         => $purchase->voyage_no,
+            'BL number'      => $purchase->bl_number,
+            'Loading port'   => $purchase->loading_port,
+            'Discharge port' => $purchase->discharge_port,
+            'BL date'        => $purchase->bl_date?->format('d M Y'),
+            'ETA'            => $purchase->eta_date?->format('d M Y'),
+          ] as $label => $value)
+            @if($value)
+            <div class="px-4 py-2 flex items-center justify-between gap-2">
+              <dt class="text-xs {{ $muted }}">{{ $label }}</dt>
+              <dd class="text-xs font-semibold {{ $fg }}">{{ $value }}</dd>
+            </div>
+            @endif
+          @endforeach
+        </dl>
+      </details>
+      @endif
+
+    </aside>
+
+    {{-- ── Main: logistics pipeline ──────────────────────────────── --}}
+    <main class="lg:col-span-8 xl:col-span-9 min-w-0">
+      @include('purchases._import_logistics', [
+        'purchase'          => $purchase,
+        'importNomination'  => $importNomination,
+        'transporters'      => $transporters,
+        'depots'            => $depots,
+        'qty'               => $qty,
+        'currency'          => $currency,
+        'volumeUnit'        => $volumeUnit ?? 'L',
+        'border'            => $border,
+        'surface'           => $surface,
+        'surface2'          => $surface2,
+        'fg'                => $fg,
+        'muted'             => $muted,
+      ])
+    </main>
 
   </div>
 
-  {{-- ================================================================
-       IMPORT: Nomination details card (shown once nominated)
-       ================================================================ --}}
-  @if($purchase->type === 'import' && $purchase->vessel_name)
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
-      <div class="text-sm font-semibold {{ $fg }} mb-3">Vessel nomination</div>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-          <div class="text-[11px] {{ $muted }}">Vessel</div>
-          <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->vessel_name }}</div>
-        </div>
-        @if($purchase->voyage_no)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">Voyage</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->voyage_no }}</div>
-          </div>
-        @endif
-        @if($purchase->bl_number)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">BL number</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->bl_number }}</div>
-          </div>
-        @endif
-        @if($purchase->loading_port)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">Loading port</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->loading_port }}</div>
-          </div>
-        @endif
-        @if($purchase->discharge_port)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">Discharge port</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->discharge_port }}</div>
-          </div>
-        @endif
-        @if($purchase->bl_date)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">BL date</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->bl_date->format('Y-m-d') }}</div>
-          </div>
-        @endif
-        @if($purchase->eta_date)
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
-            <div class="text-[11px] {{ $muted }}">ETA</div>
-            <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $purchase->eta_date->format('Y-m-d') }}</div>
-          </div>
-        @endif
+  {{-- ══════════════════════════════════════════════════════════════════
+       ALL OTHER TYPES + import draft / cancelled / voided
+       Compact two-panel card
+       ══════════════════════════════════════════════════════════════════ --}}
+  @else
+
+  <div class="grid lg:grid-cols-12 gap-4 items-start">
+
+    {{-- Purchase details card --}}
+    <div class="lg:col-span-5 rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+      <div class="px-4 py-4 border-b {{ $border }}"
+           style="background:linear-gradient(135deg,var(--tw-surface-2) 0%,var(--tw-surface) 100%)">
+        <div class="text-[10px] uppercase tracking-wider {{ $muted }} font-semibold">{{ $typeLabel }}</div>
+        <div class="mt-1 text-lg font-bold {{ $fg }} leading-tight truncate">{{ $supplierName }}</div>
+        <div class="mt-0.5 text-xs {{ $muted }}">{{ $productName }}</div>
       </div>
+
+      <dl class="divide-y {{ $border }}">
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Quantity</dt>
+          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 0) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+        </div>
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Unit price</dt>
+          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/L</span></dd>
+        </div>
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Total value</dt>
+          <dd class="text-xl font-bold {{ $fg }}">{{ number_format($total, 2) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}</span></dd>
+        </div>
+        @if($purchase->type === 'local_depot' && $depotName !== '—')
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Depot</dt>
+          <dd class="text-sm font-medium {{ $fg }}">{{ $depotName }}</dd>
+        </div>
+        @endif
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Date</dt>
+          <dd class="text-sm {{ $fg }}">{{ $purchase->purchase_date?->format('d M Y') ?? '—' }}</dd>
+        </div>
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Reference</dt>
+          <dd class="text-xs font-mono {{ $fg }}">{{ $ref }}</dd>
+        </div>
+        @if($purchase->batch_id)
+        <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+          <dt class="text-xs {{ $muted }}">Batch</dt>
+          <dd class="text-xs font-mono font-semibold {{ $fg }}">#{{ $purchase->batch_id }}</dd>
+        </div>
+        @endif
+        @if($purchase->notes)
+        <div class="px-4 py-2.5">
+          <dt class="text-[11px] {{ $muted }} mb-0.5">Notes</dt>
+          <dd class="text-xs {{ $fg }}">{{ $purchase->notes }}</dd>
+        </div>
+        @endif
+      </dl>
     </div>
-  @endif
 
-  {{-- ================================================================
-       IMPORT: Truck nominations + logistics pipeline
-       ================================================================ --}}
-  @if($purchase->type === 'import' && in_array($purchase->status, ['confirmed', 'nominated', 'received']))
-    @include('purchases._import_logistics', [
-      'purchase'          => $purchase,
-      'importNomination'  => $importNomination,
-      'transporters'      => $transporters,
-      'depots'            => $depots,
-      'qty'               => $qty,
-      'currency'          => $currency,
-      'volumeUnit'        => $volumeUnit ?? 'L',
-    ])
-  @endif
+    {{-- Workflow / status panel --}}
+    <div class="lg:col-span-7 rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden flex flex-col">
 
-  {{-- ================================================================
-       IMPORT: Delivery progress + history card (legacy movements)
-       ================================================================ --}}
-  @if($purchase->type === 'import' && in_array($purchase->status, ['nominated', 'received']))
-    @php
-      $qtyDelivered = (float) ($purchase->qty_delivered ?? 0);
-      $pct = $qty > 0 ? min(100, round($qtyDelivered / $qty * 100)) : 0;
-    @endphp
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5">
-      <div class="flex items-center justify-between gap-4 mb-3">
-        <div class="text-sm font-semibold {{ $fg }}">Delivery progress</div>
-        <div class="text-xs {{ $muted }}">
-          {{ number_format($qtyDelivered, 3) }} / {{ number_format($qty, 3) }} L
-          <span class="ml-1 font-semibold {{ $fg }}">{{ $pct }}%</span>
+      {{-- Status timeline --}}
+      @php
+        $allStatuses = match($purchase->type) {
+          'local_depot' => ['draft','confirmed','received'],
+          'cross_dock'  => ['draft','confirmed','transferred'],
+          default       => ['draft','confirmed'],
+        };
+        $terminalStatuses = ['received','transferred','dispatched'];
+        $terminalReached  = in_array($purchase->status, $terminalStatuses);
+        $currentIdx       = array_search($purchase->status, $allStatuses);
+        if ($currentIdx === false && $terminalReached) $currentIdx = count($allStatuses) - 1;
+        $statusLabels = [
+          'draft'       => 'Draft',
+          'confirmed'   => 'Confirmed',
+          'received'    => 'Received',
+          'transferred' => 'Transferred',
+          'dispatched'  => 'Dispatched',
+        ];
+      @endphp
+      <div class="px-5 pt-5 pb-4 border-b {{ $border }}">
+        <div class="text-[10px] uppercase tracking-wide {{ $muted }} font-semibold mb-3">Progress</div>
+        <div class="flex items-center">
+          @foreach($allStatuses as $i => $s)
+            @php
+              $done    = $currentIdx !== false && $i <= $currentIdx && !in_array($purchase->status, ['cancelled','voided']);
+              $current = $i === $currentIdx && !in_array($purchase->status, ['cancelled','voided']);
+            @endphp
+            <div class="flex items-center {{ $i < count($allStatuses) - 1 ? 'flex-1' : '' }}">
+              <div class="flex flex-col items-center gap-1">
+                <div class="w-7 h-7 rounded-full flex items-center justify-center border text-[10px] font-bold shrink-0
+                            {{ $done ? 'bg-emerald-500 border-emerald-500 text-white' : ($border . ' ' . $surface2 . ' ' . $muted) }}">
+                  @if($done && !$current)
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  @else
+                    {{ $i + 1 }}
+                  @endif
+                </div>
+                <div class="text-[9px] font-semibold whitespace-nowrap {{ $done ? 'text-emerald-500' : $muted }}">
+                  {{ $statusLabels[$s] ?? ucfirst($s) }}
+                </div>
+              </div>
+              @if($i < count($allStatuses) - 1)
+                <div class="flex-1 h-px mx-2 mb-4 {{ $i < ($currentIdx ?? -1) && !in_array($purchase->status, ['cancelled','voided']) ? 'bg-emerald-500' : 'bg-[color:var(--tw-border)]' }}"></div>
+              @endif
+            </div>
+          @endforeach
         </div>
       </div>
 
-      {{-- Progress bar --}}
-      <div class="w-full bg-[color:var(--tw-surface-2)] rounded-full h-2 mb-4 border {{ $border }}">
-        <div class="bg-emerald-500 h-2 rounded-full transition-all"
-             style="width: {{ $pct }}%"></div>
+      {{-- What's next / guidance --}}
+      <div class="px-5 py-4 border-b {{ $border }}">
+        <div class="text-xs font-semibold {{ $fg }} mb-1">
+          @if(in_array($purchase->status, ['cancelled','voided'])) Status
+          @elseif(in_array($purchase->status, ['received','transferred','dispatched'])) Complete
+          @else What's next
+          @endif
+        </div>
+        <p class="text-sm {{ $muted }} leading-relaxed">
+          @if($purchase->type === 'local_depot')
+            @if($purchase->status === 'draft') Confirm to lock the draft and create a batch. Then receive it into <strong class="{{ $fg }}">{{ $depotName }}</strong>.
+            @elseif($purchase->status === 'confirmed') Ready to receive into <strong class="{{ $fg }}">{{ $depotName }}</strong>. Click <strong class="{{ $fg }}">Receive</strong> above.
+            @elseif($purchase->status === 'received') Stock received into <strong class="{{ $fg }}">{{ $depotName }}</strong>. Purchase is complete.
+            @elseif($purchase->status === 'cancelled') Purchase was cancelled. No inventory changes were made.
+            @elseif($purchase->status === 'voided') Purchase was voided. Stock has been returned.
+            @else {{ ucfirst($purchase->status) }}
+            @endif
+          @elseif($purchase->type === 'cross_dock')
+            @if($purchase->status === 'draft') Confirm to create a batch and receipt stock into Cross Dock immediately.
+            @elseif($purchase->status === 'confirmed') Stock is in Cross Dock. <strong class="{{ $fg }}">Transfer</strong> to a depot or <strong class="{{ $fg }}">Dispatch</strong> directly to a client.
+            @elseif($purchase->status === 'transferred') Stock transferred from Cross Dock into a depot. Complete.
+            @elseif($purchase->status === 'dispatched') Dispatched to {{ $purchase->client?->name ?? 'client' }}. Complete.
+            @elseif($purchase->status === 'cancelled') Purchase was cancelled. Cross Dock receipt automatically reversed.
+            @else {{ ucfirst($purchase->status) }}
+            @endif
+          @else {{-- import draft / cancelled / voided --}}
+            @if($purchase->status === 'draft') Confirm to create a batch, then set up the truck nomination to begin tracking.
+            @elseif($purchase->status === 'cancelled') Purchase was cancelled.
+            @elseif($purchase->status === 'voided') Purchase was voided.
+            @else Complete.
+            @endif
+          @endif
+        </p>
       </div>
 
-      {{-- Delivery rows --}}
-      @if($importMovements->isNotEmpty())
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="{{ $muted }} border-b {{ $border }}">
-                <th class="text-left py-1.5 pr-3 font-semibold">Movement</th>
-                <th class="text-left py-1.5 pr-3 font-semibold">Depot</th>
-                <th class="text-right py-1.5 pr-3 font-semibold">Qty (L)</th>
-                <th class="text-right py-1.5 font-semibold">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($importMovements as $mv)
-                <tr class="border-b {{ $border }} last:border-0">
-                  <td class="py-1.5 pr-3 {{ $fg }} font-mono">#{{ $mv->id }}</td>
-                  <td class="py-1.5 pr-3 {{ $fg }}">{{ $mv->toDepot?->name ?? '—' }}</td>
-                  <td class="py-1.5 pr-3 text-right {{ $fg }} font-semibold">{{ number_format($mv->qty, 3) }}</td>
-                  <td class="py-1.5 text-right {{ $muted }}">{{ $mv->created_at->format('Y-m-d H:i') }}</td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
+      {{-- Cancelled / Voided note --}}
+      @if(in_array($purchase->status, ['cancelled','voided']) && $purchase->actioned_at)
+        <div class="mx-5 my-4 rounded-xl border border-rose-500/30 bg-rose-500/8 px-4 py-3 text-xs text-rose-700 dark:text-rose-300">
+          {{ ucfirst($purchase->status) }} on {{ $purchase->actioned_at->format('d M Y, H:i') }}
+          @if($purchase->action_note) · {{ $purchase->action_note }} @endif
         </div>
-      @else
-        <p class="text-xs {{ $muted }}">No deliveries posted yet.</p>
       @endif
+
+      <div class="flex-1 min-h-8"></div>
+
     </div>
+
+  </div>
   @endif
 
 </div>
+
+@endsection
 
 {{-- =========================
      LANDED COSTS / BATCH COSTS
@@ -515,7 +660,6 @@
                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
 
-      {{-- Paid by routing --}}
       <div>
         <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Who paid this cost?</label>
         <select name="paid_by_type" id="costPaidByType" onchange="updatePaidByFields()"
@@ -583,13 +727,11 @@ function updatePaidByFields() {
    ========================= --}}
 @if($purchase->status === 'draft')
   <div id="confirmModal" class="fixed inset-0 z-50 hidden">
-    {{-- Backdrop --}}
     <div class="absolute inset-0 bg-black/60" data-close="confirm"></div>
 
     <div class="tw-modal-wrap">
       <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
         <div class="tw-modal-handle"></div>
-        {{-- Header --}}
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -598,46 +740,37 @@ function updatePaidByFields() {
                 Locks the draft, creates/attaches a batch, and routes it into the correct workflow.
               </div>
             </div>
-
             <button type="button" data-close="confirm"
                     class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
                            {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition"
-                    aria-label="Close">
-              ✕
-            </button>
+                    aria-label="Close">✕</button>
           </div>
         </div>
 
-        {{-- Body --}}
         <div class="p-5 space-y-4">
           <div class="grid gap-3 sm:grid-cols-2">
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Purchase</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $ref }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Supplier</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $supplierName }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Product</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $productName }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Type</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ $typeLabel }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Quantity</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
                 {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span>
               </div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Cost</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
@@ -650,32 +783,22 @@ function updatePaidByFields() {
 
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
             <div class="font-semibold">What happens after confirm</div>
-
             @if($purchase->type === 'import')
-              <div class="mt-1 {{ $muted }}">
-                Batch is created. Stock is <span class="{{ $fg }} font-semibold">not received</span> yet — it will be received during offload.
-              </div>
+              <div class="mt-1 {{ $muted }}">Batch is created. Stock is <span class="{{ $fg }} font-semibold">not received</span> yet — it will be received during offload.</div>
             @elseif($purchase->type === 'local_depot')
-              <div class="mt-1 {{ $muted }}">
-                Batch is created. Next step is receiving into: <span class="{{ $fg }} font-semibold">{{ $depotName }}</span>.
-              </div>
+              <div class="mt-1 {{ $muted }}">Batch is created. Next step is receiving into: <span class="{{ $fg }} font-semibold">{{ $depotName }}</span>.</div>
             @else
-              <div class="mt-1 {{ $muted }}">
-                Batch is created and stock is receipted into <span class="{{ $fg }} font-semibold">CROSS DOCK</span> immediately.
-              </div>
+              <div class="mt-1 {{ $muted }}">Batch is created and stock is receipted into <span class="{{ $fg }} font-semibold">CROSS DOCK</span> immediately.</div>
             @endif
           </div>
-
         </div>
 
-        {{-- Footer --}}
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="confirm"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
                          hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
-
           <button type="button" id="confirmConfirm"
                   class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-emerald-600 text-sm font-semibold text-white
                          hover:bg-emerald-500/20 transition">
@@ -692,13 +815,11 @@ function updatePaidByFields() {
    ========================= --}}
 @if($purchase->type === 'local_depot' && $purchase->status === 'confirmed')
   <div id="receiveModal" class="fixed inset-0 z-50 hidden">
-    {{-- Backdrop --}}
     <div class="absolute inset-0 bg-black/60" data-close="receive"></div>
 
     <div class="tw-modal-wrap">
       <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
         <div class="tw-modal-handle"></div>
-        {{-- Header --}}
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
@@ -707,36 +828,29 @@ function updatePaidByFields() {
                 Posts a receipt movement, updates depot stock, and marks the purchase as received.
               </div>
             </div>
-
             <button type="button" data-close="receive"
                     class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
                            {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition"
-                    aria-label="Close">
-              ✕
-            </button>
+                    aria-label="Close">✕</button>
           </div>
         </div>
 
-        {{-- Body --}}
         <div class="p-5 space-y-4">
           <div class="grid gap-3 sm:grid-cols-2">
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Depot</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $depotName }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Product</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }} truncate">{{ $productName }}</div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Quantity</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
                 {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span>
               </div>
             </div>
-
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Cost impact</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
@@ -755,21 +869,14 @@ function updatePaidByFields() {
               <li>Purchase status becomes <span class="{{ $fg }}">received</span></li>
             </ul>
           </div>
-
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $muted }}">
-            Tip: this is safe to retry — duplicates should be blocked by the receipt reference.
-          </div>
         </div>
 
-        {{-- Footer --}}
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="receive"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
                          hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
-
-          {{-- Match "Confirmed" pill look in light mode --}}
           <button type="button" id="confirmReceive"
                   class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-[color:var(--tw-accent-soft)]
                          text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition">
@@ -853,41 +960,35 @@ function updatePaidByFields() {
                      value="{{ old('vessel_name') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Voyage no.</label>
               <input type="text" name="voyage_no" placeholder="e.g. V2024-01"
                      value="{{ old('voyage_no') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">BL number</label>
               <input type="text" name="bl_number" placeholder="e.g. BL-2024-0012"
                      value="{{ old('bl_number') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Loading port</label>
               <input type="text" name="loading_port" placeholder="e.g. Rotterdam"
                      value="{{ old('loading_port') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Discharge port</label>
               <input type="text" name="discharge_port" placeholder="e.g. Lagos"
                      value="{{ old('discharge_port') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">BL date</label>
               <input type="date" name="bl_date" value="{{ old('bl_date') }}"
                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
             </div>
-
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">ETA</label>
               <input type="date" name="eta_date" value="{{ old('eta_date') }}"
@@ -959,15 +1060,6 @@ function updatePaidByFields() {
             <input type="text" name="note" placeholder="e.g. truck manifest, weigh-bridge ref…"
                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
           </div>
-
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
-            <div class="font-semibold">What will happen</div>
-            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
-              <li>Receipt movement posted into the selected depot</li>
-              <li>Batch stock (FIFO-ready) updated</li>
-              <li>Purchase auto-closes when fully delivered</li>
-            </ul>
-          </div>
         </div>
 
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
@@ -1026,15 +1118,6 @@ function updatePaidByFields() {
             <input type="text" name="note" placeholder="e.g. truck manifest ref…"
                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
                           focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-          </div>
-
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
-            <div class="font-semibold">What will happen</div>
-            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
-              <li>Issue movement posted from Cross Dock</li>
-              <li>Receipt movement posted into selected depot</li>
-              <li>Purchase status becomes <strong class="{{ $fg }}">transferred</strong></li>
-            </ul>
           </div>
         </div>
 
@@ -1097,15 +1180,6 @@ function updatePaidByFields() {
             <input type="text" name="note" placeholder="e.g. delivery note ref…"
                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }}
                           focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
-          </div>
-
-          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
-            <div class="font-semibold">What will happen</div>
-            <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
-              <li>Issue movement posted from Cross Dock (stock leaves inventory)</li>
-              <li>Purchase status becomes <strong class="{{ $fg }}">dispatched</strong></li>
-              <li>Client is recorded on this purchase</li>
-            </ul>
           </div>
         </div>
 
@@ -1283,21 +1357,11 @@ function updatePaidByFields() {
     const confirmConfirm = document.getElementById('confirmConfirm');
     const confirmForm    = document.getElementById('confirmForm');
 
-    function openConfirm() {
-      if (!confirmModal) return;
-      confirmModal.classList.remove('hidden');
-      document.documentElement.classList.add('overflow-hidden');
-    }
-    function closeConfirm() {
-      if (!confirmModal) return;
-      confirmModal.classList.add('hidden');
-      document.documentElement.classList.remove('overflow-hidden');
-    }
+    function openConfirm() { if (!confirmModal) return; confirmModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeConfirm() { if (!confirmModal) return; confirmModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnConfirm, 'click', openConfirm);
-    if (confirmModal) {
-      confirmModal.querySelectorAll('[data-close="confirm"]').forEach(el => on(el, 'click', closeConfirm));
-    }
+    if (confirmModal) confirmModal.querySelectorAll('[data-close="confirm"]').forEach(el => on(el, 'click', closeConfirm));
     on(confirmConfirm, 'click', () => { closeConfirm(); confirmForm && confirmForm.submit(); });
 
     // Receive modal
@@ -1306,82 +1370,42 @@ function updatePaidByFields() {
     const confirmReceive = document.getElementById('confirmReceive');
     const receiveForm    = document.getElementById('receiveForm');
 
-    function openReceive() {
-      if (!receiveModal) return;
-      receiveModal.classList.remove('hidden');
-      document.documentElement.classList.add('overflow-hidden');
-    }
-    function closeReceive() {
-      if (!receiveModal) return;
-      receiveModal.classList.add('hidden');
-      document.documentElement.classList.remove('overflow-hidden');
-    }
+    function openReceive() { if (!receiveModal) return; receiveModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeReceive() { if (!receiveModal) return; receiveModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnReceive, 'click', openReceive);
-    if (receiveModal) {
-      receiveModal.querySelectorAll('[data-close="receive"]').forEach(el => on(el, 'click', closeReceive));
-    }
+    if (receiveModal) receiveModal.querySelectorAll('[data-close="receive"]').forEach(el => on(el, 'click', closeReceive));
     on(confirmReceive, 'click', () => { closeReceive(); receiveForm && receiveForm.submit(); });
 
     // Undo Receipt modal
-    const btnUndoReceipt  = document.getElementById('btnUndoReceipt');
+    const btnUndoReceipt   = document.getElementById('btnUndoReceipt');
     const undoReceiptModal = document.getElementById('undoReceiptModal');
 
-    function openUndoReceipt() {
-      if (!undoReceiptModal) return;
-      undoReceiptModal.classList.remove('hidden');
-      document.documentElement.classList.add('overflow-hidden');
-    }
-    function closeUndoReceipt() {
-      if (!undoReceiptModal) return;
-      undoReceiptModal.classList.add('hidden');
-      document.documentElement.classList.remove('overflow-hidden');
-    }
+    function openUndoReceipt() { if (!undoReceiptModal) return; undoReceiptModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeUndoReceipt() { if (!undoReceiptModal) return; undoReceiptModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnUndoReceipt, 'click', openUndoReceipt);
-    if (undoReceiptModal) {
-      undoReceiptModal.querySelectorAll('[data-close="undo-receipt"]').forEach(el => on(el, 'click', closeUndoReceipt));
-    }
+    if (undoReceiptModal) undoReceiptModal.querySelectorAll('[data-close="undo-receipt"]').forEach(el => on(el, 'click', closeUndoReceipt));
 
     // Cross-dock transfer modal
     const btnCrossDockTransfer   = document.getElementById('btnCrossDockTransfer');
     const crossDockTransferModal = document.getElementById('crossDockTransferModal');
 
-    function openCrossDockTransfer() {
-      if (!crossDockTransferModal) return;
-      crossDockTransferModal.classList.remove('hidden');
-      document.documentElement.classList.add('overflow-hidden');
-    }
-    function closeCrossDockTransfer() {
-      if (!crossDockTransferModal) return;
-      crossDockTransferModal.classList.add('hidden');
-      document.documentElement.classList.remove('overflow-hidden');
-    }
+    function openCrossDockTransfer() { if (!crossDockTransferModal) return; crossDockTransferModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeCrossDockTransfer() { if (!crossDockTransferModal) return; crossDockTransferModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnCrossDockTransfer, 'click', openCrossDockTransfer);
-    if (crossDockTransferModal) {
-      crossDockTransferModal.querySelectorAll('[data-close="cross-dock-transfer"]').forEach(el => on(el, 'click', closeCrossDockTransfer));
-    }
+    if (crossDockTransferModal) crossDockTransferModal.querySelectorAll('[data-close="cross-dock-transfer"]').forEach(el => on(el, 'click', closeCrossDockTransfer));
 
     // Cross-dock dispatch modal
     const btnCrossDockDispatch   = document.getElementById('btnCrossDockDispatch');
     const crossDockDispatchModal = document.getElementById('crossDockDispatchModal');
 
-    function openCrossDockDispatch() {
-      if (!crossDockDispatchModal) return;
-      crossDockDispatchModal.classList.remove('hidden');
-      document.documentElement.classList.add('overflow-hidden');
-    }
-    function closeCrossDockDispatch() {
-      if (!crossDockDispatchModal) return;
-      crossDockDispatchModal.classList.add('hidden');
-      document.documentElement.classList.remove('overflow-hidden');
-    }
+    function openCrossDockDispatch() { if (!crossDockDispatchModal) return; crossDockDispatchModal.classList.remove('hidden'); document.documentElement.classList.add('overflow-hidden'); }
+    function closeCrossDockDispatch() { if (!crossDockDispatchModal) return; crossDockDispatchModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnCrossDockDispatch, 'click', openCrossDockDispatch);
-    if (crossDockDispatchModal) {
-      crossDockDispatchModal.querySelectorAll('[data-close="cross-dock-dispatch"]').forEach(el => on(el, 'click', closeCrossDockDispatch));
-    }
+    if (crossDockDispatchModal) crossDockDispatchModal.querySelectorAll('[data-close="cross-dock-dispatch"]').forEach(el => on(el, 'click', closeCrossDockDispatch));
 
     // Nominate vessel modal
     const btnNominate   = document.getElementById('btnNominate');
@@ -1391,9 +1415,7 @@ function updatePaidByFields() {
     function closeNominate() { if (!nominateModal) return; nominateModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnNominate, 'click', openNominate);
-    if (nominateModal) {
-      nominateModal.querySelectorAll('[data-close="nominate"]').forEach(el => on(el, 'click', closeNominate));
-    }
+    if (nominateModal) nominateModal.querySelectorAll('[data-close="nominate"]').forEach(el => on(el, 'click', closeNominate));
 
     // Import deliver modal
     const btnImportDeliver   = document.getElementById('btnImportDeliver');
@@ -1403,9 +1425,7 @@ function updatePaidByFields() {
     function closeImportDeliver() { if (!importDeliverModal) return; importDeliverModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnImportDeliver, 'click', openImportDeliver);
-    if (importDeliverModal) {
-      importDeliverModal.querySelectorAll('[data-close="import-deliver"]').forEach(el => on(el, 'click', closeImportDeliver));
-    }
+    if (importDeliverModal) importDeliverModal.querySelectorAll('[data-close="import-deliver"]').forEach(el => on(el, 'click', closeImportDeliver));
 
     // Cancel purchase modal
     const btnCancel   = document.getElementById('btnCancel');
@@ -1415,9 +1435,7 @@ function updatePaidByFields() {
     function closeCancel() { if (!cancelModal) return; cancelModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnCancel, 'click', openCancel);
-    if (cancelModal) {
-      cancelModal.querySelectorAll('[data-close="cancel-purchase"]').forEach(el => on(el, 'click', closeCancel));
-    }
+    if (cancelModal) cancelModal.querySelectorAll('[data-close="cancel-purchase"]').forEach(el => on(el, 'click', closeCancel));
 
     // Void / Return to seller modal
     const btnVoid   = document.getElementById('btnVoid');
@@ -1427,9 +1445,7 @@ function updatePaidByFields() {
     function closeVoid() { if (!voidModal) return; voidModal.classList.add('hidden'); document.documentElement.classList.remove('overflow-hidden'); }
 
     on(btnVoid, 'click', openVoid);
-    if (voidModal) {
-      voidModal.querySelectorAll('[data-close="void-purchase"]').forEach(el => on(el, 'click', closeVoid));
-    }
+    if (voidModal) voidModal.querySelectorAll('[data-close="void-purchase"]').forEach(el => on(el, 'click', closeVoid));
 
     // Delete cost modal
     const deleteCostModal = document.getElementById('deleteCostModal');
@@ -1448,22 +1464,15 @@ function updatePaidByFields() {
       deleteCostModal.classList.add('hidden');
       document.documentElement.classList.remove('overflow-hidden');
     };
-    if (deleteCostModal) {
-      deleteCostModal.querySelectorAll('[data-close="delete-cost"]').forEach(el => on(el, 'click', closeDeleteCostModal));
-    }
+    if (deleteCostModal) deleteCostModal.querySelectorAll('[data-close="delete-cost"]').forEach(el => on(el, 'click', closeDeleteCostModal));
 
     // ESC closes any open modal
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      closeConfirm();
-      closeReceive();
-      closeUndoReceipt();
-      closeCrossDockTransfer();
-      closeCrossDockDispatch();
-      closeNominate();
-      closeImportDeliver();
-      closeCancel();
-      closeVoid();
+      closeConfirm(); closeReceive(); closeUndoReceipt();
+      closeCrossDockTransfer(); closeCrossDockDispatch();
+      closeNominate(); closeImportDeliver();
+      closeCancel(); closeVoid();
       if (window.closeDeleteCostModal) closeDeleteCostModal();
     });
   })();
@@ -1502,5 +1511,3 @@ function updatePaidByFields() {
     </form>
   </div>
 </div>
-
-@endsection
