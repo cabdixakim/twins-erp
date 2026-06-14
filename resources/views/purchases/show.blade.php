@@ -517,8 +517,6 @@
 
 </div>
 
-@endsection
-
 {{-- =========================
      LANDED COSTS / BATCH COSTS
    ========================= --}}
@@ -1511,3 +1509,4 @@ function updatePaidByFields() {
     </form>
   </div>
 </div>
+@endsection
