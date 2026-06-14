@@ -192,7 +192,7 @@
     @endif
     @endif
 
-    {{-- ── TRUCK CARDS ──────────────────────────────────────── --}}
+    {{-- ── TRUCK TABLE ──────────────────────────────────────── --}}
     @php
       $justImportedIds = collect(
         array_filter(
@@ -203,231 +203,217 @@
 
     @if($trucks->isNotEmpty())
 
-    {{-- Section label --}}
-    <div class="px-5 pt-4 pb-2 flex items-center gap-2">
-      <span class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest">Trucks</span>
-      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full border {{ $border }} text-[10px] font-semibold {{ $muted }}">
-        {{ $trucks->count() }}
-      </span>
-    </div>
+    {{-- Visually elevated truck section — distinct from the surrounding card --}}
+    <div class="mx-4 mb-4 mt-3 rounded-2xl overflow-hidden shadow-sm"
+         style="border: 1.5px solid color-mix(in srgb, var(--tw-accent) 35%, transparent)">
 
-    {{-- Card list --}}
-    <div id="truck-table-section" class="divide-y divide-[color:var(--tw-border)] border-t {{ $border }}">
-      @foreach($trucks as $truck)
-        @php
-          $truckActions   = $truck->nextActions();
-          $truckLabel     = $truck->statusLabel();
-          $truckColor     = $truck->statusColor();
-          $isJustImported = isset($justImportedIds[$truck->id]);
-          $isFailed       = $truck->status === 'loading_failed';
-
-          // 0=nominated, 1=loaded, 2=in_transit, 3=border_cleared, 4=delivered
-          $stageIdx = match($truck->status) {
-            'loaded'         => 1,
-            'in_transit'     => 2,
-            'border_cleared' => 3,
-            'delivered'      => 4,
-            default          => 0,
-          };
-
-          $stageLabels = ['Nom','Load','Transit','Border','Done'];
-          $stageColors = [
-            // [dot-bg, dot-border, dot-text] for: future, current, complete, failed(stage0)
-          ];
-        @endphp
-
-        <div class="px-5 py-4 flex items-center gap-4 hover:bg-[color:var(--tw-surface-2)] transition-colors
-                    {{ $isJustImported ? 'just-imported-row' : '' }}"
-             @if($isJustImported) data-just-imported="{{ $truck->id }}" style="background:rgba(16,185,129,.06)" @endif>
-
-          {{-- ── Left: truck identity & data ── --}}
-          <div class="flex-1 min-w-0">
-
-            {{-- Reg + trailer + status pill --}}
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-base font-bold font-mono {{ $fg }} leading-none">
-                {{ $truck->truck_reg ?: '—' }}
-              </span>
-              @if($truck->trailer_reg)
-                <span class="text-sm {{ $muted }} font-mono">/ {{ $truck->trailer_reg }}</span>
-              @endif
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $truckColor }}">
-                {{ $truckLabel }}
-              </span>
-              @if($isJustImported)
-                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                      style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)">
-                  Just imported
-                </span>
-              @endif
-            </div>
-
-            {{-- Driver · phone · capacity --}}
-            <div class="mt-1 text-xs {{ $muted }}">
-              {{ $truck->driver_name ?: 'No driver' }}
-              @if($truck->driver_phone) · {{ $truck->driver_phone }} @endif
-              · <span class="{{ $fg }}">{{ number_format($truck->capacity, 0) }} {{ $unitLabel }}</span>
-            </div>
-
-            {{-- Loaded / delivered figures (only if data exists) --}}
-            @if($truck->qty_loaded !== null || $truck->qty_delivered !== null)
-            <div class="mt-1 text-xs {{ $muted }} flex flex-wrap items-center gap-x-3">
-              @if($truck->qty_loaded !== null)
-                <span>
-                  Loaded <strong class="{{ $fg }}">{{ number_format($truck->qty_loaded, 0) }}</strong>
-                  @if($truck->pickup_date)
-                    <span class="opacity-70">({{ $truck->pickup_date->format('d M') }})</span>
-                  @endif
-                </span>
-              @endif
-              @if($truck->qty_delivered !== null)
-                <span>
-                  Delivered <strong class="text-emerald-500">{{ number_format($truck->qty_delivered, 0) }}</strong>
-                  @if($truck->delivery_date)
-                    <span class="opacity-70">({{ $truck->delivery_date->format('d M') }})</span>
-                  @endif
-                </span>
-                @if($truck->excess_loss_qty > 0)
-                  <span class="text-rose-400 font-semibold">
-                    Shortfall {{ $nom->short_charge_currency }} {{ number_format($truck->shortfall_charge, 2) }}
-                    <span class="font-normal">({{ number_format($truck->excess_loss_qty, 0) }} L excess)</span>
-                  </span>
-                @else
-                  <span class="text-emerald-500">Within tolerance ✓</span>
-                @endif
-              @endif
-              @if($truck->status === 'delivered' && ($truck->tr8_number || $truck->t1_number))
-                <span class="text-emerald-500" title="TR8: {{ $truck->tr8_number }} | T1: {{ $truck->t1_number }}">
-                  TR8/T1 ✓
-                </span>
-              @endif
-            </div>
-            @endif
-          </div>
-
-          {{-- ── Centre: pipeline stage dots (hidden on small screens) ── --}}
-          <div class="hidden lg:flex items-center shrink-0">
-            @foreach($stageLabels as $si => $slabel)
-              @php
-                $isComplete = !$isFailed && $si < $stageIdx;
-                $isCurrent  = $si === $stageIdx;
-                $isFuture   = $si > $stageIdx;
-              @endphp
-
-              {{-- Connecting line before each dot (except first) --}}
-              @if($si > 0)
-                <div class="w-5 h-px
-                  {{ $isComplete || ($isCurrent && $si <= $stageIdx) ? 'bg-emerald-500/50' : 'bg-[color:var(--tw-border)]' }}">
-                </div>
-              @endif
-
-              <div class="flex flex-col items-center gap-0.5">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border
-                  @if($isFailed && $si === 0)
-                    bg-rose-500/15 border-rose-500/40 text-rose-400
-                  @elseif($si === 4 && $truck->status === 'delivered')
-                    bg-emerald-500 border-emerald-600 text-white
-                  @elseif($isComplete)
-                    bg-emerald-500/15 border-emerald-500/40 text-emerald-500
-                  @elseif($isCurrent && !$isFailed)
-                    bg-[color:var(--tw-accent)]/15 border-[color:var(--tw-accent)]/50 text-[color:var(--tw-accent)]
-                  @else
-                    border-[color:var(--tw-border)] text-[color:var(--tw-muted)] opacity-40
-                  @endif">
-                  @if($si === 4 && $truck->status === 'delivered')
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  @elseif($isFailed && $si === 0)
-                    ✕
-                  @else
-                    {{ $si + 1 }}
-                  @endif
-                </div>
-                <div class="text-[8px] leading-none
-                  @if($si === 4 && $truck->status === 'delivered') text-emerald-500
-                  @elseif($isComplete) text-emerald-500
-                  @elseif($isCurrent && !$isFailed) text-[color:var(--tw-accent)]
-                  @else {{ $muted }} opacity-40
-                  @endif">
-                  {{ $slabel }}
-                </div>
-              </div>
-            @endforeach
-          </div>
-
-          {{-- ── Right: action buttons ── --}}
-          <div class="flex items-center gap-1.5 shrink-0">
-
-            {{-- Edit (nominated or failed only) --}}
-            @if(in_array($truck->status, ['nominated', 'loading_failed']))
-              <button type="button"
-                      onclick="openTruckModal('editTruckModal-{{ $truck->id }}')"
-                      class="h-8 px-2.5 rounded-xl border {{ $border }} text-xs {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
-                Edit
-              </button>
-            @endif
-
-            {{-- Quick post (nominated → skip to deliver) --}}
-            @if($truck->status === 'nominated')
-              <button type="button"
-                      onclick="openTruckModal('quickDeliverModal-{{ $truck->id }}')"
-                      title="Record load + delivery in one step"
-                      class="h-8 px-2.5 rounded-xl border border-teal-500/40 bg-teal-500/10 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition">
-                Quick post
-              </button>
-            @endif
-
-            {{-- Record load — filled blue --}}
-            @if(in_array('record_load', $truckActions))
-              <button type="button"
-                      onclick="openTruckModal('loadModal-{{ $truck->id }}')"
-                      class="h-9 px-4 rounded-xl border border-blue-600/50 bg-blue-600 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm">
-                Record load
-              </button>
-            @endif
-
-            {{-- Fail load --}}
-            @if(in_array('fail_load', $truckActions))
-              <button type="button"
-                      onclick="openTruckModal('failLoadModal-{{ $truck->id }}')"
-                      class="h-8 px-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-xs font-semibold text-rose-500 hover:bg-rose-500/20 transition">
-                Fail
-              </button>
-            @endif
-
-            {{-- In transit — filled amber --}}
-            @if(in_array('mark_in_transit', $truckActions))
-              <button type="button"
-                      data-truck-reg="{{ $truck->truck_reg }}"
-                      data-transit-action="{{ route('purchases.import-nomination.trucks.mark-in-transit', [$purchase, $nom, $truck]) }}"
-                      onclick="openInTransitModal(this)"
-                      class="h-9 px-4 rounded-xl border border-amber-600/50 bg-amber-600 text-xs font-bold text-white hover:bg-amber-500 transition shadow-sm">
-                In transit →
-              </button>
-            @endif
-
-            {{-- Border clearance — filled purple --}}
-            @if(in_array('record_border', $truckActions))
-              <button type="button"
-                      onclick="openTruckModal('borderModal-{{ $truck->id }}')"
-                      class="h-9 px-4 rounded-xl border border-purple-600/50 bg-purple-600 text-xs font-bold text-white hover:bg-purple-500 transition shadow-sm">
-                Border ✓
-              </button>
-            @endif
-
-            {{-- Deliver — filled emerald --}}
-            @if(in_array('record_delivery', $truckActions))
-              <button type="button"
-                      onclick="openTruckModal('deliveryModal-{{ $truck->id }}')"
-                      class="h-9 px-4 rounded-xl border border-emerald-600/50 bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-sm">
-                Deliver ↓
-              </button>
-            @endif
-
-          </div>
+      {{-- Section header bar --}}
+      <div class="flex items-center justify-between px-4 py-2.5"
+           style="background: color-mix(in srgb, var(--tw-accent) 8%, var(--tw-surface-2));
+                  border-bottom: 1px solid color-mix(in srgb, var(--tw-accent) 25%, transparent)">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               style="color: var(--tw-accent)">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414A1 1 0 0121 11.414V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0M15 17a2 2 0 104 0"/>
+          </svg>
+          <span class="text-xs font-bold uppercase tracking-widest"
+                style="color: var(--tw-accent)">Trucks</span>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold border {{ $muted }}"
+                style="border-color: color-mix(in srgb, var(--tw-accent) 30%, transparent);
+                       color: var(--tw-accent);
+                       background: color-mix(in srgb, var(--tw-accent) 10%, transparent)">
+            {{ $trucks->count() }}
+          </span>
         </div>
-      @endforeach
+      </div>
+
+      {{-- Table --}}
+      <div id="truck-table-section" class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="{{ $muted }}"
+                style="border-bottom: 1px solid color-mix(in srgb, var(--tw-accent) 20%, transparent);
+                       background: color-mix(in srgb, var(--tw-accent) 4%, var(--tw-surface-2))">
+              <th class="text-left py-2.5 pl-5 pr-3 font-semibold whitespace-nowrap">Truck / Trailer</th>
+              <th class="text-left py-2.5 pr-3 font-semibold whitespace-nowrap">Driver</th>
+              <th class="text-right py-2.5 pr-3 font-semibold whitespace-nowrap">Capacity</th>
+              <th class="text-right py-2.5 pr-3 font-semibold whitespace-nowrap">Loaded</th>
+              <th class="text-right py-2.5 pr-3 font-semibold whitespace-nowrap">Delivered</th>
+              <th class="text-right py-2.5 pr-3 font-semibold whitespace-nowrap">Shortfall chg</th>
+              <th class="text-center py-2.5 pr-3 font-semibold whitespace-nowrap">Status</th>
+              <th class="text-right py-2.5 pr-4 font-semibold whitespace-nowrap">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($trucks as $truck)
+              @php
+                $truckActions   = $truck->nextActions();
+                $truckLabel     = $truck->statusLabel();
+                $truckColor     = $truck->statusColor();
+                $isJustImported = isset($justImportedIds[$truck->id]);
+              @endphp
+              <tr class="border-b {{ $border }} last:border-0 transition-colors
+                          {{ $isJustImported ? 'just-imported-row' : '' }}"
+                  style="{{ $isJustImported ? 'background:rgba(16,185,129,.06)' : '' }}"
+                  @if($isJustImported) data-just-imported="{{ $truck->id }}" @endif
+                  onmouseover="this.style.background='color-mix(in srgb, var(--tw-accent) 4%, var(--tw-surface-2))'"
+                  onmouseout="this.style.background='{{ $isJustImported ? 'rgba(16,185,129,.06)' : '' }}'">
+
+                {{-- Truck / Trailer --}}
+                <td class="py-3 pl-5 pr-3 whitespace-nowrap">
+                  <div class="font-mono font-bold text-sm {{ $fg }}">
+                    {{ $truck->truck_reg ?: '—' }}
+                    @if($truck->trailer_reg)
+                      <span class="font-normal {{ $muted }}"> / {{ $truck->trailer_reg }}</span>
+                    @endif
+                  </div>
+                  @if($isJustImported)
+                    <span class="inline-flex items-center mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                          style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)">
+                      Just imported
+                    </span>
+                  @endif
+                </td>
+
+                {{-- Driver --}}
+                <td class="py-3 pr-3 {{ $fg }} whitespace-nowrap">
+                  {{ $truck->driver_name ?: '—' }}
+                  @if($truck->driver_phone)
+                    <span class="block text-[10px] {{ $muted }}">{{ $truck->driver_phone }}</span>
+                  @endif
+                </td>
+
+                {{-- Capacity --}}
+                <td class="py-3 pr-3 text-right font-semibold {{ $fg }} whitespace-nowrap">
+                  {{ number_format($truck->capacity, 0) }}
+                  <span class="font-normal {{ $muted }}">{{ $unitLabel }}</span>
+                </td>
+
+                {{-- Loaded --}}
+                <td class="py-3 pr-3 text-right {{ $fg }} whitespace-nowrap">
+                  @if($truck->qty_loaded !== null)
+                    <span class="font-semibold">{{ number_format($truck->qty_loaded, 0) }}</span>
+                    @if($truck->pickup_date)
+                      <span class="block text-[10px] {{ $muted }}">{{ $truck->pickup_date->format('d M') }}</span>
+                    @endif
+                  @else
+                    <span class="{{ $muted }}">—</span>
+                  @endif
+                </td>
+
+                {{-- Delivered --}}
+                <td class="py-3 pr-3 text-right whitespace-nowrap">
+                  @if($truck->qty_delivered !== null)
+                    <span class="font-semibold text-emerald-500">{{ number_format($truck->qty_delivered, 0) }}</span>
+                    @if($truck->delivery_date)
+                      <span class="block text-[10px] {{ $muted }}">{{ $truck->delivery_date->format('d M') }}</span>
+                    @endif
+                  @else
+                    <span class="{{ $muted }}">—</span>
+                  @endif
+                </td>
+
+                {{-- Shortfall charge --}}
+                <td class="py-3 pr-3 text-right whitespace-nowrap">
+                  @if($truck->status === 'delivered')
+                    @if($truck->excess_loss_qty > 0)
+                      <span class="font-semibold text-rose-400">
+                        {{ $nom->short_charge_currency }} {{ number_format($truck->shortfall_charge, 2) }}
+                      </span>
+                      <span class="block text-[10px] {{ $muted }}">{{ number_format($truck->excess_loss_qty, 0) }} excess</span>
+                    @else
+                      <span class="text-emerald-500 text-[11px]">Within tolerance</span>
+                    @endif
+                  @else
+                    <span class="{{ $muted }}">—</span>
+                  @endif
+                </td>
+
+                {{-- Status --}}
+                <td class="py-3 pr-3 text-center whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $truckColor }}">
+                    {{ $truckLabel }}
+                  </span>
+                  @if($truck->status === 'delivered' && ($truck->tr8_number || $truck->t1_number))
+                    <span class="block text-[10px] text-emerald-500 mt-0.5"
+                          title="TR8: {{ $truck->tr8_number }} | T1: {{ $truck->t1_number }}">TR8/T1 ✓</span>
+                  @endif
+                </td>
+
+                {{-- Actions --}}
+                <td class="py-3 pr-4 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-1.5">
+
+                    @if(in_array($truck->status, ['nominated', 'loading_failed']))
+                      <button type="button"
+                              onclick="openTruckModal('editTruckModal-{{ $truck->id }}')"
+                              class="h-7 px-2 rounded-lg border {{ $border }} text-[11px] {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                        Edit
+                      </button>
+                    @endif
+
+                    @if($truck->status === 'nominated')
+                      <button type="button"
+                              onclick="openTruckModal('quickDeliverModal-{{ $truck->id }}')"
+                              title="Record load + delivery in one step"
+                              class="h-7 px-2 rounded-lg border border-teal-500/40 bg-teal-500/10 text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition">
+                        Quick post
+                      </button>
+                    @endif
+
+                    @if(in_array('record_load', $truckActions))
+                      <button type="button"
+                              onclick="openTruckModal('loadModal-{{ $truck->id }}')"
+                              class="h-8 px-3 rounded-xl text-xs font-bold text-white transition shadow-sm hover:opacity-90"
+                              style="background:var(--tw-accent); border:1px solid color-mix(in srgb, var(--tw-accent) 70%, #000)">
+                        Record load
+                      </button>
+                    @endif
+
+                    @if(in_array('fail_load', $truckActions))
+                      <button type="button"
+                              onclick="openTruckModal('failLoadModal-{{ $truck->id }}')"
+                              class="h-7 px-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-[11px] font-semibold text-rose-500 hover:bg-rose-500/20 transition">
+                        Fail
+                      </button>
+                    @endif
+
+                    @if(in_array('mark_in_transit', $truckActions))
+                      <button type="button"
+                              data-truck-reg="{{ $truck->truck_reg }}"
+                              data-transit-action="{{ route('purchases.import-nomination.trucks.mark-in-transit', [$purchase, $nom, $truck]) }}"
+                              onclick="openInTransitModal(this)"
+                              class="h-8 px-3 rounded-xl border border-amber-600/50 bg-amber-600 text-xs font-bold text-white hover:bg-amber-500 transition shadow-sm">
+                        In transit →
+                      </button>
+                    @endif
+
+                    @if(in_array('record_border', $truckActions))
+                      <button type="button"
+                              onclick="openTruckModal('borderModal-{{ $truck->id }}')"
+                              class="h-8 px-3 rounded-xl border border-purple-600/50 bg-purple-600 text-xs font-bold text-white hover:bg-purple-500 transition shadow-sm">
+                        Border ✓
+                      </button>
+                    @endif
+
+                    @if(in_array('record_delivery', $truckActions))
+                      <button type="button"
+                              onclick="openTruckModal('deliveryModal-{{ $truck->id }}')"
+                              class="h-8 px-3 rounded-xl border border-emerald-600/50 bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-sm">
+                        Deliver ↓
+                      </button>
+                    @endif
+
+                  </div>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
     </div>
 
     @else
