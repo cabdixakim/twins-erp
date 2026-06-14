@@ -181,7 +181,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
     {{-- Header --}}
     <div class="hdr">
         <div class="hdr-left">
-            <div class="co-name">{{ $company->name ?? 'TWINS ERP' }}</div>
+            <div class="co-name">{{ $company->name }}</div>
             <div class="co-tagline">Fuel &amp; Transport Management</div>
         </div>
         <div class="hdr-right">
@@ -358,7 +358,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
     {{-- Footer --}}
     <div class="footer">
         <div class="footer-left">
-            <strong>TWINS ERP</strong><br>
+            <strong>{{ $company->name }}</strong><br>
             Fuel &amp; Transport Management System
         </div>
         <div class="footer-right">

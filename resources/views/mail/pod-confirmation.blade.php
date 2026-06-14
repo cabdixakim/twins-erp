@@ -139,10 +139,10 @@
 
   {{-- Email footer --}}
   <div class="email-footer">
-    {{ $sale->company?->name ?? 'Twins ERP' }}
+    {{ $sale->company?->name }}
     @if($sale->company?->email) · {{ $sale->company->email }}@endif
     @if($sale->company?->phone) · {{ $sale->company->phone }}@endif
-    <br>This email was generated automatically by Twins ERP.
+    <br>This email was generated automatically by {{ $sale->company?->name }}.
   </div>
 
 </div>
