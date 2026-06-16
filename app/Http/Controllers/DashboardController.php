@@ -237,6 +237,9 @@ class DashboardController extends Controller {
             ->first();
         $pettyCashTotal = (float) ($pettyCashRow->total ?? 0);
 
+        // ── Base currency ──────────────────────────────────────────────────
+        $baseCurrency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? 'USD';
+
         return view('dashboard.index', compact(
             'byCurrency',
             'topTransporters',
@@ -264,7 +267,8 @@ class DashboardController extends Controller {
             'chartSold',
             'totalAP',
             'bankByCurrency',
-            'topBankAccounts'
+            'topBankAccounts',
+            'baseCurrency'
         ));
     }
 }

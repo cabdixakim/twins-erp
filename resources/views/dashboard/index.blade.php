@@ -79,7 +79,10 @@
         </div>
       </div>
       <div>
-        <p class="text-xl font-bold tw-fg leading-none">{{ number_format($revenueMtd, 0) }}</p>
+        <p class="text-xl font-bold tw-fg leading-none">
+          {{ number_format($revenueMtd, 0) }}
+          <span class="text-[11px] font-semibold tw-muted ml-0.5">{{ $baseCurrency }}</span>
+        </p>
         <p class="text-[10px] tw-muted mt-1">{{ $salesCountMtd }} sale{{ $salesCountMtd === 1 ? '' : 's' }} this month</p>
       </div>
     </div>
@@ -97,7 +100,7 @@
       </div>
       <div>
         <p class="text-xl font-bold leading-none" style="color:#a855f7">{{ $grossMarginPct }}%</p>
-        <p class="text-[10px] tw-muted mt-1">GP: {{ number_format($grossProfitMtd, 0) }}</p>
+        <p class="text-[10px] tw-muted mt-1">GP: {{ number_format($grossProfitMtd, 0) }} {{ $baseCurrency }}</p>
       </div>
     </div>
 
@@ -156,6 +159,7 @@
       <div>
         <p class="text-xl font-bold leading-none" style="color:{{ $netPositive ? '#10b981' : '#ef4444' }}">
           {{ $netPositive ? '' : '–' }}{{ number_format(abs($netPosition), 0) }}
+          <span class="text-[11px] font-semibold" style="color:{{ $netPositive ? '#10b981' : '#ef4444' }};opacity:.7">{{ $baseCurrency }}</span>
         </p>
         <p class="text-[10px] tw-muted mt-1">AR − AP</p>
       </div>
@@ -173,7 +177,10 @@
         </div>
       </div>
       <div>
-        <p class="text-xl font-bold leading-none" style="color:#14b8a6">{{ number_format($pettyCashTotal, 0) }}</p>
+        <p class="text-xl font-bold leading-none" style="color:#14b8a6">
+          {{ number_format($pettyCashTotal, 0) }}
+          <span class="text-[11px] font-semibold" style="color:#14b8a6;opacity:.7">{{ $baseCurrency }}</span>
+        </p>
         <p class="text-[10px] tw-muted mt-1">current float</p>
       </div>
     </div>
