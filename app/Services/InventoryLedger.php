@@ -201,17 +201,18 @@ class InventoryLedger
         int $fromDepotId,
         float $qtyRequested
     ): array {
-        // Get all available layers (ordered by batch, deterministic)
+        // Get all available layers (ordered by batch, deterministic).
+        // LEFT JOIN so depot_stock rows with batch_id = NULL are included (unbatched stock).
         $layers = DepotStock::query()
             ->where('depot_stocks.company_id', $companyId)
             ->where('depot_stocks.depot_id', $fromDepotId)
             ->where('depot_stocks.product_id', $productId)
             ->whereRaw('(depot_stocks.qty_on_hand - depot_stocks.qty_reserved) > 0')
-            ->join('batches', function ($j) use ($companyId) {
+            ->leftJoin('batches', function ($j) use ($companyId) {
                 $j->on('batches.id', '=', 'depot_stocks.batch_id')
                   ->where('batches.company_id', '=', $companyId);
             })
-            ->orderBy('batches.purchased_at', 'asc')
+            ->orderByRaw('batches.purchased_at ASC NULLS LAST')
             ->orderBy('depot_stocks.batch_id', 'asc')
             ->orderBy('depot_stocks.id', 'asc')
             ->select('depot_stocks.*', 'batches.purchased_at')
@@ -264,7 +265,7 @@ class InventoryLedger
                 'product_id'            => $productId,
                 'type'                  => 'sale',
                 'depot_id'              => $fromDepotId,
-                'batch_id'              => (int) $layer->batch_id,
+                'batch_id'              => $layer->batch_id ? (int) $layer->batch_id : null,
                 'inventory_movement_id' => $movement->id,
                 'ref_type'              => $data['ref_type'] ?? null,
                 'ref_id'                => $data['ref_id'] ?? null,
@@ -286,14 +287,17 @@ class InventoryLedger
                     'updated_at'  => now(),
                 ]);
 
-            Batch::query()
-                ->where('company_id', $companyId)
-                ->whereKey((int) $layer->batch_id)
-                ->update([
-                    'qty_remaining' => DB::raw('qty_remaining - ' . $take),
-                    'updated_by'    => $data['updated_by'] ?? ($data['created_by'] ?? null),
-                    'updated_at'    => now(),
-                ]);
+            // Only update batch qty_remaining when the stock layer has a real batch
+            if ($layer->batch_id) {
+                Batch::query()
+                    ->where('company_id', $companyId)
+                    ->whereKey((int) $layer->batch_id)
+                    ->update([
+                        'qty_remaining' => DB::raw('qty_remaining - ' . $take),
+                        'updated_by'    => $data['updated_by'] ?? ($data['created_by'] ?? null),
+                        'updated_at'    => now(),
+                    ]);
+            }
 
             $cogsTotal += $lineTotal;
             $remaining -= $take;
