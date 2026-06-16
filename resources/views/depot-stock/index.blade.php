@@ -38,38 +38,66 @@
       </div>
     @else
       <div class="space-y-1">
+        @php $shownDivider = false; @endphp
         @foreach($depots as $d)
           @php $active = $currentDepot && $currentDepot->id === $d->id; @endphp
-          <a href="{{ route('depot-stock.index', ['depot' => $d->id]) }}"
-             class="group flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition
-                    {{ $active ? $pillGreen : $border . ' ' . $surface2 . ' ' . $fg }}
-                    {{ $active ? '' : 'hover:border-emerald-500/40 hover:bg-[color:var(--tw-surface)]' }}">
-            <div class="min-w-0">
-              <div class="text-sm font-semibold truncate {{ $active ? 'text-white' : $fg }}">
-                {{ $d->name }}
-              </div>
-              <div class="text-[11px] truncate {{ $active ? 'text-white/80' : $muted }}">
-                @if($d->is_system)
-                  Cross dock (system)
-                @else
-                  {{ $d->city ?: 'City not set' }}
-                @endif
-              </div>
-            </div>
-            @if($d->is_system)
-              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
-                           {{ $active ? 'border-white/30 text-white/90' : 'border-amber-500/30 text-amber-400' }}">
-                System
+
+          {{-- Divider between system depots and regular depots --}}
+          @if(!$d->is_system && !$shownDivider)
+            @php $shownDivider = true; @endphp
+            @if($depots->where('is_system', true)->count())
+              <div class="border-t {{ $border }} my-1"></div>
+            @endif
+          @endif
+
+          @if($d->is_system)
+            {{-- CROSS DOCK — bold amber card --}}
+            <a href="{{ route('depot-stock.index', ['depot' => $d->id]) }}"
+               class="group flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 transition
+                      {{ $active
+                           ? 'border-amber-500 bg-amber-500'
+                           : 'border-amber-500/60 bg-amber-500/10 hover:border-amber-500 hover:bg-amber-500/15' }}">
+              {{-- truck icon --}}
+              <span class="{{ $active ? 'text-white' : 'text-amber-400' }} shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 17h8M3 11l2-6h11l2 6M3 11h18M5 17a2 2 0 100-4 2 2 0 000 4zm14 0a2 2 0 100-4 2 2 0 000 4z"/>
+                </svg>
               </span>
-            @else
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-bold truncate {{ $active ? 'text-white' : 'text-amber-300' }}">
+                  {{ $d->name }}
+                </div>
+                <div class="text-[11px] {{ $active ? 'text-white/80' : 'text-amber-400/80' }}">
+                  Cross dock — in transit stock
+                </div>
+              </div>
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
+                           {{ $active ? 'border-white/30 bg-white/20 text-white' : 'border-amber-500/50 text-amber-300' }}">
+                Cross Dock
+              </span>
+            </a>
+          @else
+            {{-- Regular depot card --}}
+            <a href="{{ route('depot-stock.index', ['depot' => $d->id]) }}"
+               class="group flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition
+                      {{ $active ? $pillGreen : $border . ' ' . $surface2 . ' ' . $fg }}
+                      {{ $active ? '' : 'hover:border-emerald-500/40 hover:bg-[color:var(--tw-surface)]' }}">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold truncate {{ $active ? 'text-white' : $fg }}">
+                  {{ $d->name }}
+                </div>
+                <div class="text-[11px] truncate {{ $active ? 'text-white/80' : $muted }}">
+                  {{ $d->city ?: 'City not set' }}
+                </div>
+              </div>
               <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
                            {{ $d->is_active
                                 ? ($active ? 'border-white/30 text-white/90' : 'border-emerald-500/30 text-emerald-300')
                                 : 'border-slate-500/30 text-slate-400' }}">
                 {{ $d->is_active ? 'Active' : 'Inactive' }}
               </span>
-            @endif
-          </a>
+            </a>
+          @endif
         @endforeach
       </div>
     @endif
