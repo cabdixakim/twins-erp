@@ -1,0 +1,128 @@
+Internal Server Error
+
+QueryException
+SQLSTATE[0A000]: Feature not supported: 7 ERROR: FOR UPDATE is not allowed with aggregate functions (Connection: pgsql, SQL: select max("sequence_no") as aggregate from "sales" where "company_id" = 1 and "sales"."company_id" = 1 for update)
+app/Http/Controllers/SalesController.php :211
+ 
+        $sale = DB::transaction(function () use ($cid, $u, $data) {
+            $nextSeq = (int) Sale::query()
+                ->where('company_id', $cid)
+                ->lockForUpdate()
+                ->max('sequence_no');
+ 
+            $nextSeq = $nextSeq + 1;
+ 
+            $saleDate = $data['sale_date'] ?? Carbon::today();
+            $year = Carbon::parse($saleDate)->format('Y');
+ 
+            $company = Company::find($cid);
+            $companyCode = $company?->code ?? '';
+ 
+            $reference = $companyCode
+                ? "SO-{$companyCode}-{$year}-" . str_pad((string)$nextSeq, 5, '0', STR_PAD_LEFT)
+Request
+POST /sales
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36
+content-length
+398
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cache-control
+max-age=0
+content-type
+application/x-www-form-urlencoded
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6IkJHN2RabXFHZUdnZ1BSS0VPSDE0WVE9PSIsInZhbHVlIjoiUEhSZS9MS21jRWRFQ2JLR0t4R2RUVVpqYUM2UDQ1OWU1b3lsR1N3NmR6OFpVRGZUMERxay9wUU0vMkExN28wdnRGWGdxQ1pwVnl0Ukg3UlFLeHRiQm44UFpzclRWN3R4U2txMDN6Tkl6UURZdS90cjNFTndFeWkyeDB0WVlTY3oiLCJtYWMiOiIwMDAxOGY1ZTIwODY3YzFlZTEyOWI4MDNkMGJjNGRjMDk3OTI0MGM0YzYzYzVmY2JlZDc1MTk0YzYzOTc3YzIzIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6ImFrSEE2L3cyTTM1Wkt0ZlRYdU5udVE9PSIsInZhbHVlIjoiV0tBUTByNmRiS25RWWREZDFBTmRtUlhBR1RaQUNqZkFweEt4RmNyK3lIb3FzRjczYndkRm85NnVxdFlaR1NybWh5M2VZMnVDb2UzdThzMmY3VGM2Vy9iTHU4eWVKaG5RaTJtb0tMREkzNHdCNDlSSkJQTk1reUc1RjV4azcxUEsiLCJtYWMiOiI0NzQwZGZhNmYzMjE5ZGM2YTgyMmM0ZTJmYmQ1ZTM4ODY3YWE5NGVhMjY0NjFmMTc2NmY2NWI2N2ZiMTk5YWRhIiwidGFnIjoiIn0%3D
+origin
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/sales?open_sale=1&from_depot=11
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.2.150, 10.56.1.184, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+{
+    "_token": "q3ikf8shITbE8GvYNtmI2QzEuSNjhA8iUEOhqyLi",
+    "depot_id": "11",
+    "product_id": "5",
+    "client_id": "13",
+    "client_name": null,
+    "sale_date": null,
+    "currency": "USD",
+    "qty": "40000",
+    "unit_price": "1.9",
+    "delivery_mode": "ex_depot",
+    "transporter_id": null,
+    "truck_no": null,
+    "trailer_no": null,
+    "waybill_no": null,
+    "freight_amount": null,
+    "freight_currency": "USD",
+    "delivery_notes": null,
+    "driver_name": null,
+    "advance_account_id": null,
+    "trip_advance": null,
+    "fuel_advance": null,
+    "advance_currency": "USD",
+    "seal_numbers": null,
+    "temperature": "20",
+    "density": "0.845"
+}
+Application
+Routing
+controller
+App\Http\Controllers\SalesController@store
+route name
+sales.store
+middleware
+web, auth, company.setup, user.active, active.company
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql
+select exists(select * from "depots" where "company_id" = 1 and "depots"."id" = 11 and "depots"."company_id" = 1) as "exists"
+pgsql
+select exists(select * from "products" where "company_id" = 1 and "products"."id" = 5 and "products"."company_id" = 1) as "exists"
+pgsql
