@@ -1106,9 +1106,10 @@
     {{-- Scrollable truck list --}}
     <form method="POST"
           action="{{ route('purchases.import-nomination.trucks.bulk-quick-post', [$purchase, $nom]) }}"
-          id="bulkQuickPostForm">
+          id="bulkQuickPostForm"
+          class="flex flex-col flex-1 min-h-0">
       @csrf
-      <div class="overflow-y-auto flex-1">
+      <div class="overflow-y-auto flex-1 min-h-0">
         <table class="w-full text-xs">
           <thead>
             <tr class="{{ $muted }} border-b {{ $border }} {{ $surface2 }} sticky top-0 z-10">
