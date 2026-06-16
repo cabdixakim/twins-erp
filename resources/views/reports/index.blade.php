@@ -13,7 +13,7 @@
 
 @section('content')
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
     {{-- P&L by Batch --}}
     <a href="{{ route('reports.pl') }}"

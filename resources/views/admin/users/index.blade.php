@@ -28,7 +28,7 @@
     $input = "w-full rounded-xl border $border $bg px-3 py-2 text-sm $fg placeholder:opacity-70 focus:outline-none focus:ring-2 focus:ring-emerald-500/30";
 @endphp
 
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="space-y-6">
 
     {{-- Flash message --}}
     @if (session('status'))

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="max-w-5xl space-y-5">
+<div class="space-y-5">
 
     {{-- Actions bar --}}
     <div class="flex flex-wrap items-center justify-between gap-3">

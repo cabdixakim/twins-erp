@@ -27,7 +27,7 @@
 </div>
 @else
 
-<div class="max-w-3xl space-y-4">
+<div class="space-y-4">
 
     {{-- Balance indicator --}}
     <div class="rounded-xl border px-4 py-3 flex items-center gap-3" style="background:{{ $balanced ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)' }};border-color:{{ $balanced ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)' }}">

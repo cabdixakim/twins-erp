@@ -2,7 +2,7 @@
 @section('title', 'Settings')
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-10">
+<div class="space-y-10">
 
     {{-- Page header --}}
     <div class="flex items-center gap-4">
