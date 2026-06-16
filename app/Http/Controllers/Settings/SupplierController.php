@@ -71,6 +71,15 @@ class SupplierController extends Controller
         $data['is_active'] = $request->boolean('is_active', true);
         $data['default_currency'] = $data['default_currency'] ?? 'USD';
 
+        // Block duplicate name+type within the same company (case-insensitive)
+        $duplicate = Supplier::where('company_id', $companyId)
+            ->whereRaw('LOWER(name) = LOWER(?)', [$data['name']])
+            ->where('type', $data['type'] ?? null)
+            ->exists();
+        if ($duplicate) {
+            return back()->withErrors(['name' => 'A supplier with this name and type already exists.'])->withInput();
+        }
+
         $supplier = Supplier::create($data);
 
         \App\Models\AuditLog::record('created', "Supplier '{$supplier->name}' created.", $supplier, "Supplier {$supplier->name}", severity: 'info', module: 'Supplier');
@@ -94,6 +103,16 @@ class SupplierController extends Controller
             : $supplier->is_active;
 
         $data['default_currency'] = $data['default_currency'] ?? $supplier->default_currency ?? 'USD';
+
+        // Block duplicate name+type within the same company (case-insensitive, exclude self)
+        $duplicate = Supplier::where('company_id', $supplier->company_id)
+            ->whereRaw('LOWER(name) = LOWER(?)', [$data['name']])
+            ->where('type', $data['type'] ?? null)
+            ->where('id', '!=', $supplier->id)
+            ->exists();
+        if ($duplicate) {
+            return back()->withErrors(['name' => 'A supplier with this name and type already exists.'])->withInput();
+        }
 
         $supplier->update($data);
 

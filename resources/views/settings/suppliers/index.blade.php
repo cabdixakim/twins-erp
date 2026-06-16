@@ -25,6 +25,12 @@
     </div>
 @endif
 
+@if ($errors->any())
+    <div class="mb-4 rounded-xl bg-rose-600/20 border border-rose-500/40 px-3 py-2 text-xs text-rose-300 font-medium">
+        @foreach ($errors->all() as $e) {{ $e }} @endforeach
+    </div>
+@endif
+
 <div class="grid md:grid-cols-3 gap-6">
 
     {{-- LEFT SIDEBAR: suppliers list --}}
@@ -105,7 +111,10 @@
 
             <div>
                 <label class="{{ $label }}">Name</label>
-                <input type="text" name="name" class="{{ $input }}" required>
+                <input type="text" name="name" value="{{ old('name') }}" class="{{ $input }}" required>
+                @error('name')
+                    <p class="mt-1 text-[11px] text-rose-400">{{ $message }}</p>
+                @enderror
             </div>
 
             <div class="grid sm:grid-cols-2 gap-3">
@@ -202,6 +211,11 @@
             closeSupplierCreateModal();
         }
     });
+
+    // Auto-reopen modal if there are validation errors from the create form
+    @if ($errors->any() && old('name'))
+        openSupplierCreateModal();
+    @endif
 </script>
 
 @endsection
