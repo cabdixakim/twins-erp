@@ -26,38 +26,43 @@
         {{ now()->format('l, d F Y') }}
       </p>
     </div>
-    <div class="flex items-center gap-2 flex-wrap">
+    {{-- Quick actions: icon-only on mobile, icon+label on sm+ --}}
+    <div class="flex items-center gap-2">
       <a href="{{ route('purchases.create') }}"
-         class="h-9 px-3.5 rounded-xl border text-xs font-semibold tw-fg hover:tw-surface transition inline-flex items-center gap-1.5"
-         style="border-color:var(--tw-border); background:var(--tw-surface)">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+         class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
+         style="border-color:var(--tw-border); background:var(--tw-surface)"
+         title="New Purchase">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
-        New Purchase
+        <span class="hidden sm:inline">New Purchase</span>
       </a>
       <a href="{{ route('sales.index') }}"
-         class="h-9 px-3.5 rounded-xl border text-xs font-semibold tw-fg hover:tw-surface transition inline-flex items-center gap-1.5"
-         style="border-color:var(--tw-border); background:var(--tw-surface)">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+         class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
+         style="border-color:var(--tw-border); background:var(--tw-surface)"
+         title="New Sale">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
         </svg>
-        New Sale
+        <span class="hidden sm:inline">New Sale</span>
       </a>
       <a href="{{ route('petty-cash.index') }}"
-         class="h-9 px-3.5 rounded-xl border text-xs font-semibold tw-fg hover:tw-surface transition inline-flex items-center gap-1.5"
-         style="border-color:var(--tw-border); background:var(--tw-surface)">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+         class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
+         style="border-color:var(--tw-border); background:var(--tw-surface)"
+         title="Petty Cash">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75"/>
         </svg>
-        Petty Cash
+        <span class="hidden sm:inline">Petty Cash</span>
       </a>
       <a href="{{ route('reports.index') }}"
-         class="h-9 px-3.5 rounded-xl border text-xs font-semibold tw-fg hover:tw-surface transition inline-flex items-center gap-1.5"
-         style="border-color:var(--tw-border); background:var(--tw-surface)">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+         class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
+         style="border-color:var(--tw-border); background:var(--tw-surface)"
+         title="Reports">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/>
         </svg>
-        Reports
+        <span class="hidden sm:inline">Reports</span>
       </a>
     </div>
   </div>
@@ -210,7 +215,7 @@
           </span>
         </div>
       </div>
-      <div class="relative" style="height:200px">
+      <div class="relative" style="height:160px" id="chartWrap">
         <canvas id="throughputChart"></canvas>
       </div>
     </div>
