@@ -57,7 +57,6 @@ class Invoice extends Model
     {
         return DB::transaction(function () use ($sale, $company) {
             $seq = (int) self::where('company_id', $company->id)
-                ->lockForUpdate()
                 ->max('sequence_no') + 1;
 
             $prefix      = $company->invoice_prefix ?: 'INV';
