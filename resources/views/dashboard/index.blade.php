@@ -189,8 +189,8 @@
     <div class="lg:col-span-2 tw-card rounded-2xl p-5">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <div class="text-sm font-semibold tw-fg">Fuel Throughput</div>
-          <div class="text-[10px] tw-muted mt-0.5">Purchased vs Sold — last 6 months (litres)</div>
+          <div class="text-sm font-semibold tw-fg">Purchased vs Sold</div>
+          <div class="text-[10px] tw-muted mt-0.5">Last 6 months — litres</div>
         </div>
         <div class="flex items-center gap-4 text-[10px] tw-muted">
           <span class="flex items-center gap-1.5">
