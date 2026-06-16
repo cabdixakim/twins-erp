@@ -207,7 +207,6 @@ class SalesController extends Controller
         $sale = DB::transaction(function () use ($cid, $u, $data) {
             $nextSeq = (int) Sale::query()
                 ->where('company_id', $cid)
-                ->lockForUpdate()
                 ->max('sequence_no');
 
             $nextSeq = $nextSeq + 1;
