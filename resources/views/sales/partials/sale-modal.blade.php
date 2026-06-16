@@ -99,6 +99,7 @@
                      class="{{ $fieldBase }} @error('qty') {{ $fieldErr }} @enderror"
                      placeholder="e.g. 20000" />
               @error('qty') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+              <div id="saleStockHint" class="mt-1 text-[11px]"></div>
             </div>
 
             <div>
@@ -397,6 +398,10 @@ window.selectedSale = @json($selected);
       saleFormMethod.disabled = true;
     }
     if (submitBtn) submitBtn.textContent = 'Save draft';
+    // Clear the hint; it will re-populate when depot+product are chosen
+    if (typeof availableStock !== 'undefined') { availableStock = null; }
+    const _hint = document.getElementById('saleStockHint');
+    if (_hint) _hint.textContent = '';
   };
 
   const setEditMode = (sale) => {
@@ -447,6 +452,8 @@ window.selectedSale = @json($selected);
     setVal('f_advance_currency', sale.advance_currency || 'USD');
 
     paintModes();
+    // Refresh stock hint with the prefilled depot+product
+    if (typeof fetchStock === 'function') fetchStock();
   };
 
   // delivery toggle
@@ -483,6 +490,53 @@ window.selectedSale = @json($selected);
       densityInput.value = val;
     }
   });
+
+  // ── Inline stock availability hint ──────────────────────────────────────
+  const depotSel   = document.getElementById('f_depot_id');
+  const qtyInput   = document.getElementById('f_qty');
+  const stockHint  = document.getElementById('saleStockHint');
+  let   availableStock = null;
+
+  const renderStockHint = () => {
+    if (!stockHint) return;
+    if (availableStock === null) {
+      stockHint.textContent = '';
+      return;
+    }
+    const qty = parseFloat(qtyInput?.value?.replace(/,/g, '')) || 0;
+    const fmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(availableStock);
+    if (qty > 0 && qty > availableStock + 0.001) {
+      stockHint.textContent = '⚠ Exceeds available: ' + fmt + ' L';
+      stockHint.style.cssText = 'color:#f59e0b;font-weight:600';
+    } else if (availableStock === 0) {
+      stockHint.textContent = 'No stock in this depot for selected product';
+      stockHint.style.cssText = 'color:#f87171;font-weight:600';
+    } else {
+      stockHint.textContent = 'Available: ' + fmt + ' L';
+      stockHint.style.cssText = 'color:#34d399';
+    }
+  };
+
+  const fetchStock = () => {
+    const depotId   = depotSel?.value;
+    const productId = productSel?.value;
+    if (!depotId || !productId) {
+      availableStock = null;
+      renderStockHint();
+      return;
+    }
+    fetch('/depot-stock/available?depot_id=' + depotId + '&product_id=' + productId, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(r => r.json())
+      .then(d => { availableStock = d.available; renderStockHint(); })
+      .catch(() => { availableStock = null; renderStockHint(); });
+  };
+
+  on(depotSel,  'change', fetchStock);
+  on(productSel, 'change', fetchStock);
+  on(qtyInput,  'input',  renderStockHint);
+  // ── end stock hint ───────────────────────────────────────────────────────
 
   // Bind buttons normally (no "arm" hacks)
   on(openBtn, 'click', () => { setCreateMode(); open(); });

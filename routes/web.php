@@ -112,6 +112,8 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
 
         Route::get('/depot-stock', [DepotStockController::class, 'index'])
             ->name('depot-stock.index');
+        Route::get('/depot-stock/available', [DepotStockController::class, 'available'])
+            ->name('depot-stock.available');
         Route::get('/depot-stock/export', [DepotStockController::class, 'exportCsv'])
             ->name('depot-stock.export');
 

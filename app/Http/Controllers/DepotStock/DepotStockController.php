@@ -7,10 +7,35 @@ use App\Models\Depot;
 use App\Models\DepotStock;
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DepotStockController extends Controller
 {
+    /**
+     * JSON: return available qty for a given depot + product (for the active company).
+     * Used by the sales modal for the inline stock hint.
+     */
+    public function available(Request $request): JsonResponse
+    {
+        $cid       = (int) (auth()->user()?->active_company_id ?? 0);
+        $depotId   = (int) $request->query('depot_id', 0);
+        $productId = (int) $request->query('product_id', 0);
+
+        if (!$cid || !$depotId || !$productId) {
+            return response()->json(['available' => null]);
+        }
+
+        $available = DepotStock::query()
+            ->where('company_id', $cid)
+            ->where('depot_id', $depotId)
+            ->where('product_id', $productId)
+            ->get()
+            ->sum(fn ($l) => max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved));
+
+        return response()->json(['available' => round($available, 2)]);
+    }
+
     public function index(Request $request)
     {
         $u   = auth()->user();
