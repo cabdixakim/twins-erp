@@ -1186,6 +1186,11 @@
         </table>
       </div>
 
+      {{-- Inline validation error banner --}}
+      <div id="bqpErrorBanner" class="hidden px-5 pt-3 pb-0">
+        <div class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-400 font-medium" id="bqpErrorText"></div>
+      </div>
+
       {{-- Footer --}}
       <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-between gap-3 shrink-0">
         <div class="text-[11px] {{ $muted }}">
@@ -1231,6 +1236,59 @@ function bqpUpdateCount() {
 }
 document.addEventListener('change', e => {
   if (e.target.classList.contains('bqp-include')) bqpUpdateCount();
+});
+
+// Clear error highlight when user fixes a field
+document.addEventListener('input', e => {
+  if (e.target.closest('#bulkQuickPostForm')) {
+    e.target.classList.remove('!border-rose-500', 'ring-2', 'ring-rose-500/40');
+  }
+});
+document.addEventListener('change', e => {
+  if (e.target.closest('#bulkQuickPostForm') && !e.target.classList.contains('bqp-include')) {
+    e.target.classList.remove('!border-rose-500', 'ring-2', 'ring-rose-500/40');
+  }
+});
+
+// Inline validation on submit
+document.getElementById('bulkQuickPostForm')?.addEventListener('submit', function(e) {
+  const banner   = document.getElementById('bqpErrorBanner');
+  const errorEl  = document.getElementById('bqpErrorText');
+  const errClass = ['!border-rose-500', 'ring-2', 'ring-rose-500/40'];
+
+  // Clear previous errors
+  banner.classList.add('hidden');
+  this.querySelectorAll('.bqp-qty-loaded, .bqp-qty-delivered, .bqp-date, .bqp-depot')
+      .forEach(el => el.classList.remove(...errClass));
+
+  const badTrucks = [];
+
+  this.querySelectorAll('.bqp-include:checked').forEach(cb => {
+    const row      = cb.closest('tr');
+    const reg      = row.querySelector('td:nth-child(2) .font-mono')?.textContent?.trim() || '?';
+    const loaded   = row.querySelector('.bqp-qty-loaded');
+    const delivered= row.querySelector('.bqp-qty-delivered');
+    const date     = row.querySelector('.bqp-date');
+    const depot    = row.querySelector('.bqp-depot');
+    const missing  = [];
+
+    if (!loaded?.value   || parseFloat(loaded.value)   < 1)  { missing.push('qty loaded');   loaded?.classList.add(...errClass); }
+    if (!delivered?.value|| parseFloat(delivered.value) < 0)  { missing.push('qty delivered');delivered?.classList.add(...errClass); }
+    if (!date?.value)                                          { missing.push('date');          date?.classList.add(...errClass); }
+    if (!depot?.value)                                         { missing.push('depot');         depot?.classList.add(...errClass); }
+
+    if (missing.length) badTrucks.push(`${reg}: missing ${missing.join(', ')}`);
+  });
+
+  if (badTrucks.length) {
+    e.preventDefault();
+    errorEl.textContent = badTrucks.length === 1
+      ? badTrucks[0]
+      : `${badTrucks.length} trucks have incomplete fields — fix highlighted cells below.`;
+    banner.classList.remove('hidden');
+    // Scroll to first highlighted field
+    this.querySelector('.!border-rose-500')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 });
 </script>
 @endif
