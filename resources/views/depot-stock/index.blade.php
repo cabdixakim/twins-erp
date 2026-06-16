@@ -49,15 +49,26 @@
                 {{ $d->name }}
               </div>
               <div class="text-[11px] truncate {{ $active ? 'text-white/80' : $muted }}">
-                {{ $d->city ?: 'City not set' }}
+                @if($d->is_system)
+                  Cross dock (system)
+                @else
+                  {{ $d->city ?: 'City not set' }}
+                @endif
               </div>
             </div>
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
-                         {{ $d->is_active
-                              ? ($active ? 'border-white/30 text-white/90' : 'border-emerald-500/30 text-emerald-300')
-                              : 'border-slate-500/30 text-slate-400' }}">
-              {{ $d->is_active ? 'Active' : 'Inactive' }}
-            </span>
+            @if($d->is_system)
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
+                           {{ $active ? 'border-white/30 text-white/90' : 'border-amber-500/30 text-amber-400' }}">
+                System
+              </span>
+            @else
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border
+                           {{ $d->is_active
+                                ? ($active ? 'border-white/30 text-white/90' : 'border-emerald-500/30 text-emerald-300')
+                                : 'border-slate-500/30 text-slate-400' }}">
+                {{ $d->is_active ? 'Active' : 'Inactive' }}
+              </span>
+            @endif
           </a>
         @endforeach
       </div>

@@ -11,6 +11,7 @@ use App\Models\ImportTruck;
 use App\Models\TransporterLedgerEntry;
 use App\Http\Controllers\SupplierLedgerController;
 use App\Services\DepotChargeAutoPost;
+use App\Services\InventoryLedger;
 
 class ImportNominationController extends Controller
 {
@@ -299,6 +300,29 @@ class ImportNominationController extends Controller
             'shortfall_charge' => $shortfallCharge,
         ]));
 
+        // Post inventory receipt into the depot (idempotent per truck)
+        if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
+            $ledger = app(InventoryLedger::class);
+            $unitCost = (float) $purchase->unit_price;
+            $ledger->receipt(
+                [
+                    'company_id'  => $cid,
+                    'product_id'  => (int) $purchase->product_id,
+                    'to_depot_id' => (int) $data['depot_id'],
+                    'batch_id'    => (int) $purchase->batch_id,
+                    'qty'         => $qtyDelivered,
+                    'unit_cost'   => $unitCost,
+                    'total_cost'  => round($qtyDelivered * $unitCost, 2),
+                    'ref_type'    => 'import_truck',
+                    'ref_id'      => (int) $truck->id,
+                    'reference'   => 'import-delivery:' . $truck->id,
+                    'notes'       => "Import delivery — truck {$truck->truck_reg} ({$qtyDelivered} {$volumeUnit})",
+                    'created_by'  => auth()->id(),
+                ],
+                ['type' => 'receipt', 'ref_type' => 'import_truck', 'ref_id' => (int) $truck->id]
+            );
+        }
+
         // Post ledger entries for freight earned + short charge (idempotent per truck)
         if ($nomination->transporter_id) {
             // Always use transporter's default_currency — keeps the ledger single-currency
@@ -456,6 +480,29 @@ class ImportNominationController extends Controller
             'shortfall_charge' => $shortfallCharge,
         ]);
 
+        // Post inventory receipt into the depot (idempotent per truck)
+        if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
+            $ledger = app(InventoryLedger::class);
+            $unitCost = (float) $purchase->unit_price;
+            $ledger->receipt(
+                [
+                    'company_id'  => $cid,
+                    'product_id'  => (int) $purchase->product_id,
+                    'to_depot_id' => (int) $data['depot_id'],
+                    'batch_id'    => (int) $purchase->batch_id,
+                    'qty'         => $qtyDelivered,
+                    'unit_cost'   => $unitCost,
+                    'total_cost'  => round($qtyDelivered * $unitCost, 2),
+                    'ref_type'    => 'import_truck',
+                    'ref_id'      => (int) $truck->id,
+                    'reference'   => 'import-delivery:' . $truck->id,
+                    'notes'       => "Import delivery — truck {$truck->truck_reg} ({$qtyDelivered} {$volumeUnit})",
+                    'created_by'  => auth()->id(),
+                ],
+                ['type' => 'receipt', 'ref_type' => 'import_truck', 'ref_id' => (int) $truck->id]
+            );
+        }
+
         // Post transporter entries (freight + shortfall charge)
         if ($nomination->transporter_id) {
             $ledgerCurrency = DB::table('transporters')
@@ -593,6 +640,29 @@ class ImportNominationController extends Controller
                 'excess_loss_qty'  => $excessLossQty,
                 'shortfall_charge' => $shortfallCharge,
             ]);
+
+            // Post inventory receipt into the depot (idempotent per truck)
+            if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
+                $ledger = app(InventoryLedger::class);
+                $unitCost = (float) $purchase->unit_price;
+                $ledger->receipt(
+                    [
+                        'company_id'  => $cid,
+                        'product_id'  => (int) $purchase->product_id,
+                        'to_depot_id' => $depotId,
+                        'batch_id'    => (int) $purchase->batch_id,
+                        'qty'         => $qtyDelivered,
+                        'unit_cost'   => $unitCost,
+                        'total_cost'  => round($qtyDelivered * $unitCost, 2),
+                        'ref_type'    => 'import_truck',
+                        'ref_id'      => (int) $truck->id,
+                        'reference'   => 'import-delivery:' . $truck->id,
+                        'notes'       => "Import delivery — truck {$truck->truck_reg} ({$qtyDelivered} {$volumeUnit})",
+                        'created_by'  => auth()->id(),
+                    ],
+                    ['type' => 'receipt', 'ref_type' => 'import_truck', 'ref_id' => (int) $truck->id]
+                );
+            }
 
             $freightAmt = 0;
             if ($nomination->transporter_id) {

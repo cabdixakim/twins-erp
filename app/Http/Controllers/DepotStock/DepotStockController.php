@@ -19,7 +19,7 @@ class DepotStockController extends Controller
         $depots = Depot::query()
             ->where('company_id', $cid)
             ->where('is_active', true)
-            ->where('is_system', false)
+            ->orderBy('is_system')
             ->orderBy('name')
             ->get();
 
