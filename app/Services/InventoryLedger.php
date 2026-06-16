@@ -201,21 +201,15 @@ class InventoryLedger
         int $fromDepotId,
         float $qtyRequested
     ): array {
-        // Get all available layers (ordered by batch, deterministic).
-        // LEFT JOIN so depot_stock rows with batch_id = NULL are included (unbatched stock).
+        // For weighted average costing, batch identity is irrelevant — every unit costs
+        // the same average. No need to join batches or FIFO-order layers. Just query
+        // depot_stocks directly and deduct in a stable order (oldest row first).
         $layers = DepotStock::query()
-            ->where('depot_stocks.company_id', $companyId)
-            ->where('depot_stocks.depot_id', $fromDepotId)
-            ->where('depot_stocks.product_id', $productId)
-            ->whereRaw('(depot_stocks.qty_on_hand - depot_stocks.qty_reserved) > 0')
-            ->leftJoin('batches', function ($j) use ($companyId) {
-                $j->on('batches.id', '=', 'depot_stocks.batch_id')
-                  ->where('batches.company_id', '=', $companyId);
-            })
-            ->orderByRaw('batches.purchased_at ASC NULLS LAST')
-            ->orderBy('depot_stocks.batch_id', 'asc')
-            ->orderBy('depot_stocks.id', 'asc')
-            ->select('depot_stocks.*', 'batches.purchased_at')
+            ->where('company_id', $companyId)
+            ->where('depot_id', $fromDepotId)
+            ->where('product_id', $productId)
+            ->whereRaw('(qty_on_hand - qty_reserved) > 0')
+            ->orderBy('id', 'asc')
             ->lockForUpdate()
             ->get();
 
@@ -225,8 +219,9 @@ class InventoryLedger
             throw new \RuntimeException('Insufficient stock in depot for this product.');
         }
 
-        // Compute current weighted average cost for this depot+product
+        // Use the current depot+product weighted average cost
         $avgUnitCost = $this->currentWeightedAverageCost($companyId, $productId, $fromDepotId);
+        $totalCost   = round($qtyRequested * $avgUnitCost, 2);
 
         $movement = InventoryMovement::create([
             'company_id'    => $companyId,
@@ -241,12 +236,13 @@ class InventoryLedger
             'to_depot_id'   => $data['to_depot_id'] ?? null,
             'qty'           => $qtyRequested,
             'unit_cost'     => $avgUnitCost,
-            'total_cost'    => round($qtyRequested * $avgUnitCost, 2),
+            'total_cost'    => $totalCost,
             'notes'         => $data['notes'] ?? null,
             'created_by'    => $data['created_by'] ?? null,
             'updated_by'    => $data['updated_by'] ?? ($data['created_by'] ?? null),
         ]);
 
+        // Deduct qty_on_hand across layers and record one consumption per layer touched
         $remaining = $qtyRequested;
         $cogsTotal = 0.0;
 
@@ -265,7 +261,7 @@ class InventoryLedger
                 'product_id'            => $productId,
                 'type'                  => 'sale',
                 'depot_id'              => $fromDepotId,
-                'batch_id'              => $layer->batch_id ? (int) $layer->batch_id : null,
+                'batch_id'              => $layer->batch_id ?: null,
                 'inventory_movement_id' => $movement->id,
                 'ref_type'              => $data['ref_type'] ?? null,
                 'ref_id'                => $data['ref_id'] ?? null,
@@ -287,7 +283,7 @@ class InventoryLedger
                     'updated_at'  => now(),
                 ]);
 
-            // Only update batch qty_remaining when the stock layer has a real batch
+            // Keep batch qty_remaining in sync when the layer has a batch
             if ($layer->batch_id) {
                 Batch::query()
                     ->where('company_id', $companyId)
