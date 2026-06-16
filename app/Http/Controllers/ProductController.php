@@ -33,10 +33,10 @@ class ProductController extends Controller
             'default_density' => 'nullable|numeric|min:0|max:2',
         ]);
 
-        // Check for duplicate product (company_id + name)
+        // Check for duplicate product (company_id + name) — case-insensitive
         $exists = \App\Models\Product::query()
             ->where('company_id', $cid)
-            ->where('name', $data['name'])
+            ->whereRaw('LOWER(name) = LOWER(?)', [$data['name']])
             ->exists();
         if ($exists) {
             return back()->withErrors(['name' => 'A product with this name already exists for your company.'])->withInput();
