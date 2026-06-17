@@ -76,13 +76,13 @@
     }
     .seal-cell {
       border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;
-      padding: 10px 8px;
+      padding: 8px 6px;
       text-align: center;
-      font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
-      min-height: 44px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+      min-height: 38px; display: flex; align-items: center; justify-content: center;
     }
     .seal-cell:nth-child(4n) { border-right: none; }
-    .seal-cell.empty-seal { color: #ccc; font-size: 11px; font-weight: 400; }
+    .seal-cell.blank-seal { background: #fff; } /* clean white — handwrite here */
     /* fallback table for environments where grid print breaks */
     .seal-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
     .seal-table th { background: #111; color: #fff; padding: 6px 8px; text-align: left; font-size: 11px; font-weight: 600; }
@@ -103,8 +103,15 @@
 
     @media print {
       .no-print { display: none !important; }
-      body { padding: 14px 18px; }
-      @page { margin: 12mm 14mm; }
+      body { padding: 10px 16px; }
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
+      }
+      /* Keep key blocks from splitting across pages */
+      .seal-section { page-break-inside: avoid; }
+      .sig-row       { page-break-inside: avoid; }
+      .specs-row     { page-break-inside: avoid; }
     }
   </style>
 </head>
@@ -197,30 +204,28 @@
       </div>
     </div>
 
-    {{-- Seal number grid — 4 columns, large bold numbers --}}
-    @if(!empty($sealNumbers))
-      @php
-        // Pad to a multiple of 4 so grid rows are complete
-        $padded = $sealNumbers;
-        while (count($padded) % 4 !== 0) { $padded[] = null; }
-      @endphp
-      <div class="seal-grid">
-        @foreach($padded as $seal)
-          @if($seal !== null)
-            <div class="seal-cell">{{ $seal }}</div>
-          @else
-            <div class="seal-cell empty-seal">—</div>
-          @endif
-        @endforeach
-      </div>
-    @else
-      <div class="seal-grid">
-        {{-- 8 blank cells when no seals entered — handwrite later --}}
-        @for($i = 0; $i < 8; $i++)
-          <div class="seal-cell empty-seal">—</div>
-        @endfor
-      </div>
-    @endif
+    {{--
+      Seal grid: always 4 columns.
+      Minimum 20 cells (5 rows) so blank DNs have consistent dimensions and enough
+      space for handwriting up to 18+ seals. If more seals are pre-filled, the grid
+      expands in full rows of 4 to keep the layout tidy.
+    --}}
+    @php
+      $MIN_CELLS = 20; // 4 cols × 5 rows
+      $filled    = $sealNumbers ?? [];
+      // Pad filled seals to a multiple of 4, then ensure at least MIN_CELLS total
+      $total = max($MIN_CELLS, (int) ceil(count($filled) / 4) * 4);
+      $cells = array_pad($filled, $total, null); // null = blank handwrite cell
+    @endphp
+    <div class="seal-grid">
+      @foreach($cells as $seal)
+        @if($seal !== null && $seal !== '')
+          <div class="seal-cell">{{ $seal }}</div>
+        @else
+          <div class="seal-cell blank-seal"></div>
+        @endif
+      @endforeach
+    </div>
   </div>
 
   {{-- ===== TEMPERATURE / DENSITY ===== --}}
