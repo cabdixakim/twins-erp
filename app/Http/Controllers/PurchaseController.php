@@ -579,7 +579,15 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         }
 
         $qty  = (float) $purchase->qty;
-        $unit = (float) $purchase->unit_price;
+
+        // Include any batch costs already recorded (freight, duty, etc.) in the landed unit cost
+        $batchCostsTotal = $purchase->batch_id
+            ? (float) DB::table('batch_costs')
+                ->where('batch_id', $purchase->batch_id)
+                ->sum('amount_base')
+            : 0.0;
+        $purchaseCost = (float) $purchase->unit_price * $qty;
+        $unit = $qty > 0 ? round(($purchaseCost + $batchCostsTotal) / $qty, 6) : (float) $purchase->unit_price;
 
         // Ledger handles: inventory_movements + depot_stocks + batch qty updates (and idempotency)
         $ledger->receipt(
@@ -589,7 +597,6 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 'to_depot_id'  => (int) $purchase->depot_id,
                 'batch_id'     => (int) $purchase->batch_id,
                 'qty'          => $qty,
-                // ledger will prefer batch unit_cost if batch exists, but keep for completeness
                 'unit_cost'    => $unit,
                 'total_cost'   => round($qty * $unit, 2),
 

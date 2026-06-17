@@ -412,10 +412,19 @@ class ImportNominationController extends Controller
             'shortfall_charge' => $shortfallCharge,
         ]));
 
+        // Compute landed unit cost: purchase price + duty (if assessed) + freight
+        $freightAmt = $nomination->transporter_id
+            ? round($qtyLoaded * (float) $nomination->rate_per_1000l, 2)
+            : 0.0;
+        $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
+            ? (float) ($truck->duty_amount ?? 0)
+            : 0.0;
+        $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
+        $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+
         // Post inventory receipt into the depot (idempotent per truck)
         if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
             $ledger = app(InventoryLedger::class);
-            $unitCost = (float) $purchase->unit_price;
             $ledger->receipt(
                 [
                     'company_id'  => $cid,
@@ -442,7 +451,7 @@ class ImportNominationController extends Controller
                 ->where('id', $nomination->transporter_id)
                 ->value('default_currency') ?? 'USD';
 
-            $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
+            // $freightAmt already computed above for landed cost
 
             if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)
                     ->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
@@ -478,7 +487,7 @@ class ImportNominationController extends Controller
         }
 
         // Auto-post freight as a batch cost (idempotent per truck)
-        if ($purchase->batch_id && isset($freightAmt) && $freightAmt > 0) {
+        if ($purchase->batch_id && $freightAmt > 0) {
             $freightCostExists = DB::table('batch_costs')
                 ->where('batch_id', $purchase->batch_id)
                 ->where('truck_id', $truck->id)
@@ -530,7 +539,7 @@ class ImportNominationController extends Controller
             $msg .= " Shortfall: {$nomination->short_charge_currency} "
                   . number_format($shortfallCharge, 2) . ' deducted from transporter.';
         }
-        if (isset($freightAmt) && $freightAmt > 0) {
+        if ($freightAmt > 0) {
             $msg .= " Freight posted: " . number_format($freightAmt, 2) . ".";
         }
         if (!empty($depotChargesPosted)) {
@@ -592,10 +601,19 @@ class ImportNominationController extends Controller
             'shortfall_charge' => $shortfallCharge,
         ]);
 
+        // Compute landed unit cost: purchase price + duty (if assessed) + freight
+        $freightAmt = $nomination->transporter_id
+            ? round($qtyLoaded * (float) $nomination->rate_per_1000l, 2)
+            : 0.0;
+        $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
+            ? (float) ($truck->duty_amount ?? 0)
+            : 0.0;
+        $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
+        $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+
         // Post inventory receipt into the depot (idempotent per truck)
         if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
             $ledger = app(InventoryLedger::class);
-            $unitCost = (float) $purchase->unit_price;
             $ledger->receipt(
                 [
                     'company_id'  => $cid,
@@ -620,7 +638,7 @@ class ImportNominationController extends Controller
             $ledgerCurrency = DB::table('transporters')
                 ->where('id', $nomination->transporter_id)
                 ->value('default_currency') ?? 'USD';
-            $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
+            // $freightAmt already computed above for landed cost
             if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
                 TransporterLedgerEntry::create([
                     'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
@@ -753,10 +771,19 @@ class ImportNominationController extends Controller
                 'shortfall_charge' => $shortfallCharge,
             ]);
 
+            // Compute landed unit cost: purchase price + duty (if assessed) + freight
+            $freightAmt = $nomination->transporter_id
+                ? round($qtyLoaded * (float) $nomination->rate_per_1000l, 2)
+                : 0.0;
+            $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
+                ? (float) ($truck->duty_amount ?? 0)
+                : 0.0;
+            $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
+            $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+
             // Post inventory receipt into the depot (idempotent per truck)
             if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
                 $ledger = app(InventoryLedger::class);
-                $unitCost = (float) $purchase->unit_price;
                 $ledger->receipt(
                     [
                         'company_id'  => $cid,
@@ -776,12 +803,11 @@ class ImportNominationController extends Controller
                 );
             }
 
-            $freightAmt = 0;
             if ($nomination->transporter_id) {
                 $ledgerCurrency = DB::table('transporters')
                     ->where('id', $nomination->transporter_id)
                     ->value('default_currency') ?? 'USD';
-                $freightAmt = round($qtyLoaded * ((float) $nomination->rate_per_1000l / $rateDivisor), 2);
+                // $freightAmt already computed above for landed cost
                 if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
                     TransporterLedgerEntry::create([
                         'company_id'     => $cid, 'transporter_id' => $nomination->transporter_id,
