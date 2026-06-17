@@ -473,4 +473,85 @@ class InventoryLedger
             ->where('id', '!=', $excludeStockId)
             ->update(['unit_cost' => $newAvgCost, 'updated_at' => now()]);
     }
+
+    /**
+     * Recompute weighted average unit cost after a batch cost is added or removed.
+     *
+     * Called by BatchCostController after store() or destroy(). Only applies to
+     * weighted_average companies — specific_lot costing is unaffected.
+     *
+     * Logic:
+     *  1. Recompute this batch's unit_cost = (purchase_price × qty + total_landed_costs) / qty
+     *  2. Update the depot_stock row for this batch to the new unit_cost
+     *  3. Recompute the cross-batch weighted average for the depot+product
+     *  4. Propagate the new average to all depot_stock rows for that depot+product
+     */
+    public static function recomputeUnitCostAfterBatchCostChange(\App\Models\Purchase $purchase): void
+    {
+        // Only applies to weighted average costing
+        $company = DB::table('companies')->where('id', $purchase->company_id)->first();
+        if (!$company || ($company->costing_method ?? 'weighted_average') !== 'weighted_average') {
+            return;
+        }
+
+        if (!$purchase->batch_id || !$purchase->depot_id || !$purchase->product_id) {
+            return;
+        }
+
+        $companyId = (int) $purchase->company_id;
+        $depotId   = (int) $purchase->depot_id;
+        $productId = (int) $purchase->product_id;
+        $batchId   = (int) $purchase->batch_id;
+
+        // Sum all landed costs for this purchase that are included in cost
+        $totalLandedCosts = (float) DB::table('batch_costs')
+            ->where('purchase_id', $purchase->id)
+            ->sum('amount_base');
+
+        // Qty received for this batch (use qty as proxy if no movement exists yet)
+        $qtyReceived = (float) DB::table('inventory_movements')
+            ->where('company_id', $companyId)
+            ->where('batch_id', $batchId)
+            ->where('to_depot_id', $depotId)
+            ->where('type', 'receipt')
+            ->sum('qty');
+
+        if ($qtyReceived <= 0) {
+            $qtyReceived = (float) ($purchase->qty ?: 1);
+        }
+
+        $purchaseValue = (float) $purchase->unit_price * $qtyReceived;
+        $newUnitCost   = round(($purchaseValue + $totalLandedCosts) / $qtyReceived, 6);
+
+        // Update the specific depot_stock row for this batch in this depot
+        $stockRow = DepotStock::where('company_id', $companyId)
+            ->where('depot_id', $depotId)
+            ->where('product_id', $productId)
+            ->where('batch_id', $batchId)
+            ->first();
+
+        if ($stockRow) {
+            $stockRow->update(['unit_cost' => $newUnitCost, 'updated_at' => now()]);
+        }
+
+        // Recompute the cross-batch weighted average for the full depot+product
+        $result = DepotStock::where('company_id', $companyId)
+            ->where('depot_id', $depotId)
+            ->where('product_id', $productId)
+            ->whereRaw('qty_on_hand > 0')
+            ->selectRaw('SUM(qty_on_hand) as total_qty, SUM(qty_on_hand * unit_cost) as total_value')
+            ->first();
+
+        $totalQty   = (float) ($result->total_qty ?? 0);
+        $totalValue = (float) ($result->total_value ?? 0);
+
+        if ($totalQty > 0) {
+            $newAvg = round($totalValue / $totalQty, 6);
+            // Propagate to all rows (no exclusion — we already updated the batch row above)
+            DepotStock::where('company_id', $companyId)
+                ->where('depot_id', $depotId)
+                ->where('product_id', $productId)
+                ->update(['unit_cost' => $newAvg, 'updated_at' => now()]);
+        }
+    }
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Purchase;
 use App\Models\Batch;
 use App\Models\BatchCost;
+use App\Services\InventoryLedger;
 use Illuminate\Support\Facades\DB;
 
 class BatchCostController extends Controller
@@ -18,7 +19,7 @@ class BatchCostController extends Controller
         abort_if($purchase->status === 'draft', 400, 'Confirm the purchase before adding landed costs.');
 
         $data = $request->validate([
-            'category'              => 'required|in:freight,duty,border_charge,hospitality,storage,penalty,other',
+            'category'              => 'required|in:freight,duty,border_charge,storage,penalty,other',
             'description'           => 'required|string|max:500',
             'amount'                => 'required|numeric|min:0.01',
             'currency'              => 'required|string|max:8',
@@ -145,6 +146,8 @@ class BatchCostController extends Controller
             ]);
         }
 
+        InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);
+
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Landed cost added.');
     }
@@ -156,10 +159,12 @@ class BatchCostController extends Controller
         abort_if((int) $batchCost->purchase_id !== $purchase->id, 403);
 
         if ($batchCost->auto_posted) {
-            return back()->with('error', 'Auto-posted costs (freight, hospitality) cannot be deleted — they are system records from truck milestones.');
+            return back()->with('error', 'Auto-posted costs cannot be deleted — they are system records from truck milestones.');
         }
 
         $batchCost->delete();
+
+        InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Landed cost removed.');
