@@ -810,6 +810,11 @@ class SalesController extends Controller
                         ->delete();
                 }
 
+                // Reverse the client AR invoice posted at sale posting
+                \App\Models\ClientLedgerEntry::where('ref_type', Sale::class)
+                    ->where('ref_id', $sale->id)
+                    ->delete();
+
                 // Void any invoice documents
                 Invoice::where('sale_id', $sale->id)->delete();
             }

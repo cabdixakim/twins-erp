@@ -755,6 +755,12 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 $movement->update(['notes' => ($movement->notes ? $movement->notes . ' | ' : '') . 'REVERSED by undo-receipt']);
             }
 
+            // Reverse the supplier invoice that was posted at receive()
+            \App\Models\SupplierLedgerEntry::where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('type', 'purchase_invoice')
+                ->delete();
+
             $purchase->status     = 'confirmed';
             $purchase->actioned_at = null;
             $purchase->actioned_by = null;
@@ -1169,6 +1175,12 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
 
                 $movement->update(['notes' => trim(($movement->notes ?? '') . ' | VOIDED/RETURNED: ' . $reason)]);
             }
+
+            // Reverse the supplier invoice that was posted at receive()
+            \App\Models\SupplierLedgerEntry::where('ref_type', 'purchase')
+                ->where('ref_id', $purchase->id)
+                ->where('type', 'purchase_invoice')
+                ->delete();
 
             $purchase->status      = 'voided';
             $purchase->action_note = $reason ?: 'Returned to seller';

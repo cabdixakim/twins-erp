@@ -53,7 +53,7 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] {{ $muted }} uppercase tracking-wide mb-1">With open balance</div>
         <div class="text-xl font-bold text-amber-500">
-            {{ $clients->filter(fn($c) => ($balances[$c->id] ?? 0) > 0.005)->count() }}
+            {{ $clients->filter(fn($c) => array_sum($balances[$c->id] ?? []) > 0.005)->count() }}
         </div>
     </div>
 </div>
@@ -89,9 +89,9 @@
             <tbody>
                 @foreach($clients as $client)
                     @php
-                        $balance  = (float) ($balances[$client->id] ?? 0);
-                        $invoiced = (float) ($invoicedTotals[$client->id] ?? 0);
                         $cur      = $client->currency ?: 'USD';
+                        $balance  = (float) ($balances[$client->id][$cur] ?? array_sum($balances[$client->id] ?? []));
+                        $invoiced = (float) ($invoicedTotals[$client->id][$cur] ?? array_sum($invoicedTotals[$client->id] ?? []));
                         $s        = $sym($cur);
                         $a        = $aging[$client->id] ?? null;
                         $aCurrent = $a ? (float)$a->bucket_current : 0;

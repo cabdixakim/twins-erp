@@ -47,23 +47,36 @@ class ClientLedgerController extends Controller
             ->orderBy('name')
             ->get();
 
-        $balances = ClientLedgerEntry::where('company_id', $cid)
-            ->selectRaw('client_id, SUM(amount) as balance')
-            ->groupBy('client_id')
-            ->pluck('balance', 'client_id');
+        // Balance per client per currency — keyed [client_id][currency] = balance
+        $balanceRows = ClientLedgerEntry::where('company_id', $cid)
+            ->selectRaw('client_id, currency, SUM(amount) as balance')
+            ->groupBy('client_id', 'currency')
+            ->get();
+        $balances = [];
+        foreach ($balanceRows as $row) {
+            $balances[$row->client_id][$row->currency] = (float) $row->balance;
+        }
 
-        $invoicedTotals = ClientLedgerEntry::where('company_id', $cid)
+        // Invoiced total per client per currency
+        $invoicedRows = ClientLedgerEntry::where('company_id', $cid)
             ->where('type', 'invoice')
-            ->selectRaw('client_id, SUM(amount) as total')
-            ->groupBy('client_id')
-            ->pluck('total', 'client_id');
+            ->selectRaw('client_id, currency, SUM(amount) as total')
+            ->groupBy('client_id', 'currency')
+            ->get();
+        $invoicedTotals = [];
+        foreach ($invoicedRows as $row) {
+            $invoicedTotals[$row->client_id][$row->currency] = (float) $row->total;
+        }
 
-        // Summary totals across all clients
-        $totalAR = (float) ClientLedgerEntry::where('company_id', $cid)
+        // Total AR per currency (only clients with a net positive balance)
+        $totalARByCurrency = ClientLedgerEntry::where('company_id', $cid)
+            ->selectRaw('currency, SUM(amount) as t')
+            ->groupBy('currency')
             ->havingRaw('SUM(amount) > 0')
-            ->groupBy('client_id')
-            ->selectRaw('SUM(amount) as t')
-            ->get()->sum('t');
+            ->pluck('t', 'currency')
+            ->map(fn($v) => (float) $v);
+        // Keep a single $totalAR for backward compatibility (sum of first/primary currency)
+        $totalAR = $totalARByCurrency->sum();
 
         // AR Aging buckets — based on open invoices
         $today = now()->toDateString();
