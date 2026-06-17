@@ -828,14 +828,24 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 'from_depot_id' => $crossDockDepotId,
             ]);
 
-            // Receipt into target depot
+            // Compute landed unit cost: purchase price + any batch_costs already posted
+            $totalBatchCosts  = (float) DB::table('batch_costs')
+                ->where('purchase_id', $purchase->id)
+                ->sum('amount_base');
+            $purchaseQty      = (float) ($purchase->qty ?: 1);
+            $landedUnitCost   = round(
+                ((float) $purchase->unit_price * $purchaseQty + $totalBatchCosts) / $purchaseQty,
+                6
+            );
+
+            // Receipt into target depot — use landed unit cost so batch costs are reflected in WA
             $ledger->receipt([
                 'company_id'  => $cid,
                 'product_id'  => (int) $purchase->product_id,
                 'to_depot_id' => $depotId,
                 'batch_id'    => (int) $purchase->batch_id,
                 'qty'         => $qty,
-                'unit_cost'   => (float) $purchase->unit_price,
+                'unit_cost'   => $landedUnitCost,
                 'ref_type'    => 'purchase',
                 'ref_id'      => (int) $purchase->id,
                 'reference'   => 'cross-dock-transfer:' . $purchase->id,
@@ -849,6 +859,15 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                 'to_depot_id' => $depotId,
                 'batch_id'    => (int) $purchase->batch_id,
             ]);
+
+            // The CROSS DOCK confirm receipt already counted qty_received on the batch.
+            // This transfer is an internal stock move — undo the extra increment added
+            // by ledger->receipt() above to avoid double-counting.
+            if ($purchase->batch_id) {
+                \App\Models\Batch::where('company_id', $cid)
+                    ->whereKey((int) $purchase->batch_id)
+                    ->decrement('qty_received', $qty);
+            }
 
             $purchase->status      = 'transferred';
             $purchase->depot_id    = $depotId;

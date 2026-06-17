@@ -77,19 +77,23 @@ class ReportController extends Controller
             $purchase = round((float)$batch->total_cost, 2);
             $landed   = round((float)($batch->landed_cost_total ?? 0), 2);
 
-            // COGS = proportional purchase cost for qty sold
-            $cogs     = $batch->qty_purchased > 0
-                ? round($purchase * ($qtySold / $batch->qty_purchased), 2)
+            // Prorate both purchase cost AND landed costs by the fraction of batch sold.
+            // e.g. if 50% of the batch was sold, only 50% of landed costs appear in COGS.
+            $ratio       = ($batch->qty_purchased > 0 && $qtySold > 0)
+                ? min(1.0, $qtySold / $batch->qty_purchased)
                 : 0;
+            $cogs        = round($purchase * $ratio, 2);
+            $landedCogs  = round($landed * $ratio, 2);
 
-            $totalCost   = $cogs + $landed;
+            $totalCost   = $cogs + $landedCogs;
             $grossMargin = round($revenue - $totalCost, 2);
             $marginPct   = $revenue > 0 ? round($grossMargin / $revenue * 100, 1) : null;
 
             $batch->_revenue      = $revenue;
             $batch->_qty_sold     = $qtySold;
             $batch->_purchase     = $purchase;
-            $batch->_landed       = $landed;
+            $batch->_landed       = $landedCogs;  // prorated share of landed costs
+            $batch->_landed_total = $landed;       // full landed costs (for reference)
             $batch->_cogs         = $cogs;
             $batch->_total_cost   = $totalCost;
             $batch->_gross_margin = $grossMargin;
