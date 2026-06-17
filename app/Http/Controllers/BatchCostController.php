@@ -75,7 +75,7 @@ class BatchCostController extends Controller
 
         // ── Secondary AP auto-posting ────────────────────────────────────────────
         //
-        // Storage/throughput/loading/offloading categories ALWAYS generate a depot
+        // Storage/offloading/loading categories ALWAYS generate a depot
         // ledger charge against the purchase's depot (we owe the depot for these),
         // regardless of paid_by_type.  Other categories only post when a specific
         // third party fronted the cost (paid_by_type = depot | transporter).

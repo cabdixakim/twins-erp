@@ -53,7 +53,7 @@ class PermissionsSeeder extends Seeder
 
             // Depots
             ['slug' => 'depots.view',                    'name' => 'View depots & ledger',            'group' => 'Depots',      'description' => 'See depot list, stock, ledger entries and statements'],
-            ['slug' => 'depots.charges',                 'name' => 'Record depot charges',            'group' => 'Depots',      'description' => 'Post storage, throughput and loading charges'],
+            ['slug' => 'depots.charges',                 'name' => 'Record depot charges',            'group' => 'Depots',      'description' => 'Post storage, offloading and loading charges'],
             ['slug' => 'depots.payments',                'name' => 'Record depot payments',           'group' => 'Depots',      'description' => 'Post a payment against a depot balance'],
             ['slug' => 'depots.manage',                  'name' => 'Create / edit depots',            'group' => 'Depots',      'description' => 'Add new depots and update their details'],
 

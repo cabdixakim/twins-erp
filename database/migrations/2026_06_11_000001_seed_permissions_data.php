@@ -38,7 +38,7 @@ return new class extends Migration
             ['slug' => 'transporters.charges',          'name' => 'Record transporter charges',     'group' => 'Transporters', 'description' => 'Post advances and charges to a transporter ledger'],
             ['slug' => 'transporters.manage',           'name' => 'Create / edit transporters',     'group' => 'Transporters', 'description' => 'Add new transporters and update their details'],
             ['slug' => 'depots.view',                   'name' => 'View depots & ledger',           'group' => 'Depots',       'description' => 'See depot list, stock, ledger entries and statements'],
-            ['slug' => 'depots.charges',                'name' => 'Record depot charges',           'group' => 'Depots',       'description' => 'Post storage, throughput and loading charges'],
+            ['slug' => 'depots.charges',                'name' => 'Record depot charges',           'group' => 'Depots',       'description' => 'Post storage, offloading and loading charges'],
             ['slug' => 'depots.payments',               'name' => 'Record depot payments',          'group' => 'Depots',       'description' => 'Post a payment against a depot balance'],
             ['slug' => 'depots.manage',                 'name' => 'Create / edit depots',           'group' => 'Depots',       'description' => 'Add new depots and update their details'],
             ['slug' => 'inventory.view',                'name' => 'View inventory & stock',         'group' => 'Inventory',    'description' => 'See depot stock levels and inventory movements'],

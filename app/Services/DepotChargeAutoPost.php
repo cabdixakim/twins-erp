@@ -164,8 +164,8 @@ class DepotChargeAutoPost
             // Map our batch cost category to the depot ledger entry type
             $ledgerType = match ($config->category) {
                 'storage'    => 'storage_charge',
-                'offloading' => 'loading_fee',
-                'duty'       => 'other_charge',
+                'offloading' => 'offloading_fee',
+                'duty'       => 'duty_charge',
                 'customs'    => 'other_charge',
                 default      => 'other_charge',
             };

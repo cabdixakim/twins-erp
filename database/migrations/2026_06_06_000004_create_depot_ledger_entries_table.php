@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('depot_id')->constrained('depots')->cascadeOnDelete();
 
-            // storage_charge | throughput_charge | loading_fee | other_charge | payment | adjustment
+            // storage_charge | offloading_fee | loading_fee | duty_charge | other_charge | payment | adjustment
             $table->string('type', 40);
 
             // Positive = charge (we owe the depot); negative = payment (we paid the depot)

@@ -329,7 +329,7 @@
         </div>
         <div>
           <div class="text-xs font-semibold tw-fg">Depot Charges</div>
-          <div class="text-[10px] tw-muted">Storage & throughput</div>
+          <div class="text-[10px] tw-muted">Storage & offloading</div>
         </div>
         <svg class="w-4 h-4 ml-auto tw-muted opacity-40 group-hover:opacity-80 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
