@@ -261,7 +261,7 @@ class ImportNominationController extends Controller
 
     public function recordBorder(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
     {
-        $this->authorise($purchase);
+        $cid = $this->authorise($purchase);
         abort_if((int) $truck->nomination_id !== $nomination->id, 403);
 
         if ($truck->status !== 'in_transit') {
@@ -272,13 +272,40 @@ class ImportNominationController extends Controller
             'tr8_number'          => 'nullable|string|max:80',
             't1_number'           => 'nullable|string|max:80',
             'border_date'         => 'required|date',
-            'duty_vendor_type'    => 'nullable|string|max:30',
+            'duty_vendor_type'    => ['nullable', Rule::in(['customs_authority', 'supplier', 'depot', 'transporter', 'self', ''])],
             'duty_vendor_id'      => 'nullable|integer',
             'duty_rate_per_1000l' => 'nullable|numeric|min:0',
             'duty_qty'            => 'nullable|numeric|min:0',
             'duty_currency'       => 'nullable|string|max:8',
             'duty_notes'          => 'nullable|string|max:500',
         ]);
+
+        // Validate duty vendor ownership when an AP type is selected
+        $submittedType = $data['duty_vendor_type'] ?? null;
+        $submittedId   = (int) ($data['duty_vendor_id'] ?? 0);
+        $apTypes       = ['customs_authority', 'supplier', 'depot', 'transporter'];
+
+        if ($submittedType && in_array($submittedType, $apTypes, true)) {
+            if (! $submittedId) {
+                return back()->withErrors(['duty_vendor_id' => 'A vendor must be selected for the chosen duty type.'])->withInput();
+            }
+
+            $vendorExists = match ($submittedType) {
+                'customs_authority' => DB::table('duty_vendors')
+                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                'supplier'          => DB::table('suppliers')
+                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                'depot'             => DB::table('depots')
+                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                'transporter'       => DB::table('transporters')
+                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                default             => false,
+            };
+
+            if (! $vendorExists) {
+                return back()->withErrors(['duty_vendor_id' => 'Selected duty vendor not found or does not belong to this company.'])->withInput();
+            }
+        }
 
         // Compute duty amount
         $dutyRate = (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
@@ -822,13 +849,61 @@ class ImportNominationController extends Controller
             return back()->with('error', 'No trucks selected.');
         }
 
-        $now = now();
-        $updated = ImportTruck::where('nomination_id', $nomination->id)
+        $trucks = ImportTruck::where('nomination_id', $nomination->id)
             ->whereIn('id', $ids)
             ->where('status', 'in_transit')
-            ->update(['status' => 'border_cleared', 'border_cleared_at' => $now, 'updated_at' => $now]);
+            ->get();
 
-        return back()->with('status', "{$updated} truck(s) marked as border cleared.");
+        $now      = now();
+        $updated  = 0;
+        $dutyMsgs = [];
+
+        foreach ($trucks as $truck) {
+            $truck->update([
+                'status'           => 'border_cleared',
+                'border_cleared_at' => $now,
+            ]);
+            $updated++;
+
+            // Auto-post duty using nomination defaults if truck has no explicit duty setup
+            if (! $truck->duty_vendor_type && $nomination->default_duty_vendor_type) {
+                $truck->update([
+                    'duty_vendor_type'    => $nomination->default_duty_vendor_type,
+                    'duty_vendor_id'      => $nomination->default_duty_vendor_id,
+                    'duty_rate_per_1000l' => $truck->duty_rate_per_1000l ?? $nomination->default_duty_rate_per_1000l,
+                    'duty_currency'       => $truck->duty_currency ?? $nomination->default_duty_currency ?? 'USD',
+                ]);
+                $truck->refresh();
+            }
+
+            // Compute duty amount if not yet set
+            if (($truck->duty_amount ?? 0) <= 0) {
+                $rate = (float) ($truck->duty_rate_per_1000l ?? 0);
+                $qty  = (float) ($truck->duty_qty ?? $truck->qty_loaded ?? 0);
+                if ($rate > 0 && $qty > 0) {
+                    $truck->update(['duty_amount' => round($rate * $qty / 1000, 4)]);
+                    $truck->refresh();
+                }
+            }
+
+            if ($truck->duty_vendor_type && ($truck->duty_amount ?? 0) > 0) {
+                try {
+                    $msg = DutyPostingService::postForTruck($truck, (int) auth()->id());
+                    if ($msg) {
+                        $dutyMsgs[] = $msg;
+                    }
+                } catch (\Throwable $e) {
+                    $dutyMsgs[] = "Duty auto-post failed for {$truck->truck_reg}: {$e->getMessage()}";
+                }
+            }
+        }
+
+        $statusMsg = "{$updated} truck(s) marked as border cleared.";
+        if ($dutyMsgs) {
+            $statusMsg .= ' ' . implode(' ', $dutyMsgs);
+        }
+
+        return back()->with('status', $statusMsg);
     }
 
     // ── Download truck CSV template ──────────────────────────────────────────

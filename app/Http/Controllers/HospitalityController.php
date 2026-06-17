@@ -20,7 +20,7 @@ class HospitalityController extends Controller
 
         $data = $request->validate([
             'paid_to_type'  => 'required|in:supplier,petty_cash',
-            'paid_to_id'    => 'nullable|integer',
+            'paid_to_id'    => 'required|integer|min:1',
             'amount'        => 'required|numeric|min:0.01',
             'currency'      => 'required|string|max:8',
             'exchange_rate' => 'nullable|numeric|min:0',
@@ -30,23 +30,25 @@ class HospitalityController extends Controller
 
         $exchangeRate = max(1, (float) ($data['exchange_rate'] ?? 1));
         $amountBase   = round((float) $data['amount'] * $exchangeRate, 4);
-        $rawId        = (int) ($data['paid_to_id'] ?? 0);
+        $rawId        = (int) $data['paid_to_id'];
         $paidToId     = null;
         $paidToName   = null;
 
-        if ($data['paid_to_type'] === 'supplier' && $rawId) {
+        if ($data['paid_to_type'] === 'supplier') {
             $supplier = DB::table('suppliers')
                 ->where('id', $rawId)->where('company_id', $cid)->first();
-            if ($supplier) {
-                $paidToId   = $rawId;
-                $paidToName = $supplier->name;
+            if (! $supplier) {
+                return back()->withErrors(['paid_to_id' => 'Selected supplier not found or does not belong to this company.'])->withInput();
             }
-        } elseif ($data['paid_to_type'] === 'petty_cash' && $rawId) {
+            $paidToId   = $rawId;
+            $paidToName = $supplier->name;
+        } elseif ($data['paid_to_type'] === 'petty_cash') {
             $account = PettyCashAccount::where('id', $rawId)->where('company_id', $cid)->first();
-            if ($account) {
-                $paidToId   = $rawId;
-                $paidToName = $account->name;
+            if (! $account) {
+                return back()->withErrors(['paid_to_id' => 'Selected petty cash account not found or does not belong to this company.'])->withInput();
             }
+            $paidToId   = $rawId;
+            $paidToName = $account->name;
         }
 
         $desc = $data['description'] ?: 'Hospitality — ' . ($paidToName ?? 'PO ' . $purchase->reference);
