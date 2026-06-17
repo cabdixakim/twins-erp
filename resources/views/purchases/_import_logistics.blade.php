@@ -584,6 +584,39 @@
           </div>
         </div>
 
+        {{-- Duty defaults --}}
+        <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
+          <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty defaults (pre-fills each truck)</div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Default duty paid to</label>
+            <select name="default_duty_vendor_type"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+              <option value="">No default</option>
+              <option value="customs_authority" {{ ($nom?->default_duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
+              <option value="supplier"          {{ ($nom?->default_duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
+              <option value="self"              {{ ($nom?->default_duty_vendor_type ?? '') === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate / 1000L</label>
+              <input type="number" name="default_duty_rate_per_1000l" step="0.0001" min="0"
+                     value="{{ $nom?->default_duty_rate_per_1000l ?? '' }}"
+                     placeholder="0.0000"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default currency</label>
+              <select name="default_duty_currency"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
+                  <option value="{{ $cur }}" {{ ($nom?->default_duty_currency ?? 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+        </div>
+
         {{-- Notes --}}
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes <span class="{{ $muted }}">(optional)</span></label>
@@ -893,6 +926,76 @@
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Border date <span class="text-rose-400">*</span></label>
             <input type="date" name="border_date" required
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          </div>
+
+          {{-- Duty section --}}
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
+            <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty / Tax</div>
+            @php
+              $cid = auth()->user()->active_company_id;
+              $dutyVendorsList = \App\Models\DutyVendor::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+              $suppliersList   = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+            @endphp
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Duty paid to</label>
+              <select name="duty_vendor_type"
+                      onchange="toggleDutyVendorSelect(this, {{ $truck->id }})"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40">
+                <option value="">No duty / skip</option>
+                <option value="customs_authority" {{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
+                <option value="supplier"          {{ ($truck->duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
+                <option value="self"              {{ ($truck->duty_vendor_type ?? '') === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
+              </select>
+            </div>
+            <div id="dutyVendorCustomsRow-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Customs Authority</label>
+              <select name="duty_vendor_id"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($dutyVendorsList as $dv)
+                  <option value="{{ $dv->id }}" {{ ($truck->duty_vendor_id ?? '') == $dv->id ? 'selected' : '' }}>{{ $dv->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div id="dutyVendorSupplierRow-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'supplier' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Supplier</label>
+              <select name="duty_vendor_id"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($suppliersList as $sv)
+                  <option value="{{ $sv->id }}" {{ ($truck->duty_vendor_id ?? '') == $sv->id ? 'selected' : '' }}>{{ $sv->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Rate / 1000L</label>
+                <input type="number" name="duty_rate_per_1000l" step="0.0001" min="0"
+                       value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
+                       placeholder="0.0000" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty (L)</label>
+                <input type="number" name="duty_qty" step="0.001" min="0"
+                       value="{{ $truck->duty_qty ?? ($truck->qty_loaded ?? '') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
+                       placeholder="auto" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
+                <input type="text" name="duty_currency" maxlength="8"
+                       value="{{ $truck->duty_currency ?? ($nom->default_duty_currency ?? 'USD') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Duty notes</label>
+              <input type="text" name="duty_notes" maxlength="500"
+                     value="{{ $truck->duty_notes ?? '' }}"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
+                     placeholder="e.g. receipt no., waiver reason…" />
+            </div>
           </div>
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
@@ -1685,6 +1788,15 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
     document.documentElement.classList.remove('overflow-hidden');
   });
 })();
+
+// Duty vendor type toggle in border clearance modal
+function toggleDutyVendorSelect(sel, truckId) {
+  const v  = sel.value;
+  const cr = document.getElementById('dutyVendorCustomsRow-' + truckId);
+  const sr = document.getElementById('dutyVendorSupplierRow-' + truckId);
+  if (cr) cr.classList.toggle('hidden', v !== 'customs_authority');
+  if (sr) sr.classList.toggle('hidden', v !== 'supplier');
+}
 </script>
 
 @push('scripts')

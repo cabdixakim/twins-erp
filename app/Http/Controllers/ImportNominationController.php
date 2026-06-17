@@ -12,6 +12,7 @@ use App\Models\TransporterLedgerEntry;
 use App\Http\Controllers\SupplierLedgerController;
 use App\Services\DepotChargeAutoPost;
 use App\Services\InventoryLedger;
+use App\Services\DutyPostingService;
 
 class ImportNominationController extends Controller
 {
@@ -22,18 +23,23 @@ class ImportNominationController extends Controller
         $cid = $this->authorise($purchase);
 
         $data = $request->validate([
-            'transporter_id'        => 'nullable|integer',
-            'destination_depot_id'  => 'nullable|integer',
-            'currency'              => 'required|string|max:8',
-            'rate_per_1000l'        => 'required|numeric|min:0',
-            'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
-            'short_charge_rate'     => 'required|numeric|min:0',
-            'short_charge_currency' => 'required|string|max:8',
-            'advances'              => 'nullable|numeric|min:0',
-            'advances_currency'     => 'required|string|max:8',
-            'notes'                 => 'nullable|string|max:2000',
+            'transporter_id'             => 'nullable|integer',
+            'destination_depot_id'       => 'nullable|integer',
+            'currency'                   => 'required|string|max:8',
+            'rate_per_1000l'             => 'required|numeric|min:0',
+            'allowed_loss_pct'           => 'required|numeric|min:0|max:100',
+            'short_charge_rate'          => 'required|numeric|min:0',
+            'short_charge_currency'      => 'required|string|max:8',
+            'advances'                   => 'nullable|numeric|min:0',
+            'advances_currency'          => 'required|string|max:8',
+            'notes'                      => 'nullable|string|max:2000',
+            'default_duty_vendor_type'   => 'nullable|string|max:30',
+            'default_duty_vendor_id'     => 'nullable|integer',
+            'default_duty_rate_per_1000l'=> 'nullable|numeric|min:0',
+            'default_duty_currency'      => 'nullable|string|max:8',
         ]);
-        $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
+        $data['destination_depot_id']  = $data['destination_depot_id'] ?: null;
+        $data['default_duty_vendor_id'] = $data['default_duty_vendor_id'] ?: null;
 
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
@@ -74,18 +80,23 @@ class ImportNominationController extends Controller
         abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
 
         $data = $request->validate([
-            'transporter_id'        => 'nullable|integer',
-            'destination_depot_id'  => 'nullable|integer',
-            'currency'              => 'required|string|max:8',
-            'rate_per_1000l'        => 'required|numeric|min:0',
-            'allowed_loss_pct'      => 'required|numeric|min:0|max:100',
-            'short_charge_rate'     => 'required|numeric|min:0',
-            'short_charge_currency' => 'required|string|max:8',
-            'advances'              => 'nullable|numeric|min:0',
-            'advances_currency'     => 'required|string|max:8',
-            'notes'                 => 'nullable|string|max:2000',
+            'transporter_id'             => 'nullable|integer',
+            'destination_depot_id'       => 'nullable|integer',
+            'currency'                   => 'required|string|max:8',
+            'rate_per_1000l'             => 'required|numeric|min:0',
+            'allowed_loss_pct'           => 'required|numeric|min:0|max:100',
+            'short_charge_rate'          => 'required|numeric|min:0',
+            'short_charge_currency'      => 'required|string|max:8',
+            'advances'                   => 'nullable|numeric|min:0',
+            'advances_currency'          => 'required|string|max:8',
+            'notes'                      => 'nullable|string|max:2000',
+            'default_duty_vendor_type'   => 'nullable|string|max:30',
+            'default_duty_vendor_id'     => 'nullable|integer',
+            'default_duty_rate_per_1000l'=> 'nullable|numeric|min:0',
+            'default_duty_currency'      => 'nullable|string|max:8',
         ]);
-        $data['destination_depot_id'] = $data['destination_depot_id'] ?: null;
+        $data['destination_depot_id']   = $data['destination_depot_id'] ?: null;
+        $data['default_duty_vendor_id'] = $data['default_duty_vendor_id'] ?: null;
 
         $nomination->update(array_merge($data, [
             'advances' => $data['advances'] ?? 0,
@@ -130,7 +141,19 @@ class ImportNominationController extends Controller
 
         $data = $validator->validated();
 
-        ImportTruck::create(array_merge($data, [
+        // Pre-fill duty defaults from nomination
+        $dutyDefaults = [];
+        if ($nomination->default_duty_vendor_type) {
+            $dutyDefaults = [
+                'duty_vendor_type'   => $nomination->default_duty_vendor_type,
+                'duty_vendor_id'     => $nomination->default_duty_vendor_id,
+                'duty_rate_per_1000l'=> $nomination->default_duty_rate_per_1000l,
+                'duty_currency'      => $nomination->default_duty_currency ?: 'USD',
+                'duty_status'        => 'pending',
+            ];
+        }
+
+        ImportTruck::create(array_merge($data, $dutyDefaults, [
             'company_id'    => $cid,
             'nomination_id' => $nomination->id,
             'status'        => 'nominated',
@@ -246,14 +269,50 @@ class ImportNominationController extends Controller
         }
 
         $data = $request->validate([
-            'tr8_number'  => 'nullable|string|max:80',
-            't1_number'   => 'nullable|string|max:80',
-            'border_date' => 'required|date',
+            'tr8_number'          => 'nullable|string|max:80',
+            't1_number'           => 'nullable|string|max:80',
+            'border_date'         => 'required|date',
+            'duty_vendor_type'    => 'nullable|string|max:30',
+            'duty_vendor_id'      => 'nullable|integer',
+            'duty_rate_per_1000l' => 'nullable|numeric|min:0',
+            'duty_qty'            => 'nullable|numeric|min:0',
+            'duty_currency'       => 'nullable|string|max:8',
+            'duty_notes'          => 'nullable|string|max:500',
         ]);
 
-        $truck->update(array_merge($data, ['status' => 'border_cleared']));
+        // Compute duty amount
+        $dutyRate = (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
+        $dutyQty  = (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
+        $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / 1000, 4) : null;
 
-        return back()->with('status', "Border clearance recorded for {$truck->truck_reg}.");
+        $truck->update(array_merge($data, [
+            'status'              => 'border_cleared',
+            'duty_vendor_id'      => ($data['duty_vendor_id'] ?? null) ?: ($truck->duty_vendor_id ?: null),
+            'duty_vendor_type'    => ($data['duty_vendor_type'] ?? null) ?: ($truck->duty_vendor_type ?: null),
+            'duty_rate_per_1000l' => $dutyRate ?: null,
+            'duty_qty'            => $dutyQty ?: null,
+            'duty_amount'         => $dutyAmt,
+            'duty_currency'       => ($data['duty_currency'] ?? null) ?: ($truck->duty_currency ?: 'USD'),
+            'duty_status'         => $truck->duty_status ?? 'pending',
+        ]));
+
+        // Auto-post duty now that we have border date
+        $truck->refresh();
+        $dutyMsg = null;
+        if ($truck->duty_vendor_type && ($truck->duty_amount ?? 0) > 0) {
+            try {
+                $dutyMsg = DutyPostingService::postForTruck($truck, (int) auth()->id());
+            } catch (\Throwable $e) {
+                return back()->with('status', "Border cleared. Duty auto-post failed: {$e->getMessage()}");
+            }
+        }
+
+        $msg = "Border clearance recorded for {$truck->truck_reg}.";
+        if ($dutyMsg) {
+            $msg .= " {$dutyMsg}";
+        }
+
+        return back()->with('status', $msg);
     }
 
     // ── Record delivery ──────────────────────────────────────────────────────

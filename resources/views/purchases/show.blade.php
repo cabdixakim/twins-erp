@@ -721,6 +721,168 @@ function updatePaidByFields() {
 @endif
 
 {{-- =========================
+     HOSPITALITY CHARGES
+   ========================= --}}
+@if($purchase->status !== 'draft')
+@php
+  $hospitalityCharges = \App\Models\HospitalityCharge::where('purchase_id', $purchase->id)->orderByDesc('entry_date')->get();
+  $hospitalityTotal   = $hospitalityCharges->sum(fn($h) => (float)$h->amount_base ?: (float)$h->amount);
+  $cid = auth()->user()->active_company_id;
+  $hSuppliers  = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+  $hPettyCash  = \App\Models\PettyCashAccount::where('company_id', $cid)->orderBy('name')->get();
+@endphp
+<div class="mt-6 rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] overflow-hidden">
+  <div class="px-5 py-3 border-b border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] flex items-center justify-between">
+    <span class="text-xs font-semibold text-[color:var(--tw-fg)]">Hospitality Charges</span>
+    <button type="button" onclick="document.getElementById('addHospitalityModal').classList.remove('hidden')"
+            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border border-[color:var(--tw-border)] text-[10px] font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
+      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Add charge
+    </button>
+  </div>
+  @if($hospitalityCharges->isEmpty())
+    <div class="px-5 py-5 text-xs text-[color:var(--tw-muted)]">No hospitality charges yet. Includes agent fees, entertainment and facilitation costs.</div>
+  @else
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-[color:var(--tw-muted)] border-b border-[color:var(--tw-border)]">
+          <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
+          <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
+          <th class="text-left py-2.5 pr-3 font-semibold">Paid to</th>
+          <th class="text-right py-2.5 pr-3 font-semibold">Amount</th>
+          <th class="py-2.5 pr-5 font-semibold"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach($hospitalityCharges as $hc)
+        <tr class="border-b border-[color:var(--tw-border)] last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+          <td class="py-2.5 pl-5 pr-3 text-xs text-[color:var(--tw-muted)] whitespace-nowrap">{{ $hc->entry_date->format('d M Y') }}</td>
+          <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-fg)]">{{ $hc->description }}</td>
+          <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-muted)]">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border
+              {{ $hc->paid_to_type === 'supplier' ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30' : 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30' }}">
+              {{ ucfirst($hc->paid_to_type) }}
+            </span>
+            @if($hc->paid_to_name) <span class="ml-1">{{ $hc->paid_to_name }}</span> @endif
+          </td>
+          <td class="py-2.5 pr-3 text-right text-xs font-semibold text-[color:var(--tw-fg)]">
+            {{ number_format($hc->amount, 2) }} {{ $hc->currency }}
+          </td>
+          <td class="py-2.5 pr-5 text-right">
+            <form method="POST" action="{{ route('purchases.hospitality.destroy', [$purchase, $hc]) }}"
+                  onsubmit="return confirm('Remove this hospitality charge?')">
+              @csrf @method('DELETE')
+              <button type="submit" class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                </svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        @endforeach
+      </tbody>
+      <tfoot>
+        <tr class="border-t border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)]">
+          <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold text-[color:var(--tw-muted)]">Total hospitality</td>
+          <td class="py-2.5 pr-3 text-right text-xs font-bold text-[color:var(--tw-fg)]">
+            {{ number_format($hospitalityTotal, 2) }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  @endif
+</div>
+
+{{-- Add Hospitality Modal --}}
+<div id="addHospitalityModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)">
+  <div class="w-full max-w-md rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] shadow-2xl p-6"
+       onclick="event.stopPropagation()">
+    <h3 class="text-sm font-bold text-[color:var(--tw-fg)] mb-4">Add hospitality charge</h3>
+    <form method="POST" action="{{ route('purchases.hospitality.store', $purchase) }}" class="space-y-4">
+      @csrf
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Description</label>
+        <input name="description" type="text" placeholder="Agent fee, entertainment, facilitation…"
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Paid to</label>
+        <select name="paid_to_type" id="hospPaidToType" onchange="toggleHospPaidTo()"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+          @if($hSuppliers->isNotEmpty())
+            <option value="supplier">Supplier / vendor</option>
+          @endif
+          @if($hPettyCash->isNotEmpty())
+            <option value="petty_cash">Petty cash account</option>
+          @endif
+        </select>
+      </div>
+      <div id="hospSupplierRow">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Supplier</label>
+        <select name="paid_to_id"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+          <option value="">— select —</option>
+          @foreach($hSuppliers as $hs)
+            <option value="{{ $hs->id }}">{{ $hs->name }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div id="hospPettyCashRow" class="hidden">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Petty cash account</label>
+        <select name="paid_to_id"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+          <option value="">— select —</option>
+          @foreach($hPettyCash as $hp)
+            <option value="{{ $hp->id }}">{{ $hp->name }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="col-span-2">
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Amount</label>
+          <input name="amount" type="number" step="0.01" min="0.01" required
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
+                 placeholder="0.00">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Currency</label>
+          <input name="currency" value="{{ $purchase->currency ?? 'USD' }}" maxlength="8"
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Date</label>
+        <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('addHospitalityModal').classList.add('hidden')"
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="flex-1 h-9 rounded-xl bg-[color:var(--tw-accent)] text-white text-xs font-semibold hover:opacity-90 transition">
+          Save charge
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function toggleHospPaidTo() {
+  const v = document.getElementById('hospPaidToType').value;
+  document.getElementById('hospSupplierRow').classList.toggle('hidden', v !== 'supplier');
+  document.getElementById('hospPettyCashRow').classList.toggle('hidden', v !== 'petty_cash');
+}
+</script>
+@endif
+
+{{-- =========================
      CONFIRM MODAL (draft)
    ========================= --}}
 @if($purchase->status === 'draft')

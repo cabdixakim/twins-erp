@@ -26,6 +26,10 @@ class ImportNomination extends Model
         'status',
         'created_by',
         'volume_unit',
+        'default_duty_vendor_type',
+        'default_duty_vendor_id',
+        'default_duty_rate_per_1000l',
+        'default_duty_currency',
     ];
 
     // Note: hospitality_rate / hospitality_currency removed — storage fee

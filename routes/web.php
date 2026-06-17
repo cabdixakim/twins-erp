@@ -162,6 +162,26 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             Route::patch('/inventory/costing', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'updateCosting'])
                 ->name('inventory.update-costing');
 
+            // Duty vendors (customs authorities)
+            Route::get('/duty-vendors', [\App\Http\Controllers\Settings\DutyVendorController::class, 'index'])
+                ->name('duty-vendors.index');
+            Route::post('/duty-vendors', [\App\Http\Controllers\Settings\DutyVendorController::class, 'store'])
+                ->name('duty-vendors.store');
+            Route::patch('/duty-vendors/{dutyVendor}', [\App\Http\Controllers\Settings\DutyVendorController::class, 'update'])
+                ->name('duty-vendors.update');
+            Route::patch('/duty-vendors/{dutyVendor}/toggle', [\App\Http\Controllers\Settings\DutyVendorController::class, 'toggleActive'])
+                ->name('duty-vendors.toggle');
+
+            // Duty rates
+            Route::get('/duty-rates', [\App\Http\Controllers\Settings\DutyRateController::class, 'index'])
+                ->name('duty-rates.index');
+            Route::post('/duty-rates', [\App\Http\Controllers\Settings\DutyRateController::class, 'store'])
+                ->name('duty-rates.store');
+            Route::patch('/duty-rates/{dutyRate}', [\App\Http\Controllers\Settings\DutyRateController::class, 'update'])
+                ->name('duty-rates.update');
+            Route::delete('/duty-rates/{dutyRate}', [\App\Http\Controllers\Settings\DutyRateController::class, 'destroy'])
+                ->name('duty-rates.destroy');
+
             Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
             Route::get('/clients/export', [ClientController::class, 'exportCsv'])->name('clients.export');
             Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
@@ -354,6 +374,36 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             ->name('purchases.batch-costs.store');
         Route::delete('/purchases/{purchase}/batch-costs/{batchCost}', [BatchCostController::class, 'destroy'])
             ->name('purchases.batch-costs.destroy');
+
+        // Hospitality charges
+        Route::post('/purchases/{purchase}/hospitality', [\App\Http\Controllers\HospitalityController::class, 'store'])
+            ->name('purchases.hospitality.store');
+        Route::delete('/purchases/{purchase}/hospitality/{hospitalityCharge}', [\App\Http\Controllers\HospitalityController::class, 'destroy'])
+            ->name('purchases.hospitality.destroy');
+
+        // Duties index
+        Route::get('/duties', [\App\Http\Controllers\DutiesController::class, 'index'])
+            ->name('duties.index');
+        Route::get('/duties/export', [\App\Http\Controllers\DutiesController::class, 'exportCsv'])
+            ->name('duties.export');
+
+        // Duty rate lookup (AJAX)
+        Route::get('/duty-rates/for-product', [\App\Http\Controllers\Settings\DutyRateController::class, 'forProduct'])
+            ->name('settings.duty-rates.for-product');
+
+        // Duty vendor ledger (customs authorities AP)
+        Route::get('/duty-vendors', [\App\Http\Controllers\DutyLedgerController::class, 'index'])
+            ->name('duty-vendors.index');
+        Route::get('/duty-vendors/{dutyVendor}/statement', [\App\Http\Controllers\DutyLedgerController::class, 'statement'])
+            ->name('duty-vendors.statement');
+        Route::get('/duty-vendors/{dutyVendor}/export', [\App\Http\Controllers\DutyLedgerController::class, 'exportCsv'])
+            ->name('duty-vendors.export');
+        Route::get('/duty-vendors/{dutyVendor}', [\App\Http\Controllers\DutyLedgerController::class, 'show'])
+            ->name('duty-vendors.show');
+        Route::post('/duty-vendors/{dutyVendor}/payments', [\App\Http\Controllers\DutyLedgerController::class, 'recordPayment'])
+            ->name('duty-vendors.payments.store');
+        Route::post('/duty-vendors/{dutyVendor}/adjustments', [\App\Http\Controllers\DutyLedgerController::class, 'recordAdjustment'])
+            ->name('duty-vendors.adjustments.store');
 
         // Sales (company-scoped)
         Route::get('/sales/export', [SalesController::class, 'exportCsv'])->name('sales.export');

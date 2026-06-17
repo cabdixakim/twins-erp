@@ -121,6 +121,18 @@
         <span class="tw-nav-label sidebar-label">Depots</span>
     </a>
 
+    {{-- DUTIES --}}
+    <a href="{{ route('duties.index') }}"
+       class="tw-nav-item {{ ($onDuties ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Duties</span>
+    </a>
+
     <div class="tw-nav-divider"></div>
 
     {{-- PETTY CASH --}}

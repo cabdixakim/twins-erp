@@ -136,6 +136,36 @@
             </a>
             @endif
 
+            <a href="{{ route('settings.duty-vendors.index') }}"
+               class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
+                <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
+                             bg-amber-500/10 border border-amber-500/20">
+                    <svg class="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--tw-fg)">Customs Authorities</div>
+                    <div class="text-xs mt-0.5 leading-relaxed" style="color:var(--tw-muted)">Authorities you pay import duty to</div>
+                </div>
+                <svg class="w-4 h-4 ml-auto mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-60 transition" style="color:var(--tw-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+            </a>
+
+            <a href="{{ route('settings.duty-rates.index') }}"
+               class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
+                <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
+                             bg-orange-500/10 border border-orange-500/20">
+                    <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--tw-fg)">Duty Rate Schedule</div>
+                    <div class="text-xs mt-0.5 leading-relaxed" style="color:var(--tw-muted)">Tax rates per product per 1000 litres</div>
+                </div>
+                <svg class="w-4 h-4 ml-auto mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-60 transition" style="color:var(--tw-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+            </a>
+
             <a href="{{ route('settings.clients.index') }}"
                class="group tw-card flex items-start gap-4 p-5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer">
                 <span class="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
