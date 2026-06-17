@@ -9,6 +9,7 @@
         'storage_charge'   => ['label' => 'Storage',    'color' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'],
         'handling_fee'     => ['label' => 'Handling fee', 'color' => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'],
         'loading_fee'      => ['label' => 'Loading fee','color' => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30'],
+        'duty_charge'      => ['label' => 'Duty',       'color' => 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30'],
         'other_charge'     => ['label' => 'Other',      'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
         'payment'          => ['label' => 'Payment',    'color' => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'],
         'adjustment'       => ['label' => 'Adjustment', 'color' => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30'],
@@ -579,6 +580,7 @@ function loadStoragePreview() {
                     <option value="storage_charge">Storage charge</option>
                     <option value="handling_fee">Handling fee</option>
                     <option value="loading_fee">Loading fee</option>
+                    <option value="duty_charge">Duty charge</option>
                     <option value="other_charge">Other charge</option>
                 </select>
             </div>

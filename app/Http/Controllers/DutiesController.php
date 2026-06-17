@@ -104,6 +104,8 @@ class DutiesController extends Controller
         $dateFrom   = $request->query('from');
         $dateTo     = $request->query('to');
         $vendorType = $request->query('vendor_type');
+        $vendorId   = $request->query('vendor_id');
+        $productId  = $request->query('product_id');
         $status     = $request->query('status');
 
         $query = DB::table('import_trucks as t')
@@ -126,12 +128,11 @@ class DutiesController extends Controller
                 'pr.name as product_name',
             ]);
 
-        $vendorId   = $request->query('vendor_id');
-
         if ($dateFrom)   $query->whereDate('t.border_date', '>=', $dateFrom);
         if ($dateTo)     $query->whereDate('t.border_date', '<=', $dateTo);
         if ($vendorType) $query->where('t.duty_vendor_type', $vendorType);
         if ($vendorId)   $query->where('t.duty_vendor_id', (int) $vendorId);
+        if ($productId)  $query->where('p.product_id', (int) $productId);
         if ($status)     $query->where('t.duty_status', $status);
 
         $rows = $query->orderByDesc('t.border_date')->get();

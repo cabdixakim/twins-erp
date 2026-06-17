@@ -278,6 +278,7 @@ class ImportNominationController extends Controller
             'tr8_number'          => 'nullable|string|max:80',
             't1_number'           => 'nullable|string|max:80',
             'border_date'         => 'required|date',
+            'waive_duty'          => 'nullable|boolean',
             'duty_vendor_type'    => ['nullable', Rule::in(['customs_authority', 'supplier', 'depot', 'transporter', 'self', ''])],
             'duty_vendor_id'      => 'nullable|integer',
             'duty_rate_per_1000l' => 'nullable|numeric|min:0',
@@ -286,53 +287,72 @@ class ImportNominationController extends Controller
             'duty_notes'          => 'nullable|string|max:500',
         ]);
 
-        // Validate duty vendor ownership when an AP type is selected
-        $submittedType = $data['duty_vendor_type'] ?? null;
-        $submittedId   = (int) ($data['duty_vendor_id'] ?? 0);
-        $apTypes       = ['customs_authority', 'supplier', 'depot', 'transporter'];
+        $waiveDuty = (bool) ($data['waive_duty'] ?? false);
 
-        if ($submittedType && in_array($submittedType, $apTypes, true)) {
-            if (! $submittedId) {
-                return back()->withErrors(['duty_vendor_id' => 'A vendor must be selected for the chosen duty type.'])->withInput();
-            }
+        // If duty is waived, skip all AP vendor validation and post as waived
+        if (! $waiveDuty) {
+            // Validate duty vendor ownership when an AP type is selected
+            $submittedType = $data['duty_vendor_type'] ?? null;
+            $submittedId   = (int) ($data['duty_vendor_id'] ?? 0);
+            $apTypes       = ['customs_authority', 'supplier', 'depot', 'transporter'];
 
-            $vendorExists = match ($submittedType) {
-                'customs_authority' => DB::table('duty_vendors')
-                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
-                'supplier'          => DB::table('suppliers')
-                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
-                'depot'             => DB::table('depots')
-                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
-                'transporter'       => DB::table('transporters')
-                    ->where('id', $submittedId)->where('company_id', $cid)->exists(),
-                default             => false,
-            };
+            if ($submittedType && in_array($submittedType, $apTypes, true)) {
+                if (! $submittedId) {
+                    return back()->withErrors(['duty_vendor_id' => 'A vendor must be selected for the chosen duty type.'])->withInput();
+                }
 
-            if (! $vendorExists) {
-                return back()->withErrors(['duty_vendor_id' => 'Selected duty vendor not found or does not belong to this company.'])->withInput();
+                $vendorExists = match ($submittedType) {
+                    'customs_authority' => DB::table('duty_vendors')
+                        ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                    'supplier'          => DB::table('suppliers')
+                        ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                    'depot'             => DB::table('depots')
+                        ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                    'transporter'       => DB::table('transporters')
+                        ->where('id', $submittedId)->where('company_id', $cid)->exists(),
+                    default             => false,
+                };
+
+                if (! $vendorExists) {
+                    return back()->withErrors(['duty_vendor_id' => 'Selected duty vendor not found or does not belong to this company.'])->withInput();
+                }
             }
         }
 
         // Compute duty amount
-        $dutyRate = (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
-        $dutyQty  = (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
+        $dutyRate = $waiveDuty ? 0.0 : (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
+        $dutyQty  = $waiveDuty ? 0.0 : (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
         $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / 1000, 4) : null;
 
-        $truck->update(array_merge($data, [
-            'status'              => 'border_cleared',
-            'duty_vendor_id'      => ($data['duty_vendor_id'] ?? null) ?: ($truck->duty_vendor_id ?: null),
-            'duty_vendor_type'    => ($data['duty_vendor_type'] ?? null) ?: ($truck->duty_vendor_type ?: null),
-            'duty_rate_per_1000l' => $dutyRate ?: null,
-            'duty_qty'            => $dutyQty ?: null,
-            'duty_amount'         => $dutyAmt,
-            'duty_currency'       => ($data['duty_currency'] ?? null) ?: ($truck->duty_currency ?: 'USD'),
-            'duty_status'         => $truck->duty_status ?? 'pending',
-        ]));
+        if ($waiveDuty) {
+            $truck->update([
+                'status'           => 'border_cleared',
+                'border_date'      => $data['border_date'],
+                'tr8_number'       => $data['tr8_number'] ?? null,
+                't1_number'        => $data['t1_number'] ?? null,
+                'duty_status'      => 'waived',
+                'duty_vendor_type' => null,
+                'duty_vendor_id'   => null,
+                'duty_amount'      => null,
+                'duty_notes'       => $data['duty_notes'] ?? null,
+            ]);
+        } else {
+            $truck->update(array_merge($data, [
+                'status'              => 'border_cleared',
+                'duty_vendor_id'      => ($data['duty_vendor_id'] ?? null) ?: ($truck->duty_vendor_id ?: null),
+                'duty_vendor_type'    => ($data['duty_vendor_type'] ?? null) ?: ($truck->duty_vendor_type ?: null),
+                'duty_rate_per_1000l' => $dutyRate ?: null,
+                'duty_qty'            => $dutyQty ?: null,
+                'duty_amount'         => $dutyAmt,
+                'duty_currency'       => ($data['duty_currency'] ?? null) ?: ($truck->duty_currency ?: 'USD'),
+                'duty_status'         => $truck->duty_status ?? 'pending',
+            ]));
+        }
 
-        // Auto-post duty now that we have border date
+        // Auto-post duty now that we have border date (skip if waived)
         $truck->refresh();
         $dutyMsg = null;
-        if ($truck->duty_vendor_type && ($truck->duty_amount ?? 0) > 0) {
+        if (! $waiveDuty && $truck->duty_vendor_type && ($truck->duty_amount ?? 0) > 0) {
             try {
                 $dutyMsg = DutyPostingService::postForTruck($truck, (int) auth()->id());
             } catch (\Throwable $e) {

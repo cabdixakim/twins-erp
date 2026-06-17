@@ -989,7 +989,17 @@
 
           {{-- Duty section --}}
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
-            <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty / Tax</div>
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty / Tax</div>
+              <label class="flex items-center gap-1.5 text-xs {{ $muted }} cursor-pointer select-none">
+                <input type="checkbox" name="waive_duty" value="1"
+                       id="waiveDuty-{{ $truck->id }}"
+                       {{ ($truck->duty_status ?? '') === 'waived' ? 'checked' : '' }}
+                       onchange="toggleWaiveDuty({{ $truck->id }})"
+                       class="rounded accent-rose-500">
+                Waive duty
+              </label>
+            </div>
             @php
               $cid             = auth()->user()->active_company_id;
               $dutyVendorsList = \App\Models\DutyVendor::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
@@ -1064,7 +1074,7 @@
               </select>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-3 gap-3" id="dutyFieldsGrid-{{ $truck->id }}">
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">
                   Rate / 1000L
@@ -1077,22 +1087,38 @@
                        id="dutyRateInput-{{ $truck->id }}"
                        step="0.0001" min="0"
                        value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
+                       oninput="computeDutyAmount({{ $truck->id }})"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
                        placeholder="0.0000" />
               </div>
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty (L)</label>
                 <input type="number" name="duty_qty" step="0.001" min="0"
+                       id="dutyQtyInput-{{ $truck->id }}"
                        value="{{ $truck->duty_qty ?? ($truck->qty_loaded ?? '') }}"
+                       oninput="computeDutyAmount({{ $truck->id }})"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
                        placeholder="auto" />
               </div>
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
                 <input type="text" name="duty_currency" maxlength="8"
+                       id="dutyCurrencyInput-{{ $truck->id }}"
                        value="{{ $truck->duty_currency ?? ($nom->default_duty_currency ?? 'USD') }}"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
               </div>
+            </div>
+            {{-- Computed duty amount display --}}
+            <div id="dutyAmountRow-{{ $truck->id }}" class="flex items-center justify-between px-1">
+              <span class="text-xs {{ $muted }}">Computed duty amount:</span>
+              <span id="dutyAmountDisplay-{{ $truck->id }}"
+                    class="text-sm font-bold {{ $fg }}">
+                @if(($truck->duty_amount ?? 0) > 0)
+                  {{ $truck->duty_currency ?? 'USD' }} {{ number_format($truck->duty_amount, 2) }}
+                @else
+                  —
+                @endif
+              </span>
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Duty notes</label>
@@ -1944,6 +1970,49 @@ function autoFillDutyRate(truckId, productId) {
       }
     })
     .catch(() => {});
+}
+
+// Computed duty amount display (reactive to rate/qty inputs)
+function computeDutyAmount(truckId) {
+  const rate = parseFloat(document.getElementById('dutyRateInput-' + truckId)?.value) || 0;
+  const qty  = parseFloat(document.getElementById('dutyQtyInput-' + truckId)?.value)  || 0;
+  const cur  = (document.getElementById('dutyCurrencyInput-' + truckId)?.value || 'USD').trim();
+  const disp = document.getElementById('dutyAmountDisplay-' + truckId);
+  if (!disp) return;
+  if (rate > 0 && qty > 0) {
+    const amt = (rate * qty / 1000).toFixed(2);
+    disp.textContent = cur + ' ' + parseFloat(amt).toLocaleString(undefined, {minimumFractionDigits: 2});
+  } else {
+    disp.textContent = '—';
+  }
+}
+
+// Waive duty toggle — grays out vendor/rate/qty fields, clears vendor id
+function toggleWaiveDuty(truckId) {
+  const waived   = document.getElementById('waiveDuty-' + truckId)?.checked;
+  const grid     = document.getElementById('dutyFieldsGrid-' + truckId);
+  const amtRow   = document.getElementById('dutyAmountRow-' + truckId);
+  const vendorSel= document.querySelector('[name="duty_vendor_type"]');
+  const vendorRows = ['dutyVendorCustomsRow-', 'dutyVendorSupplierRow-', 'dutyVendorDepotRow-', 'dutyVendorTransporterRow-'];
+
+  // Disable/enable rate & qty inputs
+  ['dutyRateInput-', 'dutyQtyInput-', 'dutyCurrencyInput-'].forEach(prefix => {
+    const el = document.getElementById(prefix + truckId);
+    if (el) el.disabled = !!waived;
+  });
+  // Dim/undim fields grid
+  if (grid) grid.classList.toggle('opacity-40', !!waived);
+  if (amtRow) amtRow.classList.toggle('hidden', !!waived);
+
+  // When waived, clear vendor id hidden field + collapse vendor rows
+  if (waived) {
+    const hidden = document.getElementById('dutyVendorIdHidden-' + truckId);
+    if (hidden) hidden.value = '';
+    vendorRows.forEach(prefix => {
+      const row = document.getElementById(prefix + truckId);
+      if (row) row.classList.add('hidden');
+    });
+  }
 }
 
 // Nomination modal: default duty vendor toggle

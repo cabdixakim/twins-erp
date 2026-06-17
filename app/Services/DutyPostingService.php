@@ -123,14 +123,14 @@ class DutyPostingService
                 $alreadyPosted = DB::table('depot_ledger_entries')
                     ->where('ref_type', ImportTruck::class . ':duty')
                     ->where('ref_id', $truck->id)
-                    ->where('type', 'other_charge')
+                    ->where('type', 'duty_charge')
                     ->exists();
 
                 if (!$alreadyPosted) {
                     DB::table('depot_ledger_entries')->insert([
                         'company_id'  => $cid,
                         'depot_id'    => $vendorId,
-                        'type'        => 'other_charge',
+                        'type'        => 'duty_charge',
                         'amount'      => $amount,
                         'currency'    => $currency,
                         'description' => $desc . ' (duty paid via depot)',
