@@ -1954,15 +1954,21 @@ function syncDutyVendorId(truckId, type) {
   }
 }
 
-// Auto-fill duty rate from rate schedule
+// Auto-fill duty rate from rate schedule (sends border_date for historical accuracy)
 function autoFillDutyRate(truckId, productId) {
-  fetch('/duty-rates/for-product?product_id=' + productId)
+  // Try to get border_date from the nearest date input in the same form
+  const modal = document.getElementById('borderModal-' + truckId);
+  const dateInp = modal ? modal.querySelector('[name="border_date"]') : null;
+  const borderDate = dateInp?.value || '';
+  const url = '/duty-rates/for-product?product_id=' + productId + (borderDate ? '&date=' + encodeURIComponent(borderDate) : '');
+  fetch(url)
     .then(r => r.json())
     .then(data => {
       const inp = document.getElementById('dutyRateInput-' + truckId);
       if (!inp) return;
       if (data && data.rate) {
         inp.value = data.rate;
+        inp.dispatchEvent(new Event('input')); // trigger computed amount update
         inp.classList.add('ring-2', 'ring-emerald-500/50');
         setTimeout(() => inp.classList.remove('ring-2', 'ring-emerald-500/50'), 2000);
       } else {

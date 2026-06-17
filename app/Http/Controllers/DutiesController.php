@@ -26,7 +26,7 @@ class DutiesController extends Controller
             ->join('purchases as p', 'n.purchase_id', '=', 'p.id')
             ->leftJoin('products as pr', 'p.product_id', '=', 'pr.id')
             ->where('p.company_id', $cid)
-            ->whereNotNull('t.duty_vendor_type')
+            ->whereNotNull('t.duty_status')
             ->select([
                 't.id',
                 't.truck_reg',
@@ -73,7 +73,7 @@ class DutiesController extends Controller
             ->join('import_nominations as n', 't.nomination_id', '=', 'n.id')
             ->join('purchases as p', 'n.purchase_id', '=', 'p.id')
             ->where('p.company_id', $cid)
-            ->whereNotNull('t.duty_vendor_type')
+            ->whereNotNull('t.duty_status')
             ->selectRaw('
                 COUNT(*) as total_count,
                 SUM(CASE WHEN t.duty_status = \'posted\' THEN 1 ELSE 0 END) as posted_count,
@@ -113,7 +113,7 @@ class DutiesController extends Controller
             ->join('purchases as p', 'n.purchase_id', '=', 'p.id')
             ->leftJoin('products as pr', 'p.product_id', '=', 'pr.id')
             ->where('p.company_id', $cid)
-            ->whereNotNull('t.duty_vendor_type')
+            ->whereNotNull('t.duty_status')
             ->select([
                 't.truck_reg',
                 't.border_date',
