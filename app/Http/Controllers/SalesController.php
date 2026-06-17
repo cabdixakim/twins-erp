@@ -16,6 +16,7 @@ use App\Models\PettyCashTransaction;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\Transporter;
+use App\Models\ClientLedgerEntry;
 use App\Models\TransporterLedgerEntry;
 use App\Services\InventoryLedger;
 use Carbon\Carbon;
@@ -204,6 +205,19 @@ class SalesController extends Controller
             return back()->withErrors(['qty' => 'Insufficient stock in depot for this product.'])->withInput();
         }
 
+        // Credit limit check
+        if (!empty($data['client_id'])) {
+            $limitError = $this->checkCreditLimit(
+                (int) $data['client_id'],
+                $cid,
+                round((float) $data['qty'] * (float) $data['unit_price'], 2),
+                $data['currency'] ?? 'USD'
+            );
+            if ($limitError) {
+                return back()->withErrors(['client_id' => $limitError])->withInput();
+            }
+        }
+
         $sale = DB::transaction(function () use ($cid, $u, $data) {
             // Lock the company row to serialise concurrent sequence number generation.
             // PostgreSQL rejects FOR UPDATE on aggregate queries, so we lock a sentinel
@@ -348,6 +362,19 @@ class SalesController extends Controller
 
         $unit  = (float) $data['unit_price'];
         $total = round($qty * $unit, 2);
+
+        // Credit limit check (draft sales have no posted AR yet, so check full new amount)
+        if (!empty($data['client_id'])) {
+            $limitError = $this->checkCreditLimit(
+                (int) $data['client_id'],
+                $cid,
+                $total,
+                $data['currency'] ?? 'USD'
+            );
+            if ($limitError) {
+                return back()->withErrors(['client_id' => $limitError])->withInput();
+            }
+        }
 
         $sale->depot_id     = (int) $data['depot_id'];
         $sale->product_id   = (int) $data['product_id'];
@@ -836,5 +863,45 @@ class SalesController extends Controller
 
         return redirect()->route('sales.index', ['sale' => $sale->id])
             ->with('status', 'Sale cancelled. Stock reversed.');
+    }
+
+    /**
+     * Check whether a sale to this client would exceed their credit limit.
+     * Returns an error string if over limit, null if fine or no limit set.
+     * Only compares amounts in the same currency as the sale.
+     */
+    private function checkCreditLimit(int $clientId, int $companyId, float $saleAmount, string $currency): ?string
+    {
+        $client = Client::where('company_id', $companyId)->find($clientId);
+        if (!$client) {
+            return null;
+        }
+
+        $limit = (float) ($client->credit_limit ?? 0);
+        if ($limit <= 0) {
+            return null; // No limit set — allow
+        }
+
+        // Outstanding AR balance in this currency (positive = client owes us)
+        $outstanding = (float) ClientLedgerEntry::where('company_id', $companyId)
+            ->where('client_id', $clientId)
+            ->where('currency', $currency)
+            ->sum('amount');
+
+        if (($outstanding + $saleAmount) > $limit) {
+            $sym = match($currency) {
+                'USD' => '$', 'EUR' => '€', 'GBP' => '£',
+                default => $currency . ' ',
+            };
+            return sprintf(
+                'Credit limit exceeded for %s. Limit: %s%s · Current outstanding: %s%s · This sale: %s%s.',
+                $client->name,
+                $sym, number_format($limit, 2),
+                $sym, number_format($outstanding, 2),
+                $sym, number_format($saleAmount, 2)
+            );
+        }
+
+        return null;
     }
 }
