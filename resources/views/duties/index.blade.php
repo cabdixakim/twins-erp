@@ -87,11 +87,48 @@
         </div>
         <div>
             <label class="block text-xs font-semibold {{ $muted }} mb-1">Vendor type</label>
-            <select name="vendor_type"
+            <select name="vendor_type" id="dutiesVendorTypeFilter"
+                onchange="updateDutiesVendorSelector()"
                 class="rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]">
                 <option value="">All types</option>
                 @foreach($vendorTypeLabels as $val => $lbl)
                     <option value="{{ $val }}" {{ $vendorType === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                @endforeach
+            </select>
+        </div>
+        {{-- Vendor selector: dynamic based on vendor_type --}}
+        <div id="dutiesVendorWrap" class="{{ $vendorType && in_array($vendorType, ['customs_authority','supplier','depot','transporter']) ? '' : 'hidden' }}">
+            <label class="block text-xs font-semibold {{ $muted }} mb-1">Vendor</label>
+            <select name="vendor_id" id="dutiesVendorCustoms"
+                class="rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]
+                    {{ $vendorType === 'customs_authority' ? '' : 'hidden' }}">
+                <option value="">All customs authorities</option>
+                @foreach($dutyVendors as $dv)
+                    <option value="{{ $dv->id }}" {{ $vendorId == $dv->id ? 'selected' : '' }}>{{ $dv->name }}</option>
+                @endforeach
+            </select>
+            <select name="vendor_id" id="dutiesVendorSupplier"
+                class="rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]
+                    {{ $vendorType === 'supplier' ? '' : 'hidden' }}">
+                <option value="">All suppliers</option>
+                @foreach($suppliers as $sv)
+                    <option value="{{ $sv->id }}" {{ $vendorId == $sv->id ? 'selected' : '' }}>{{ $sv->name }}</option>
+                @endforeach
+            </select>
+            <select name="vendor_id" id="dutiesVendorDepot"
+                class="rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]
+                    {{ $vendorType === 'depot' ? '' : 'hidden' }}">
+                <option value="">All depots</option>
+                @foreach($depots as $dep)
+                    <option value="{{ $dep->id }}" {{ $vendorId == $dep->id ? 'selected' : '' }}>{{ $dep->name }}</option>
+                @endforeach
+            </select>
+            <select name="vendor_id" id="dutiesVendorTransporter"
+                class="rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]
+                    {{ $vendorType === 'transporter' ? '' : 'hidden' }}">
+                <option value="">All transporters</option>
+                @foreach($transporters as $tp)
+                    <option value="{{ $tp->id }}" {{ $vendorId == $tp->id ? 'selected' : '' }}>{{ $tp->name }}</option>
                 @endforeach
             </select>
         </div>
@@ -120,7 +157,7 @@
                 class="h-9 px-4 rounded-xl bg-[color:var(--tw-accent)] text-white text-sm font-semibold hover:opacity-90 transition">
                 Filter
             </button>
-            @if($dateFrom || $dateTo || $vendorType || $productId || $status)
+            @if($dateFrom || $dateTo || $vendorType || $vendorId || $productId || $status)
                 <a href="{{ route('duties.index') }}"
                    class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition flex items-center">
                     Clear
@@ -195,3 +232,35 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function updateDutiesVendorSelector() {
+  const v    = document.getElementById('dutiesVendorTypeFilter')?.value;
+  const wrap = document.getElementById('dutiesVendorWrap');
+  const map  = {
+    customs_authority: 'dutiesVendorCustoms',
+    supplier:          'dutiesVendorSupplier',
+    depot:             'dutiesVendorDepot',
+    transporter:       'dutiesVendorTransporter',
+  };
+  const apTypes = Object.keys(map);
+  if (wrap) wrap.classList.toggle('hidden', !apTypes.includes(v));
+  Object.entries(map).forEach(([type, id]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.toggle('hidden', v !== type);
+      el.disabled = (v !== type);
+    }
+  });
+}
+
+// Disable inactive vendor selects on submit so only the visible one submits
+document.querySelector('form')?.addEventListener('submit', function () {
+  updateDutiesVendorSelector();
+});
+
+// Init on page load
+updateDutiesVendorSelector();
+</script>
+@endpush

@@ -84,10 +84,15 @@ class DutiesController extends Controller
             ')
             ->first();
 
-        $products = Product::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+        $products    = Product::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+        $dutyVendors = DB::table('duty_vendors')->where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+        $suppliers   = DB::table('suppliers')->where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+        $depots      = DB::table('depots')->where('company_id', $cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
+        $transporters= DB::table('transporters')->where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
 
         return view('duties.index', compact(
             'entries', 'totals', 'products',
+            'dutyVendors', 'suppliers', 'depots', 'transporters',
             'dateFrom', 'dateTo', 'vendorType', 'vendorId', 'productId', 'status'
         ));
     }
@@ -121,9 +126,12 @@ class DutiesController extends Controller
                 'pr.name as product_name',
             ]);
 
+        $vendorId   = $request->query('vendor_id');
+
         if ($dateFrom)   $query->whereDate('t.border_date', '>=', $dateFrom);
         if ($dateTo)     $query->whereDate('t.border_date', '<=', $dateTo);
         if ($vendorType) $query->where('t.duty_vendor_type', $vendorType);
+        if ($vendorId)   $query->where('t.duty_vendor_id', (int) $vendorId);
         if ($status)     $query->where('t.duty_status', $status);
 
         $rows = $query->orderByDesc('t.border_date')->get();

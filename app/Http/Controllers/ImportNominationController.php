@@ -41,6 +41,9 @@ class ImportNominationController extends Controller
         $data['destination_depot_id']  = $data['destination_depot_id'] ?: null;
         $data['default_duty_vendor_id'] = $data['default_duty_vendor_id'] ?: null;
 
+        // Validate default duty vendor ownership if an AP type is selected
+        $this->validateDefaultDutyVendor($cid, $data);
+
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
             // volume_unit is intentionally NOT updated — it's locked at creation time
@@ -97,6 +100,9 @@ class ImportNominationController extends Controller
         ]);
         $data['destination_depot_id']   = $data['destination_depot_id'] ?: null;
         $data['default_duty_vendor_id'] = $data['default_duty_vendor_id'] ?: null;
+
+        // Validate default duty vendor ownership if an AP type is selected
+        $this->validateDefaultDutyVendor($cid, $data);
 
         $nomination->update(array_merge($data, [
             'advances' => $data['advances'] ?? 0,
@@ -1042,6 +1048,42 @@ class ImportNominationController extends Controller
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * Validate that default_duty_vendor_id belongs to the active company
+     * when an AP duty vendor type is selected in a nomination.
+     * Aborts with 422 if validation fails.
+     */
+    private function validateDefaultDutyVendor(int $cid, array $data): void
+    {
+        $vendorType = $data['default_duty_vendor_type'] ?? null;
+        $vendorId   = (int) ($data['default_duty_vendor_id'] ?? 0);
+        $apTypes    = ['customs_authority', 'supplier', 'depot', 'transporter'];
+
+        if (! $vendorType || ! in_array($vendorType, $apTypes, true)) {
+            return;
+        }
+
+        if ($vendorId <= 0) {
+            abort(422, "A vendor must be selected for duty type '{$vendorType}'.");
+        }
+
+        $exists = match ($vendorType) {
+            'customs_authority' => DB::table('duty_vendors')
+                ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+            'supplier'          => DB::table('suppliers')
+                ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+            'depot'             => DB::table('depots')
+                ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+            'transporter'       => DB::table('transporters')
+                ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+            default             => false,
+        };
+
+        if (! $exists) {
+            abort(422, "Selected duty vendor (#{$vendorId}, type: {$vendorType}) not found or does not belong to this company.");
+        }
+    }
 
     /**
      * Sync the advance ledger entry for a nomination.

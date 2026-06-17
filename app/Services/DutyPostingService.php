@@ -50,6 +50,30 @@ class DutyPostingService
         $date       = $truck->border_date?->format('Y-m-d') ?? now()->toDateString();
         $desc       = "Duty — truck {$truck->truck_reg}" . ($purchase ? " — PO {$purchase->reference}" : '');
 
+        // Strict vendor validation: AP type requires a non-zero, company-owned vendor ID
+        $apTypes = ['customs_authority', 'supplier', 'depot', 'transporter'];
+        if (in_array($vendorType, $apTypes, true)) {
+            if ($vendorId <= 0) {
+                throw new \RuntimeException("Duty vendor ID is required for AP type '{$vendorType}' on truck {$truck->truck_reg}.");
+            }
+
+            $vendorExists = match ($vendorType) {
+                'customs_authority' => DB::table('duty_vendors')
+                    ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+                'supplier'          => DB::table('suppliers')
+                    ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+                'depot'             => DB::table('depots')
+                    ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+                'transporter'       => DB::table('transporters')
+                    ->where('id', $vendorId)->where('company_id', $cid)->exists(),
+                default             => false,
+            };
+
+            if (! $vendorExists) {
+                throw new \RuntimeException("Duty vendor #{$vendorId} (type: {$vendorType}) not found or does not belong to this company. Cannot post duty for truck {$truck->truck_reg}.");
+            }
+        }
+
         DB::transaction(function () use (
             $truck, $vendorType, $vendorId, $amount, $currency, $cid, $date, $desc, $userId, $purchase
         ) {
