@@ -399,20 +399,34 @@ class TransporterLedgerController extends Controller
             ->with('status', 'Account settled. ' . $sym . number_format(abs($balance), 2) . ' ' . $dir . '.');
     }
 
-    public function statement(Transporter $transporter)
+    public function statement(Request $request, Transporter $transporter)
     {
         $cid = (int) auth()->user()->active_company_id;
         abort_if((int) $transporter->company_id !== $cid, 403);
 
-        $company = DB::table('companies')->where('id', $cid)->first();
+        $company  = DB::table('companies')->where('id', $cid)->first();
+        $dateFrom = $request->query('from');
+        $dateTo   = $request->query('to');
 
-        $entries = TransporterLedgerEntry::where('company_id', $cid)
+        $query = TransporterLedgerEntry::where('company_id', $cid)
             ->where('transporter_id', $transporter->id)
             ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get();
+            ->orderBy('id');
 
-        $running = 0;
+        if ($dateFrom) $query->whereDate('entry_date', '>=', $dateFrom);
+        if ($dateTo)   $query->whereDate('entry_date', '<=', $dateTo);
+
+        $entries = $query->get();
+
+        $openingBalance = 0.0;
+        if ($dateFrom) {
+            $openingBalance = (float) TransporterLedgerEntry::where('company_id', $cid)
+                ->where('transporter_id', $transporter->id)
+                ->whereDate('entry_date', '<', $dateFrom)
+                ->sum('amount');
+        }
+
+        $running = $openingBalance;
         foreach ($entries as $e) {
             $running += (float) $e->amount;
             $e->running_balance = $running;
@@ -422,13 +436,14 @@ class TransporterLedgerController extends Controller
         $advanceTotal     = abs((float) $entries->where('type', 'advance')->sum('amount'));
         $shortChargeTotal = abs((float) $entries->where('type', 'short_charge')->sum('amount'));
         $paymentTotal     = abs((float) $entries->where('type', 'payment')->sum('amount'));
-        $netPayable       = (float) $entries->sum('amount');
+        $netPayable       = $running;
         $currency         = $transporter->default_currency ?: 'USD';
 
         return view('transporters.statement', compact(
             'transporter', 'company', 'entries',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
-            'netPayable', 'currency'
+            'netPayable', 'currency',
+            'dateFrom', 'dateTo', 'openingBalance'
         ));
     }
 

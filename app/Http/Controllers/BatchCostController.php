@@ -73,9 +73,46 @@ class BatchCostController extends Controller
             'created_by'          => auth()->id(),
         ]);
 
-        // Secondary AP auto-posting based on paid_by_type
-        if ($paidByType === 'depot' && $paidById) {
-            // Depot fronted the cost — create a depot ledger charge (we owe the depot)
+        // ── Secondary AP auto-posting ────────────────────────────────────────────
+        //
+        // Storage/throughput/loading/offloading categories ALWAYS generate a depot
+        // ledger charge against the purchase's depot (we owe the depot for these),
+        // regardless of paid_by_type.  Other categories only post when a specific
+        // third party fronted the cost (paid_by_type = depot | transporter).
+        //
+        $depotCategories = ['storage', 'throughput_charge', 'loading_fee', 'offloading'];
+        $ledgerTypeMap   = [
+            'storage'          => 'storage_charge',
+            'throughput_charge'=> 'throughput_charge',
+            'loading_fee'      => 'loading_fee',
+            'offloading'       => 'loading_fee',
+        ];
+
+        if (in_array($data['category'], $depotCategories)) {
+            // Use the explicitly chosen depot, or fall back to the purchase's own depot
+            $targetDepotId = ($paidByType === 'depot' && $paidById)
+                ? $paidById
+                : (int) ($purchase->depot_id ?? 0);
+
+            if ($targetDepotId) {
+                $ledgerType = $ledgerTypeMap[$data['category']] ?? 'other_charge';
+                DB::table('depot_ledger_entries')->insert([
+                    'company_id'  => $cid,
+                    'depot_id'    => $targetDepotId,
+                    'type'        => $ledgerType,
+                    'amount'      => $amountBase,
+                    'currency'    => $data['currency'],
+                    'description' => $data['description'] . " — PO {$purchase->reference}",
+                    'entry_date'  => $data['entry_date'],
+                    'ref_type'    => Purchase::class,
+                    'ref_id'      => $purchase->id,
+                    'created_by'  => auth()->id(),
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
+        } elseif ($paidByType === 'depot' && $paidById) {
+            // Non-storage cost fronted by a depot (e.g. duty, border charge)
             DB::table('depot_ledger_entries')->insert([
                 'company_id'  => $cid,
                 'depot_id'    => $paidById,

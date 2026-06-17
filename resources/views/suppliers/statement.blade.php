@@ -34,6 +34,23 @@
 </head>
 <body>
 
+{{-- Date filter bar (screen only) --}}
+<div class="no-print" style="margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <form method="GET" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <label style="font-size:12px;font-weight:600;color:#475569;">Period:</label>
+        <input type="date" name="from" value="{{ $dateFrom }}"
+               style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;">
+        <span style="color:#94a3b8;font-size:12px;">to</span>
+        <input type="date" name="to" value="{{ $dateTo }}"
+               style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;">
+        <button type="submit" style="padding:5px 14px;background:#1e293b;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Filter</button>
+        @if($dateFrom || $dateTo)
+            <a href="?" style="font-size:12px;color:#64748b;text-decoration:underline;">Clear</a>
+        @endif
+    </form>
+    <button onclick="window.print()" style="margin-left:auto;padding:5px 14px;background:#0f172a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🖨 Print</button>
+</div>
+
 <div class="header-row">
     <div>
         <div style="font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Supplier Statement</div>
@@ -46,6 +63,12 @@
     <div class="header-right">
         <div style="font-weight:700;font-size:16px;">{{ $company->name ?? config('app.name') }}</div>
         <div>Printed {{ now()->format('d M Y') }}</div>
+        @if($dateFrom || $dateTo)
+            <div style="margin-top:4px;font-weight:600;color:#d97706;">
+                Period: {{ $dateFrom ? \Carbon\Carbon::parse($dateFrom)->format('d M Y') : 'start' }}
+                — {{ $dateTo ? \Carbon\Carbon::parse($dateTo)->format('d M Y') : 'today' }}
+            </div>
+        @endif
         <div>Currency: {{ $currency }}</div>
     </div>
 </div>
@@ -83,6 +106,18 @@
         </tr>
     </thead>
     <tbody>
+        @if($dateFrom && $openingBalance != 0)
+        <tr style="background:#fafaf7;">
+            <td style="white-space:nowrap;color:#64748b;font-style:italic;">{{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }}</td>
+            <td><span class="badge badge-adjust">Opening</span></td>
+            <td style="color:#64748b;font-style:italic;">Opening balance brought forward</td>
+            <td class="debit" style="text-align:right">{{ $openingBalance > 0 ? number_format(abs($openingBalance), 2) : '' }}</td>
+            <td class="credit" style="text-align:right">{{ $openingBalance < 0 ? number_format(abs($openingBalance), 2) : '' }}</td>
+            <td style="text-align:right;font-weight:600;color:{{ $openingBalance >= 0 ? '#d97706' : '#16a34a' }}">
+                {{ number_format(abs($openingBalance), 2) }}{{ $openingBalance < 0 ? ' CR' : '' }}
+            </td>
+        </tr>
+        @endif
         @foreach($entries as $e)
             @php
                 $isDebit = (float) $e->amount > 0;

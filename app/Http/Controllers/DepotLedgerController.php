@@ -180,20 +180,34 @@ class DepotLedgerController extends Controller
             ->with('status', 'Payment of ' . $sym . number_format($data['amount'], 2) . ' recorded.');
     }
 
-    public function statement(Depot $depot)
+    public function statement(Request $request, Depot $depot)
     {
         $cid = (int) auth()->user()->active_company_id;
         abort_if((int) $depot->company_id !== $cid, 403);
 
-        $company = DB::table('companies')->where('id', $cid)->first();
+        $company  = DB::table('companies')->where('id', $cid)->first();
+        $dateFrom = $request->query('from');
+        $dateTo   = $request->query('to');
 
-        $entries = DepotLedgerEntry::where('company_id', $cid)
+        $query = DepotLedgerEntry::where('company_id', $cid)
             ->where('depot_id', $depot->id)
             ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get();
+            ->orderBy('id');
 
-        $running = 0;
+        if ($dateFrom) $query->whereDate('entry_date', '>=', $dateFrom);
+        if ($dateTo)   $query->whereDate('entry_date', '<=', $dateTo);
+
+        $entries = $query->get();
+
+        $openingBalance = 0.0;
+        if ($dateFrom) {
+            $openingBalance = (float) DepotLedgerEntry::where('company_id', $cid)
+                ->where('depot_id', $depot->id)
+                ->whereDate('entry_date', '<', $dateFrom)
+                ->sum('amount');
+        }
+
+        $running = $openingBalance;
         foreach ($entries as $e) {
             $running += (float) $e->amount;
             $e->running_balance = $running;
@@ -202,12 +216,13 @@ class DepotLedgerController extends Controller
         $chargeTypes  = ['storage_charge', 'throughput_charge', 'loading_fee', 'other_charge'];
         $chargesTotal = (float) $entries->whereIn('type', $chargeTypes)->sum('amount');
         $paymentTotal = abs((float) $entries->where('type', 'payment')->sum('amount'));
-        $netPayable   = (float) $entries->sum('amount');
+        $netPayable   = $running;
         $currency     = $depot->default_currency ?: 'USD';
 
         return view('depots.statement', compact(
             'depot', 'company', 'entries',
-            'chargesTotal', 'paymentTotal', 'netPayable', 'currency'
+            'chargesTotal', 'paymentTotal', 'netPayable', 'currency',
+            'dateFrom', 'dateTo', 'openingBalance'
         ));
     }
 

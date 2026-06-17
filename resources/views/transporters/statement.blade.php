@@ -161,7 +161,7 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
 <body>
 
 {{-- Screen-only controls --}}
-<div class="controls">
+<div class="controls" style="flex-wrap:wrap;">
     <a href="{{ route('transporters.show', $transporter) }}" class="btn btn-light">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         Back
@@ -170,6 +170,19 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
         Export CSV
     </a>
+    {{-- Date filter --}}
+    <form method="GET" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+        <label style="font-size:12px;font-weight:600;color:#374151;">Period:</label>
+        <input type="date" name="from" value="{{ $dateFrom }}"
+               style="border:1px solid #d1d5db;border-radius:6px;padding:5px 8px;font-size:12px;background:#fff;">
+        <span style="color:#9ca3af;font-size:12px;">to</span>
+        <input type="date" name="to" value="{{ $dateTo }}"
+               style="border:1px solid #d1d5db;border-radius:6px;padding:5px 8px;font-size:12px;background:#fff;">
+        <button type="submit" class="btn btn-light" style="padding:5px 12px;font-size:12px;">Filter</button>
+        @if($dateFrom || $dateTo)
+            <a href="?" style="font-size:12px;color:#6b7280;text-decoration:underline;">Clear</a>
+        @endif
+    </form>
     <button type="button" onclick="window.print()" class="btn btn-dark">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
         Print / Save as PDF
@@ -296,6 +309,18 @@ tr.closing td{font-weight:800;font-size:12px;background:#f1f5f9;border-top:2px s
             </tr>
         </thead>
         <tbody>
+            @if($dateFrom && $openingBalance != 0)
+            <tr>
+                <td class="muted" style="white-space:nowrap;font-style:italic;">{{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }}</td>
+                <td><span class="badge" style="background:#f3f4f6;color:#6b7280">Opening</span></td>
+                <td style="color:#6b7280;font-style:italic;">Opening balance brought forward</td>
+                <td class="r"><span class="col-dash">—</span></td>
+                <td class="r"><span class="col-dash">—</span></td>
+                <td class="r" style="font-weight:700;color:{{ $openingBalance >= 0 ? '#d97706' : '#16a34a' }}">
+                    {{ $sym }}{{ number_format(abs($openingBalance), 2) }}{{ $openingBalance < 0 ? ' CR' : '' }}
+                </td>
+            </tr>
+            @endif
             @foreach($entries as $entry)
                 @php
                     $isCharge  = $entry->amount > 0;     // freight = positive = owed to transporter

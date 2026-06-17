@@ -524,31 +524,70 @@ class SalesController extends Controller
                 $sale->updated_by = $u?->id;
                 $sale->save();
 
-                // Auto-post freight charge to transporter ledger (idempotent)
-                if ($sale->transporter_id && $sale->freight_amount > 0) {
-                    $freightAlreadyPosted = \App\Models\TransporterLedgerEntry::where('company_id', (int) $sale->company_id)
-                        ->where('transporter_id', (int) $sale->transporter_id)
-                        ->where('type', 'freight_charge')
-                        ->where('ref_type', \App\Models\Sale::class)
-                        ->where('ref_id', $sale->id)
-                        ->exists();
+                // Auto-post freight charge + driver advances to transporter ledger (idempotent)
+                if ($sale->transporter_id) {
+                    $entryDate = $sale->sale_date
+                        ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d')
+                        : now()->format('Y-m-d');
 
-                    if (!$freightAlreadyPosted) {
-                        \App\Models\TransporterLedgerEntry::create([
-                            'company_id'     => (int) $sale->company_id,
-                            'transporter_id' => (int) $sale->transporter_id,
-                            'type'           => 'freight_charge',
-                            'sale_id'        => $sale->id,
-                            'amount'         => (float) $sale->freight_amount,
-                            'currency'       => $sale->freight_currency ?: 'USD',
-                            'description'    => 'Freight — Sale ' . $sale->reference,
-                            'entry_date'     => $sale->sale_date
-                                ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d')
-                                : now()->format('Y-m-d'),
-                            'ref_type'       => \App\Models\Sale::class,
-                            'ref_id'         => $sale->id,
-                            'created_by'     => $u?->id,
-                        ]);
+                    // Freight charge
+                    if ((float) $sale->freight_amount > 0) {
+                        $freightAlreadyPosted = \App\Models\TransporterLedgerEntry::where('company_id', (int) $sale->company_id)
+                            ->where('transporter_id', (int) $sale->transporter_id)
+                            ->where('type', 'freight_charge')
+                            ->where('ref_type', \App\Models\Sale::class)
+                            ->where('ref_id', $sale->id)
+                            ->exists();
+
+                        if (!$freightAlreadyPosted) {
+                            \App\Models\TransporterLedgerEntry::create([
+                                'company_id'     => (int) $sale->company_id,
+                                'transporter_id' => (int) $sale->transporter_id,
+                                'type'           => 'freight_charge',
+                                'sale_id'        => $sale->id,
+                                'amount'         => (float) $sale->freight_amount,
+                                'currency'       => $sale->freight_currency ?: 'USD',
+                                'description'    => 'Freight — Sale ' . $sale->reference,
+                                'entry_date'     => $entryDate,
+                                'ref_type'       => \App\Models\Sale::class,
+                                'ref_id'         => $sale->id,
+                                'created_by'     => $u?->id,
+                            ]);
+                        }
+                    }
+
+                    // Driver advances reduce the transporter's net payable (negative amount = advance paid)
+                    $advanceCurrency = $sale->advance_currency ?: 'USD';
+                    foreach ([
+                        'trip_advance' => 'Trip advance',
+                        'fuel_advance' => 'Fuel advance',
+                    ] as $field => $label) {
+                        $advAmt = (float) ($sale->$field ?? 0);
+                        if ($advAmt <= 0) continue;
+
+                        $alreadyPosted = \App\Models\TransporterLedgerEntry::where('company_id', (int) $sale->company_id)
+                            ->where('transporter_id', (int) $sale->transporter_id)
+                            ->where('type', 'advance')
+                            ->where('ref_type', \App\Models\Sale::class)
+                            ->where('ref_id', $sale->id)
+                            ->where('description', 'LIKE', "{$label}%")
+                            ->exists();
+
+                        if (!$alreadyPosted) {
+                            \App\Models\TransporterLedgerEntry::create([
+                                'company_id'     => (int) $sale->company_id,
+                                'transporter_id' => (int) $sale->transporter_id,
+                                'type'           => 'advance',
+                                'sale_id'        => $sale->id,
+                                'amount'         => -$advAmt, // negative = reduces payable
+                                'currency'       => $advanceCurrency,
+                                'description'    => "{$label} — Sale " . $sale->reference . ($sale->driver_name ? ' (' . $sale->driver_name . ')' : ''),
+                                'entry_date'     => $entryDate,
+                                'ref_type'       => \App\Models\Sale::class,
+                                'ref_id'         => $sale->id,
+                                'created_by'     => $u?->id,
+                            ]);
+                        }
                     }
                 }
 

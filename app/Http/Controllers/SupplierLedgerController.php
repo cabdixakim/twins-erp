@@ -153,20 +153,35 @@ class SupplierLedgerController extends Controller
             ->with('status', 'Credit note of ' . number_format($data['amount'], 2) . ' ' . $currency . ' recorded.');
     }
 
-    public function statement(Supplier $supplier)
+    public function statement(Request $request, Supplier $supplier)
     {
         $cid = (int) auth()->user()->active_company_id;
         abort_if((int) $supplier->company_id !== $cid, 403);
 
-        $company = DB::table('companies')->where('id', $cid)->first();
+        $company  = DB::table('companies')->where('id', $cid)->first();
+        $dateFrom = $request->query('from');
+        $dateTo   = $request->query('to');
 
-        $entries = SupplierLedgerEntry::where('company_id', $cid)
+        $query = SupplierLedgerEntry::where('company_id', $cid)
             ->where('supplier_id', $supplier->id)
             ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get();
+            ->orderBy('id');
 
-        $running = 0;
+        if ($dateFrom) $query->whereDate('entry_date', '>=', $dateFrom);
+        if ($dateTo)   $query->whereDate('entry_date', '<=', $dateTo);
+
+        $entries = $query->get();
+
+        // Running balance starts from zero for filtered period; show opening balance if filtered
+        $openingBalance = 0.0;
+        if ($dateFrom) {
+            $openingBalance = (float) SupplierLedgerEntry::where('company_id', $cid)
+                ->where('supplier_id', $supplier->id)
+                ->whereDate('entry_date', '<', $dateFrom)
+                ->sum('amount');
+        }
+
+        $running = $openingBalance;
         foreach ($entries as $e) {
             $running += (float) $e->amount;
             $e->running_balance = $running;
@@ -175,12 +190,13 @@ class SupplierLedgerController extends Controller
         $invoicedTotal = (float) $entries->where('type', 'purchase_invoice')->sum('amount');
         $paymentTotal  = abs((float) $entries->where('type', 'payment')->sum('amount'));
         $creditTotal   = abs((float) $entries->where('type', 'credit_note')->sum('amount'));
-        $netPayable    = (float) $entries->sum('amount');
+        $netPayable    = $running; // end balance including opening
         $currency      = $supplier->default_currency ?: 'USD';
 
         return view('suppliers.statement', compact(
             'supplier', 'company', 'entries',
-            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netPayable', 'currency'
+            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netPayable', 'currency',
+            'dateFrom', 'dateTo', 'openingBalance'
         ));
     }
 
