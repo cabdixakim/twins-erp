@@ -79,6 +79,26 @@ class DepotController extends Controller
 
         $depot = Depot::create($data);
 
+        // Post opening balance to depot ledger if provided
+        $openingBalance = (float) $request->input('opening_balance', 0);
+        if ($openingBalance > 0) {
+            $openingDate = $request->input('opening_balance_date') ?: now()->format('Y-m-d');
+            \DB::table('depot_ledger_entries')->insert([
+                'company_id' => $companyId,
+                'depot_id'   => $depot->id,
+                'type'       => 'adjustment',
+                'amount'     => $openingBalance,
+                'currency'   => $depot->default_currency ?: 'USD',
+                'description'=> 'Opening balance',
+                'entry_date' => $openingDate,
+                'ref_type'   => null,
+                'ref_id'     => null,
+                'created_by' => auth()->id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         \App\Models\AuditLog::record('created', "Depot '{$depot->name}' created.", $depot, "Depot {$depot->name}", severity: 'info', module: 'Depot');
 
         return redirect()

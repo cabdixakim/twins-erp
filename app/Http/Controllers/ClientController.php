@@ -117,6 +117,25 @@ class ClientController extends Controller
             'is_active'    => true,
         ]));
 
+        // Post opening balance to client AR ledger if provided
+        // Positive = client owes us (receivable)
+        $openingBalance = (float) $request->input('opening_balance', 0);
+        if ($openingBalance > 0) {
+            $openingDate = $request->input('opening_balance_date') ?: now()->format('Y-m-d');
+            \App\Models\ClientLedgerEntry::create([
+                'company_id'  => $cid,
+                'client_id'   => $client->id,
+                'type'        => 'adjustment',
+                'amount'      => $openingBalance,
+                'currency'    => $client->currency ?: 'USD',
+                'description' => 'Opening balance',
+                'entry_date'  => $openingDate,
+                'ref_type'    => null,
+                'ref_id'      => null,
+                'created_by'  => $u?->id,
+            ]);
+        }
+
         \App\Models\AuditLog::record('created', "Client '{$client->name}' created.", $client, "Client {$client->name}", severity: 'info', module: 'Client');
 
         return redirect()->route('settings.clients.index', ['client' => $client->id])

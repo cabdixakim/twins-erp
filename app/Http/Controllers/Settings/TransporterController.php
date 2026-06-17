@@ -66,6 +66,26 @@ class TransporterController extends Controller
 
         $transporter = Transporter::create($data);
 
+        // Post opening balance to transporter ledger if provided
+        $openingBalance = (float) $request->input('opening_balance', 0);
+        if ($openingBalance > 0) {
+            $openingDate = $request->input('opening_balance_date') ?: now()->format('Y-m-d');
+            \DB::table('transporter_ledger_entries')->insert([
+                'company_id'     => $companyId,
+                'transporter_id' => $transporter->id,
+                'type'           => 'adjustment',
+                'amount'         => $openingBalance,
+                'currency'       => $transporter->default_currency ?: 'USD',
+                'description'    => 'Opening balance',
+                'entry_date'     => $openingDate,
+                'ref_type'       => null,
+                'ref_id'         => null,
+                'created_by'     => auth()->id(),
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+        }
+
         return redirect()
             ->route('settings.transporters.index', ['transporter' => $transporter->id])
             ->with('status', 'Transporter created.');

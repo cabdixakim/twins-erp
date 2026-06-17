@@ -82,6 +82,26 @@ class SupplierController extends Controller
 
         $supplier = Supplier::create($data);
 
+        // Post opening balance to supplier ledger if provided
+        $openingBalance = (float) $request->input('opening_balance', 0);
+        if ($openingBalance > 0) {
+            $openingDate = $request->input('opening_balance_date') ?: now()->format('Y-m-d');
+            \DB::table('supplier_ledger_entries')->insert([
+                'company_id'  => $companyId,
+                'supplier_id' => $supplier->id,
+                'type'        => 'adjustment',
+                'amount'      => $openingBalance,
+                'currency'    => $supplier->default_currency ?: 'USD',
+                'description' => 'Opening balance',
+                'entry_date'  => $openingDate,
+                'ref_type'    => null,
+                'ref_id'      => null,
+                'created_by'  => auth()->id(),
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
         \App\Models\AuditLog::record('created', "Supplier '{$supplier->name}' created.", $supplier, "Supplier {$supplier->name}", severity: 'info', module: 'Supplier');
 
         return redirect()

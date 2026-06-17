@@ -162,6 +162,30 @@
                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} {{ $ring }} focus:outline-none resize-none"
                   placeholder="Internal notes about this client…">{{ old('notes', $client?->notes) }}</textarea>
       </div>
+
+      @if(!$isEdit)
+      {{-- Opening balance — only shown when creating --}}
+      <div class="rounded-xl border border-dashed {{ $border }} p-4 space-y-3">
+        <p class="text-xs font-semibold {{ $muted }}">Opening Balance
+          <span class="font-normal opacity-60">— leave blank if this is a brand-new client</span>
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="{{ $labelCls }}">Amount client owes us</label>
+            <input type="number" name="opening_balance" step="0.01" min="0"
+                   value="{{ old('opening_balance') }}"
+                   placeholder="0.00"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} {{ $ring }} focus:outline-none">
+          </div>
+          <div>
+            <label class="{{ $labelCls }}">As of date</label>
+            <input type="date" name="opening_balance_date"
+                   value="{{ old('opening_balance_date', now()->format('Y-m-d')) }}"
+                   class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} {{ $ring }} focus:outline-none">
+          </div>
+        </div>
+      </div>
+      @endif
     </div>
 
     {{-- Actions --}}

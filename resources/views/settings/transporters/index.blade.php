@@ -184,6 +184,23 @@
                 <textarea name="notes" rows="2" class="{{ $input }}"></textarea>
             </div>
 
+            {{-- Opening balance (optional) --}}
+            <div class="rounded-lg border border-dashed border-[color:var(--tw-border)] p-3 space-y-2">
+                <p class="text-[11px] font-semibold" style="color:var(--tw-muted)">Opening Balance <span class="font-normal opacity-60">(optional — leave blank for new transporters)</span></p>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label class="{{ $label }}">Amount owed to transporter</label>
+                        <input type="number" name="opening_balance" step="0.01" min="0"
+                               placeholder="0.00" class="{{ $input }}">
+                    </div>
+                    <div class="w-28">
+                        <label class="{{ $label }}">As of date</label>
+                        <input type="date" name="opening_balance_date"
+                               value="{{ now()->format('Y-m-d') }}" class="{{ $input }}">
+                    </div>
+                </div>
+            </div>
+
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button"
                         class="{{ $btnGhost }} px-3 py-1.5 text-[11px]"
