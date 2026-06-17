@@ -587,16 +587,75 @@
         {{-- Duty defaults --}}
         <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
           <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty defaults (pre-fills each truck)</div>
+          @php
+            $nomDutyType      = $nom?->default_duty_vendor_type ?? '';
+            $nomDutyVendorId  = $nom?->default_duty_vendor_id ?? '';
+            $nomDutyVendors   = \App\Models\DutyVendor::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
+            $nomSuppliers     = \App\Models\Supplier::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
+            $nomDepots        = \App\Models\Depot::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
+            $nomTransporters  = \App\Models\Transporter::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
+          @endphp
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Default duty paid to</label>
-            <select name="default_duty_vendor_type"
+            <select name="default_duty_vendor_type" id="nomDutyType"
+                    onchange="toggleNomDutyVendor()"
                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
               <option value="">No default</option>
-              <option value="customs_authority" {{ ($nom?->default_duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
-              <option value="supplier"          {{ ($nom?->default_duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
-              <option value="self"              {{ ($nom?->default_duty_vendor_type ?? '') === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
+              <option value="customs_authority" {{ $nomDutyType === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
+              <option value="supplier"          {{ $nomDutyType === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
+              <option value="depot"             {{ $nomDutyType === 'depot' ? 'selected' : '' }}>Depot (AP)</option>
+              <option value="transporter"       {{ $nomDutyType === 'transporter' ? 'selected' : '' }}>Transporter / Agent (AP)</option>
+              <option value="self"              {{ $nomDutyType === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
             </select>
           </div>
+
+          {{-- Default vendor pickers — unique names, hidden field synced by JS --}}
+          <input type="hidden" name="default_duty_vendor_id" id="nomDutyVendorIdHidden" value="{{ $nomDutyVendorId }}">
+
+          <div id="nomDutyCustomsRow" class="{{ $nomDutyType === 'customs_authority' ? '' : 'hidden' }}">
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Customs Authority</label>
+            <select id="nomDutyCustomsSel" onchange="syncNomDutyId('customs_authority')"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+              <option value="">— select —</option>
+              @foreach($nomDutyVendors as $dv)
+                <option value="{{ $dv->id }}" {{ $nomDutyVendorId == $dv->id && $nomDutyType === 'customs_authority' ? 'selected' : '' }}>{{ $dv->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div id="nomDutySupplierRow" class="{{ $nomDutyType === 'supplier' ? '' : 'hidden' }}">
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Supplier</label>
+            <select id="nomDutySupplierSel" onchange="syncNomDutyId('supplier')"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+              <option value="">— select —</option>
+              @foreach($nomSuppliers as $sv)
+                <option value="{{ $sv->id }}" {{ $nomDutyVendorId == $sv->id && $nomDutyType === 'supplier' ? 'selected' : '' }}>{{ $sv->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div id="nomDutyDepotRow" class="{{ $nomDutyType === 'depot' ? '' : 'hidden' }}">
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Depot</label>
+            <select id="nomDutyDepotSel" onchange="syncNomDutyId('depot')"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+              <option value="">— select —</option>
+              @foreach($nomDepots as $dep)
+                <option value="{{ $dep->id }}" {{ $nomDutyVendorId == $dep->id && $nomDutyType === 'depot' ? 'selected' : '' }}>{{ $dep->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div id="nomDutyTransporterRow" class="{{ $nomDutyType === 'transporter' ? '' : 'hidden' }}">
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Transporter / Agent</label>
+            <select id="nomDutyTransporterSel" onchange="syncNomDutyId('transporter')"
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+              <option value="">— select —</option>
+              @foreach($nomTransporters as $tp)
+                <option value="{{ $tp->id }}" {{ $nomDutyVendorId == $tp->id && $nomDutyType === 'transporter' ? 'selected' : '' }}>{{ $tp->name }}</option>
+              @endforeach
+            </select>
+          </div>
+
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate / 1000L</label>
@@ -932,9 +991,12 @@
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
             <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider">Duty / Tax</div>
             @php
-              $cid = auth()->user()->active_company_id;
+              $cid             = auth()->user()->active_company_id;
               $dutyVendorsList = \App\Models\DutyVendor::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
               $suppliersList   = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+              $depotsList      = \App\Models\Depot::where('company_id', $cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
+              $transportersList= \App\Models\Transporter::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+              $truckDutyType   = $truck->duty_vendor_type ?? '';
             @endphp
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Duty paid to</label>
@@ -942,35 +1004,78 @@
                       onchange="toggleDutyVendorSelect(this, {{ $truck->id }})"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40">
                 <option value="">No duty / skip</option>
-                <option value="customs_authority" {{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
-                <option value="supplier"          {{ ($truck->duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
-                <option value="self"              {{ ($truck->duty_vendor_type ?? '') === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
+                <option value="customs_authority" {{ $truckDutyType === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
+                <option value="supplier"          {{ $truckDutyType === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
+                <option value="depot"             {{ $truckDutyType === 'depot' ? 'selected' : '' }}>Depot (AP)</option>
+                <option value="transporter"       {{ $truckDutyType === 'transporter' ? 'selected' : '' }}>Transporter / Agent (AP)</option>
+                <option value="self"              {{ $truckDutyType === 'self' ? 'selected' : '' }}>Self — no AP entry</option>
               </select>
             </div>
-            <div id="dutyVendorCustomsRow-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? '' : 'hidden' }}">
+
+            {{-- Vendor-specific ID rows — each uses a unique name; the active one is copied into the hidden duty_vendor_id field by JS --}}
+            <input type="hidden" name="duty_vendor_id" id="dutyVendorIdHidden-{{ $truck->id }}"
+                   value="{{ $truck->duty_vendor_id ?? '' }}">
+
+            <div id="dutyVendorCustomsRow-{{ $truck->id }}" class="{{ $truckDutyType === 'customs_authority' ? '' : 'hidden' }}">
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Customs Authority</label>
-              <select name="duty_vendor_id"
+              <select name="duty_vendor_id_customs" id="dutyVendorCustomsSel-{{ $truck->id }}"
+                      onchange="syncDutyVendorId({{ $truck->id }},'customs_authority')"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
                 @foreach($dutyVendorsList as $dv)
-                  <option value="{{ $dv->id }}" {{ ($truck->duty_vendor_id ?? '') == $dv->id ? 'selected' : '' }}>{{ $dv->name }}</option>
+                  <option value="{{ $dv->id }}" {{ ($truck->duty_vendor_id ?? '') == $dv->id && $truckDutyType === 'customs_authority' ? 'selected' : '' }}>{{ $dv->name }}</option>
                 @endforeach
               </select>
             </div>
-            <div id="dutyVendorSupplierRow-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'supplier' ? '' : 'hidden' }}">
+
+            <div id="dutyVendorSupplierRow-{{ $truck->id }}" class="{{ $truckDutyType === 'supplier' ? '' : 'hidden' }}">
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Supplier</label>
-              <select name="duty_vendor_id"
+              <select name="duty_vendor_id_supplier" id="dutyVendorSupplierSel-{{ $truck->id }}"
+                      onchange="syncDutyVendorId({{ $truck->id }},'supplier')"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
                 @foreach($suppliersList as $sv)
-                  <option value="{{ $sv->id }}" {{ ($truck->duty_vendor_id ?? '') == $sv->id ? 'selected' : '' }}>{{ $sv->name }}</option>
+                  <option value="{{ $sv->id }}" {{ ($truck->duty_vendor_id ?? '') == $sv->id && $truckDutyType === 'supplier' ? 'selected' : '' }}>{{ $sv->name }}</option>
                 @endforeach
               </select>
             </div>
+
+            <div id="dutyVendorDepotRow-{{ $truck->id }}" class="{{ $truckDutyType === 'depot' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Depot</label>
+              <select name="duty_vendor_id_depot" id="dutyVendorDepotSel-{{ $truck->id }}"
+                      onchange="syncDutyVendorId({{ $truck->id }},'depot')"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($depotsList as $dep)
+                  <option value="{{ $dep->id }}" {{ ($truck->duty_vendor_id ?? '') == $dep->id && $truckDutyType === 'depot' ? 'selected' : '' }}>{{ $dep->name }}</option>
+                @endforeach
+              </select>
+            </div>
+
+            <div id="dutyVendorTransporterRow-{{ $truck->id }}" class="{{ $truckDutyType === 'transporter' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Transporter / Agent</label>
+              <select name="duty_vendor_id_transporter" id="dutyVendorTransporterSel-{{ $truck->id }}"
+                      onchange="syncDutyVendorId({{ $truck->id }},'transporter')"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($transportersList as $tp)
+                  <option value="{{ $tp->id }}" {{ ($truck->duty_vendor_id ?? '') == $tp->id && $truckDutyType === 'transporter' ? 'selected' : '' }}>{{ $tp->name }}</option>
+                @endforeach
+              </select>
+            </div>
+
             <div class="grid grid-cols-3 gap-3">
               <div>
-                <label class="block text-xs font-semibold {{ $fg }} mb-1">Rate / 1000L</label>
-                <input type="number" name="duty_rate_per_1000l" step="0.0001" min="0"
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">
+                  Rate / 1000L
+                  @if($purchase->product_id)
+                  <button type="button" onclick="autoFillDutyRate({{ $truck->id }}, {{ $purchase->product_id }})"
+                          class="ml-1 text-[10px] text-[color:var(--tw-accent)] hover:underline font-normal">auto-fill</button>
+                  @endif
+                </label>
+                <input type="number" name="duty_rate_per_1000l"
+                       id="dutyRateInput-{{ $truck->id }}"
+                       step="0.0001" min="0"
                        value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
                        placeholder="0.0000" />
@@ -1789,13 +1894,88 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   });
 })();
 
-// Duty vendor type toggle in border clearance modal
+// Duty vendor type toggle in border clearance modal (all 4 vendor types)
 function toggleDutyVendorSelect(sel, truckId) {
-  const v  = sel.value;
-  const cr = document.getElementById('dutyVendorCustomsRow-' + truckId);
-  const sr = document.getElementById('dutyVendorSupplierRow-' + truckId);
-  if (cr) cr.classList.toggle('hidden', v !== 'customs_authority');
-  if (sr) sr.classList.toggle('hidden', v !== 'supplier');
+  const v    = sel.value;
+  const rows = {
+    customs_authority: document.getElementById('dutyVendorCustomsRow-'      + truckId),
+    supplier:          document.getElementById('dutyVendorSupplierRow-'     + truckId),
+    depot:             document.getElementById('dutyVendorDepotRow-'        + truckId),
+    transporter:       document.getElementById('dutyVendorTransporterRow-'  + truckId),
+  };
+  Object.entries(rows).forEach(([type, el]) => {
+    if (el) el.classList.toggle('hidden', v !== type);
+  });
+  // Sync hidden field
+  syncDutyVendorId(truckId, v);
+}
+
+function syncDutyVendorId(truckId, type) {
+  const selMap = {
+    customs_authority: 'dutyVendorCustomsSel-',
+    supplier:          'dutyVendorSupplierSel-',
+    depot:             'dutyVendorDepotSel-',
+    transporter:       'dutyVendorTransporterSel-',
+  };
+  const hidden = document.getElementById('dutyVendorIdHidden-' + truckId);
+  if (!hidden) return;
+  const key = selMap[type];
+  if (key) {
+    const activeSel = document.getElementById(key + truckId);
+    hidden.value = activeSel ? activeSel.value : '';
+  } else {
+    hidden.value = '';
+  }
+}
+
+// Auto-fill duty rate from rate schedule
+function autoFillDutyRate(truckId, productId) {
+  fetch('/duty-rates/for-product?product_id=' + productId)
+    .then(r => r.json())
+    .then(data => {
+      const inp = document.getElementById('dutyRateInput-' + truckId);
+      if (!inp) return;
+      if (data && data.rate) {
+        inp.value = data.rate;
+        inp.classList.add('ring-2', 'ring-emerald-500/50');
+        setTimeout(() => inp.classList.remove('ring-2', 'ring-emerald-500/50'), 2000);
+      } else {
+        inp.placeholder = 'No rate on file';
+      }
+    })
+    .catch(() => {});
+}
+
+// Nomination modal: default duty vendor toggle
+function toggleNomDutyVendor() {
+  const v    = document.getElementById('nomDutyType')?.value;
+  const rows = {
+    customs_authority: document.getElementById('nomDutyCustomsRow'),
+    supplier:          document.getElementById('nomDutySupplierRow'),
+    depot:             document.getElementById('nomDutyDepotRow'),
+    transporter:       document.getElementById('nomDutyTransporterRow'),
+  };
+  Object.entries(rows).forEach(([type, el]) => {
+    if (el) el.classList.toggle('hidden', v !== type);
+  });
+  syncNomDutyId(v);
+}
+function syncNomDutyId(type) {
+  const selMap = {
+    customs_authority: 'nomDutyCustomsSel',
+    supplier:          'nomDutySupplierSel',
+    depot:             'nomDutyDepotSel',
+    transporter:       'nomDutyTransporterSel',
+  };
+  const hidden = document.getElementById('nomDutyVendorIdHidden');
+  if (!hidden) return;
+  const selId = selMap[type];
+  if (selId) {
+    const sel = document.getElementById(selId);
+    hidden.value = sel ? sel.value : '';
+  } else {
+    hidden.value = '';
+  }
 }
 </script>
 

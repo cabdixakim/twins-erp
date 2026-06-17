@@ -57,6 +57,26 @@ class DutyLedgerController extends Controller
         $netPayable   = (float) $breakdown->sum();
         $currency     = $dutyVendor->default_currency ?: 'USD';
 
+        // Compute running balance for each entry on the current page.
+        // Entries are ordered newest-first. The balance for the first (newest) entry
+        // on the page equals totalBalance minus the sum of all entries with higher ids
+        // (i.e., entries on prior pages or newer entries).
+        $totalBalance  = (float) DutyLedgerEntry::where('company_id', $cid)
+            ->where('duty_vendor_id', $dutyVendor->id)
+            ->sum('amount');
+        $pageFirstId   = $entries->getCollection()->isNotEmpty() ? $entries->getCollection()->first()->id : null;
+        $priorPageSum  = $pageFirstId
+            ? (float) DutyLedgerEntry::where('company_id', $cid)
+                ->where('duty_vendor_id', $dutyVendor->id)
+                ->where('id', '>', $pageFirstId)
+                ->sum('amount')
+            : 0;
+        $running = $totalBalance - $priorPageSum;
+        foreach ($entries->getCollection() as $e) {
+            $e->running_balance = $running;
+            $running -= (float) $e->amount;
+        }
+
         // Build reference links
         $allEntries = $entries->getCollection();
         $truckIds   = $allEntries->where('ref_type', ImportTruck::class)->pluck('ref_id')->unique()->filter();

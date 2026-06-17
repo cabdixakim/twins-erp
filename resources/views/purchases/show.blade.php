@@ -824,8 +824,9 @@ function updatePaidByFields() {
       </div>
       <div id="hospSupplierRow">
         <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Supplier</label>
-        <select name="paid_to_id"
-                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+        <select name="paid_to_id_supplier" id="hospSupplierSelect"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
+                onchange="syncHospId(this,'supplier')">
           <option value="">— select —</option>
           @foreach($hSuppliers as $hs)
             <option value="{{ $hs->id }}">{{ $hs->name }}</option>
@@ -834,14 +835,16 @@ function updatePaidByFields() {
       </div>
       <div id="hospPettyCashRow" class="hidden">
         <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Petty cash account</label>
-        <select name="paid_to_id"
-                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
+        <select name="paid_to_id_petty_cash" id="hospPettyCashSelect"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
+                onchange="syncHospId(this,'petty_cash')">
           <option value="">— select —</option>
           @foreach($hPettyCash as $hp)
             <option value="{{ $hp->id }}">{{ $hp->name }}</option>
           @endforeach
         </select>
       </div>
+      <input type="hidden" name="paid_to_id" id="hospPaidToIdHidden" value="">
       <div class="grid grid-cols-3 gap-3">
         <div class="col-span-2">
           <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Amount</label>
@@ -878,6 +881,18 @@ function toggleHospPaidTo() {
   const v = document.getElementById('hospPaidToType').value;
   document.getElementById('hospSupplierRow').classList.toggle('hidden', v !== 'supplier');
   document.getElementById('hospPettyCashRow').classList.toggle('hidden', v !== 'petty_cash');
+  // Sync hidden field to whichever row is now active
+  if (v === 'supplier') {
+    document.getElementById('hospPaidToIdHidden').value = document.getElementById('hospSupplierSelect').value;
+  } else if (v === 'petty_cash') {
+    document.getElementById('hospPaidToIdHidden').value = document.getElementById('hospPettyCashSelect').value;
+  } else {
+    document.getElementById('hospPaidToIdHidden').value = '';
+  }
+}
+function syncHospId(sel, type) {
+  const cur = document.getElementById('hospPaidToType').value;
+  if (cur === type) document.getElementById('hospPaidToIdHidden').value = sel.value;
 }
 </script>
 @endif

@@ -46,9 +46,10 @@ class DutiesController extends Controller
                 'n.id as nomination_id',
             ]);
 
-        if ($dateFrom) $query->whereDate('t.border_date', '>=', $dateFrom);
-        if ($dateTo)   $query->whereDate('t.border_date', '<=', $dateTo);
+        if ($dateFrom)   $query->whereDate('t.border_date', '>=', $dateFrom);
+        if ($dateTo)     $query->whereDate('t.border_date', '<=', $dateTo);
         if ($vendorType) $query->where('t.duty_vendor_type', $vendorType);
+        if ($vendorId)   $query->where('t.duty_vendor_id', (int) $vendorId);
         if ($productId)  $query->where('p.product_id', (int) $productId);
         if ($status)     $query->where('t.duty_status', $status);
 

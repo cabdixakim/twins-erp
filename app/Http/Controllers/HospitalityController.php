@@ -8,6 +8,7 @@ use App\Models\Purchase;
 use App\Models\HospitalityCharge;
 use App\Models\SupplierLedgerEntry;
 use App\Models\PettyCashTransaction;
+use App\Models\PettyCashAccount;
 
 class HospitalityController extends Controller
 {
@@ -18,42 +19,52 @@ class HospitalityController extends Controller
         abort_if($purchase->status === 'draft', 400, 'Confirm the purchase before adding hospitality charges.');
 
         $data = $request->validate([
-            'paid_to_type'          => 'required|in:supplier,petty_cash',
-            'paid_to_id'            => 'nullable|integer',
-            'amount'                => 'required|numeric|min:0.01',
-            'currency'              => 'required|string|max:8',
-            'exchange_rate'         => 'nullable|numeric|min:0',
-            'entry_date'            => 'required|date',
-            'description'           => 'nullable|string|max:500',
+            'paid_to_type'  => 'required|in:supplier,petty_cash',
+            'paid_to_id'    => 'nullable|integer',
+            'amount'        => 'required|numeric|min:0.01',
+            'currency'      => 'required|string|max:8',
+            'exchange_rate' => 'nullable|numeric|min:0',
+            'entry_date'    => 'required|date',
+            'description'   => 'nullable|string|max:500',
         ]);
 
         $exchangeRate = max(1, (float) ($data['exchange_rate'] ?? 1));
         $amountBase   = round((float) $data['amount'] * $exchangeRate, 4);
-        $paidToId     = (int) ($data['paid_to_id'] ?? 0) ?: null;
+        $rawId        = (int) ($data['paid_to_id'] ?? 0);
+        $paidToId     = null;
         $paidToName   = null;
 
-        if ($data['paid_to_type'] === 'supplier' && $paidToId) {
-            $paidToName = DB::table('suppliers')->where('id', $paidToId)->value('name');
-        } elseif ($data['paid_to_type'] === 'petty_cash' && $paidToId) {
-            $paidToName = DB::table('petty_cash_accounts')->where('id', $paidToId)->value('name');
+        if ($data['paid_to_type'] === 'supplier' && $rawId) {
+            $supplier = DB::table('suppliers')
+                ->where('id', $rawId)->where('company_id', $cid)->first();
+            if ($supplier) {
+                $paidToId   = $rawId;
+                $paidToName = $supplier->name;
+            }
+        } elseif ($data['paid_to_type'] === 'petty_cash' && $rawId) {
+            $account = PettyCashAccount::where('id', $rawId)->where('company_id', $cid)->first();
+            if ($account) {
+                $paidToId   = $rawId;
+                $paidToName = $account->name;
+            }
         }
 
         $desc = $data['description'] ?: 'Hospitality — ' . ($paidToName ?? 'PO ' . $purchase->reference);
 
         DB::transaction(function () use ($cid, $purchase, $data, $amountBase, $paidToId, $paidToName, $desc, $exchangeRate) {
             $charge = HospitalityCharge::create([
-                'company_id'   => $cid,
-                'purchase_id'  => $purchase->id,
-                'paid_to_type' => $data['paid_to_type'],
-                'paid_to_id'   => $paidToId,
-                'paid_to_name' => $paidToName,
-                'amount'       => (float) $data['amount'],
-                'currency'     => $data['currency'],
-                'exchange_rate'=> $exchangeRate,
-                'amount_base'  => $amountBase,
-                'entry_date'   => $data['entry_date'],
-                'description'  => $desc,
-                'created_by'   => auth()->id(),
+                'company_id'    => $cid,
+                'purchase_id'   => $purchase->id,
+                'paid_to_type'  => $data['paid_to_type'],
+                'paid_to_id'    => $paidToId,
+                'paid_to_name'  => $paidToName,
+                'amount'        => (float) $data['amount'],
+                'currency'      => $data['currency'],
+                'exchange_rate' => $exchangeRate,
+                'amount_base'   => $amountBase,
+                'entry_date'    => $data['entry_date'],
+                'description'   => $desc,
+                'created_by'    => auth()->id(),
             ]);
 
             if ($data['paid_to_type'] === 'supplier' && $paidToId) {
@@ -71,10 +82,7 @@ class HospitalityController extends Controller
                     'created_by'  => auth()->id(),
                 ]);
             } elseif ($data['paid_to_type'] === 'petty_cash' && $paidToId) {
-                $account = \App\Models\PettyCashAccount::where('company_id', $cid)
-                    ->where('id', $paidToId)
-                    ->first();
-
+                $account = PettyCashAccount::where('company_id', $cid)->where('id', $paidToId)->first();
                 if ($account) {
                     PettyCashTransaction::create([
                         'company_id'       => $cid,
@@ -91,24 +99,24 @@ class HospitalityController extends Controller
                 }
             }
 
-            // Also create batch cost entry if purchase has batch
             if ($purchase->batch_id) {
                 DB::table('batch_costs')->insert([
-                    'batch_id'            => $purchase->batch_id,
-                    'purchase_id'         => $purchase->id,
-                    'company_id'          => $cid,
-                    'category'            => 'hospitality',
-                    'description'         => $desc,
-                    'amount'              => (float) $data['amount'],
-                    'currency'            => $data['currency'],
-                    'exchange_rate'       => $exchangeRate,
-                    'amount_base'         => $amountBase,
-                    'entry_date'          => $data['entry_date'],
-                    'is_included_in_cost' => false,
-                    'auto_posted'         => false,
-                    'created_by'          => auth()->id(),
-                    'created_at'          => now(),
-                    'updated_at'          => now(),
+                    'batch_id'              => $purchase->batch_id,
+                    'purchase_id'           => $purchase->id,
+                    'company_id'            => $cid,
+                    'hospitality_charge_id' => $charge->id,
+                    'category'              => 'hospitality',
+                    'description'           => $desc,
+                    'amount'                => (float) $data['amount'],
+                    'currency'              => $data['currency'],
+                    'exchange_rate'         => $exchangeRate,
+                    'amount_base'           => $amountBase,
+                    'entry_date'            => $data['entry_date'],
+                    'is_included_in_cost'   => false,
+                    'auto_posted'           => false,
+                    'created_by'            => auth()->id(),
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
                 ]);
             }
         });
@@ -122,10 +130,28 @@ class HospitalityController extends Controller
         $cid = (int) auth()->user()->active_company_id;
         abort_if((int) $purchase->company_id !== $cid, 403);
         abort_if((int) $hospitalityCharge->purchase_id !== $purchase->id, 403);
+        abort_if((int) $hospitalityCharge->company_id !== $cid, 403);
 
-        $hospitalityCharge->delete();
+        DB::transaction(function () use ($hospitalityCharge) {
+            // Reverse supplier ledger entry
+            SupplierLedgerEntry::where('ref_type', HospitalityCharge::class)
+                ->where('ref_id', $hospitalityCharge->id)
+                ->delete();
+
+            // Reverse petty cash transaction
+            PettyCashTransaction::where('ref_type', HospitalityCharge::class)
+                ->where('ref_id', $hospitalityCharge->id)
+                ->delete();
+
+            // Remove batch cost entry
+            DB::table('batch_costs')
+                ->where('hospitality_charge_id', $hospitalityCharge->id)
+                ->delete();
+
+            $hospitalityCharge->delete();
+        });
 
         return redirect()->route('purchases.show', $purchase)
-            ->with('status', 'Hospitality charge removed.');
+            ->with('status', 'Hospitality charge removed and all linked entries reversed.');
     }
 }
