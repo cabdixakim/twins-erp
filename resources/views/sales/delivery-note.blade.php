@@ -58,16 +58,19 @@
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
       margin-bottom: 0;
     }
-    .seal-meta-row {
-      display: flex; border: 1px solid #ccc; border-top: none;
+    .seal-meta-table {
+      width: 100%; border-collapse: collapse;
+      border: 1px solid #ccc; border-top: none;
       margin-bottom: 0;
     }
     .seal-meta-cell {
-      flex: 1; padding: 7px 10px; border-right: 1px solid #ccc; font-size: 11px;
+      width: 33.33%; padding: 7px 10px;
+      border-right: 1px solid #ccc;
+      font-size: 11px; vertical-align: middle;
     }
     .seal-meta-cell:last-child { border-right: none; }
-    .seal-meta-label { font-weight: 700; display: block; margin-bottom: 1px; }
-    .seal-meta-value { font-size: 14px; font-weight: 700; }
+    .seal-meta-label { font-weight: 700; display: block; margin-bottom: 2px; font-size: 10px; color: #555; }
+    .seal-meta-value { font-size: 13px; font-weight: 700; display: block; }
     .seal-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -188,21 +191,23 @@
   <div class="seal-section">
     <div class="seal-section-header">Seal Numbers / N° Scellés</div>
 
-    {{-- Product + qty meta bar --}}
-    <div class="seal-meta-row">
-      <div class="seal-meta-cell">
-        <span class="seal-meta-label">Product / Produit</span>
-        <span class="seal-meta-value">{{ $sale->product?->name ?? '—' }}</span>
-      </div>
-      <div class="seal-meta-cell">
-        <span class="seal-meta-label">Quantity / Quantité</span>
-        <span class="seal-meta-value">{{ number_format((float)$sale->qty, 3) }} L</span>
-      </div>
-      <div class="seal-meta-cell">
-        <span class="seal-meta-label">Number of Seals / Nombre</span>
-        <span class="seal-meta-value">{{ count($sealNumbers) ?: '—' }}</span>
-      </div>
-    </div>
+    {{-- Product / qty / count meta bar — table for reliable print height alignment --}}
+    <table class="seal-meta-table">
+      <tr>
+        <td class="seal-meta-cell">
+          <span class="seal-meta-label">Product / Produit</span>
+          <span class="seal-meta-value">{{ $sale->product?->name ?? '—' }}</span>
+        </td>
+        <td class="seal-meta-cell">
+          <span class="seal-meta-label">Quantity / Quantité</span>
+          <span class="seal-meta-value">{{ number_format((float)$sale->qty, 3) }} L</span>
+        </td>
+        <td class="seal-meta-cell">
+          <span class="seal-meta-label">Seals / Scellés</span>
+          <span class="seal-meta-value">{{ count($sealNumbers) ?: '—' }}</span>
+        </td>
+      </tr>
+    </table>
 
     {{--
       Seal grid: always 4 columns.
