@@ -205,11 +205,14 @@ class SalesController extends Controller
         }
 
         $sale = DB::transaction(function () use ($cid, $u, $data) {
+            // Lock the company row to serialise concurrent sequence number generation.
+            // PostgreSQL rejects FOR UPDATE on aggregate queries, so we lock a sentinel
+            // row first, then read MAX without a lock — only one transaction proceeds at a time.
+            DB::table('companies')->where('id', $cid)->lockForUpdate()->first();
+
             $nextSeq = (int) Sale::query()
                 ->where('company_id', $cid)
-                ->max('sequence_no');
-
-            $nextSeq = $nextSeq + 1;
+                ->max('sequence_no') + 1;
 
             $saleDate = $data['sale_date'] ?? Carbon::today();
             $year = Carbon::parse($saleDate)->format('Y');

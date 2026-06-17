@@ -56,6 +56,9 @@ class Invoice extends Model
     public static function createFromSale(Sale $sale, Company $company): self
     {
         return DB::transaction(function () use ($sale, $company) {
+            // Lock the company row to serialise concurrent invoice sequence generation.
+            DB::table('companies')->where('id', $company->id)->lockForUpdate()->first();
+
             $seq = (int) self::where('company_id', $company->id)
                 ->max('sequence_no') + 1;
 
