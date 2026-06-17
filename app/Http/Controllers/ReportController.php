@@ -262,11 +262,11 @@ class ReportController extends Controller
             ->selectRaw("
                 depot_ledger_entries.depot_id,
                 depots.name as depot_name,
-                SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END) as balance,
-                MIN(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.created_at ELSE NULL END) as oldest_charge
+                SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END) as balance,
+                MIN(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.created_at ELSE NULL END) as oldest_charge
             ")
             ->groupBy('depot_ledger_entries.depot_id', 'depots.name')
-            ->having(DB::raw("SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END)"), '>', 0)
+            ->having(DB::raw("SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END)"), '>', 0)
             ->orderByDesc('balance')
             ->get();
 

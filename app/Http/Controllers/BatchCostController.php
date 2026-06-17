@@ -80,10 +80,10 @@ class BatchCostController extends Controller
         // regardless of paid_by_type.  Other categories only post when a specific
         // third party fronted the cost (paid_by_type = depot | transporter).
         //
-        $depotCategories = ['storage', 'throughput_charge', 'loading_fee', 'offloading'];
+        $depotCategories = ['storage', 'handling_fee', 'loading_fee', 'offloading'];
         $ledgerTypeMap   = [
             'storage'          => 'storage_charge',
-            'throughput_charge'=> 'throughput_charge',
+            'handling_fee'=> 'handling_fee',
             'loading_fee'      => 'loading_fee',
             'offloading'       => 'loading_fee',
         ];

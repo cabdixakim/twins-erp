@@ -27,7 +27,7 @@ class DepotLedgerController extends Controller
             ->map(fn($rows) => $rows->pluck('balance', 'currency'));
 
         $chargeTotals = DepotLedgerEntry::where('company_id', $cid)
-            ->whereIn('type', ['storage_charge', 'throughput_charge', 'loading_fee', 'other_charge'])
+            ->whereIn('type', ['storage_charge', 'handling_fee', 'loading_fee', 'other_charge'])
             ->selectRaw('depot_id, SUM(amount) as total')
             ->groupBy('depot_id')
             ->pluck('total', 'depot_id');
@@ -53,7 +53,7 @@ class DepotLedgerController extends Controller
             ->groupBy('type')
             ->pluck('total', 'type');
 
-        $chargeTypes   = ['storage_charge', 'throughput_charge', 'loading_fee', 'other_charge'];
+        $chargeTypes   = ['storage_charge', 'handling_fee', 'loading_fee', 'other_charge'];
         $chargesTotal  = (float) $breakdown->only($chargeTypes)->sum();
         $paymentTotal  = abs((float) ($breakdown['payment'] ?? 0));
         $netPayable    = (float) $breakdown->sum();
@@ -125,7 +125,7 @@ class DepotLedgerController extends Controller
         abort_if((int) $depot->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'type'        => 'required|in:storage_charge,throughput_charge,loading_fee,other_charge',
+            'type'        => 'required|in:storage_charge,handling_fee,loading_fee,other_charge',
             'amount'      => 'required|numeric|min:0.01',
             'currency'    => 'nullable|string|max:8',
             'entry_date'  => 'required|date',
@@ -213,7 +213,7 @@ class DepotLedgerController extends Controller
             $e->running_balance = $running;
         }
 
-        $chargeTypes  = ['storage_charge', 'throughput_charge', 'loading_fee', 'other_charge'];
+        $chargeTypes  = ['storage_charge', 'handling_fee', 'loading_fee', 'other_charge'];
         $chargesTotal = (float) $entries->whereIn('type', $chargeTypes)->sum('amount');
         $paymentTotal = abs((float) $entries->where('type', 'payment')->sum('amount'));
         $netPayable   = $running;

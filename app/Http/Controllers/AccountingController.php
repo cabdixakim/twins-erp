@@ -259,7 +259,7 @@ class AccountingController extends Controller
         $depotCharges = DB::table('depot_ledger_entries')
             ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
             ->where('depots.company_id', $cid)
-            ->whereIn('depot_ledger_entries.type', ['storage_charge','throughput_charge','loading_fee','other_charge'])
+            ->whereIn('depot_ledger_entries.type', ['storage_charge','handling_fee','loading_fee','other_charge'])
             ->whereBetween(DB::raw('DATE(depot_ledger_entries.created_at)'), [$from, $to])
             ->sum('depot_ledger_entries.amount');
 
@@ -356,7 +356,7 @@ class AccountingController extends Controller
             ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
             ->where('depots.company_id', $cid)
             ->whereDate('depot_ledger_entries.entry_date', '<=', $asOf)
-            ->sum(DB::raw("CASE WHEN depot_ledger_entries.type IN ('storage_charge','throughput_charge','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END"));
+            ->sum(DB::raw("CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END"));
 
         $totalLiabilities = max(0, (float)$supplierPayables)
                           + max(0, (float)$transporterPayables)

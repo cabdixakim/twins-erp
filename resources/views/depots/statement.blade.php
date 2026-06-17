@@ -114,7 +114,7 @@
                 $isCharge = (float) $e->amount > 0;
                 $typeLabel = match($e->type) {
                     'storage_charge'    => 'Storage',
-                    'throughput_charge' => 'Throughput',
+                    'handling_fee'      => 'Handling fee',
                     'loading_fee'       => 'Loading fee',
                     'other_charge'      => 'Other',
                     'payment'           => 'Payment',
