@@ -50,16 +50,42 @@
     .info-table td { padding: 5px 6px; vertical-align: top; border: 1px solid #ccc; font-size: 11px; }
     .info-table td.lbl { font-weight: 700; white-space: nowrap; background: #f8f8f8; width: 18%; }
 
-    /* Seal table */
-    .seal-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-    .seal-table th {
-      background: #111;
-      color: #fff;
-      padding: 6px 8px;
-      text-align: left;
-      font-size: 11px;
-      font-weight: 600;
+    /* Seal section */
+    .seal-section { margin-bottom: 14px; }
+    .seal-section-header {
+      background: #111; color: #fff;
+      padding: 7px 10px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 0;
     }
+    .seal-meta-row {
+      display: flex; border: 1px solid #ccc; border-top: none;
+      margin-bottom: 0;
+    }
+    .seal-meta-cell {
+      flex: 1; padding: 7px 10px; border-right: 1px solid #ccc; font-size: 11px;
+    }
+    .seal-meta-cell:last-child { border-right: none; }
+    .seal-meta-label { font-weight: 700; display: block; margin-bottom: 1px; }
+    .seal-meta-value { font-size: 14px; font-weight: 700; }
+    .seal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid #ccc; border-top: none;
+      margin-bottom: 12px;
+    }
+    .seal-cell {
+      border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+      min-height: 44px; display: flex; align-items: center; justify-content: center;
+    }
+    .seal-cell:nth-child(4n) { border-right: none; }
+    .seal-cell.empty-seal { color: #ccc; font-size: 11px; font-weight: 400; }
+    /* fallback table for environments where grid print breaks */
+    .seal-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .seal-table th { background: #111; color: #fff; padding: 6px 8px; text-align: left; font-size: 11px; font-weight: 600; }
     .seal-table td { padding: 5px 8px; border: 1px solid #ccc; font-size: 11px; vertical-align: middle; }
     .seal-table tr.total-row td { background: #f0f0f0; font-weight: 700; border-color: #111; }
 
@@ -117,7 +143,7 @@
       <table class="doc-ref-table">
         <tr><td>N°:</td><td>{{ $sale->reference }}</td></tr>
         <tr><td>Date:</td><td>{{ $sale->sale_date?->format('d/m/Y') }}</td></tr>
-        <tr><td>Depot / Dépôt:</td><td>{{ $sale->depot?->name ?? '—' }}</td></tr>
+        <tr><td>Depot / Dépôt:</td><td style="min-width:160px;border-bottom:1px solid #555;padding-bottom:2px;">&nbsp;</td></tr>
         <tr><td>Product / Produit:</td><td>{{ $sale->product?->name ?? '—' }}</td></tr>
       </table>
     </div>
@@ -151,38 +177,51 @@
     @endif
   </table>
 
-  {{-- ===== SEAL NUMBERS TABLE ===== --}}
-  <table class="seal-table">
-    <thead>
-      <tr>
-        <th style="width:38%">Product / Produit</th>
-        <th style="width:24%">Qty / Quantité</th>
-        <th style="width:38%">Seal No / N° Scellé</th>
-      </tr>
-    </thead>
-    <tbody>
-      @if(empty($sealNumbers))
-        <tr>
-          <td>{{ $sale->product?->name }}</td>
-          <td>{{ number_format((float)$sale->qty, 3) }} L</td>
-          <td>—</td>
-        </tr>
-      @else
-        @foreach($sealNumbers as $idx => $seal)
-          <tr>
-            <td>{{ $idx === 0 ? ($sale->product?->name) : '' }}</td>
-            <td>{{ $idx === 0 ? number_format((float)$sale->qty, 3) . ' L' : '' }}</td>
-            <td>{{ $seal }}</td>
-          </tr>
+  {{-- ===== SEAL NUMBERS SECTION ===== --}}
+  <div class="seal-section">
+    <div class="seal-section-header">Seal Numbers / N° Scellés</div>
+
+    {{-- Product + qty meta bar --}}
+    <div class="seal-meta-row">
+      <div class="seal-meta-cell">
+        <span class="seal-meta-label">Product / Produit</span>
+        <span class="seal-meta-value">{{ $sale->product?->name ?? '—' }}</span>
+      </div>
+      <div class="seal-meta-cell">
+        <span class="seal-meta-label">Quantity / Quantité</span>
+        <span class="seal-meta-value">{{ number_format((float)$sale->qty, 3) }} L</span>
+      </div>
+      <div class="seal-meta-cell">
+        <span class="seal-meta-label">Number of Seals / Nombre</span>
+        <span class="seal-meta-value">{{ count($sealNumbers) ?: '—' }}</span>
+      </div>
+    </div>
+
+    {{-- Seal number grid — 4 columns, large bold numbers --}}
+    @if(!empty($sealNumbers))
+      @php
+        // Pad to a multiple of 4 so grid rows are complete
+        $padded = $sealNumbers;
+        while (count($padded) % 4 !== 0) { $padded[] = null; }
+      @endphp
+      <div class="seal-grid">
+        @foreach($padded as $seal)
+          @if($seal !== null)
+            <div class="seal-cell">{{ $seal }}</div>
+          @else
+            <div class="seal-cell empty-seal">—</div>
+          @endif
         @endforeach
-      @endif
-      <tr class="total-row">
-        <td>Total</td>
-        <td>{{ number_format((float)$sale->qty, 3) }} L</td>
-        <td></td>
-      </tr>
-    </tbody>
-  </table>
+      </div>
+    @else
+      <div class="seal-grid">
+        {{-- 8 blank cells when no seals entered — handwrite later --}}
+        @for($i = 0; $i < 8; $i++)
+          <div class="seal-cell empty-seal">—</div>
+        @endfor
+      </div>
+    @endif
+  </div>
 
   {{-- ===== TEMPERATURE / DENSITY ===== --}}
   <div class="specs-row">
