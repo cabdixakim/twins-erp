@@ -621,7 +621,6 @@
             <option value="freight">Freight</option>
             <option value="duty">Duty / Tax</option>
             <option value="border_charge">Border charge</option>
-            <option value="hospitality">Hospitality</option>
             <option value="storage">Storage</option>
             <option value="penalty">Penalty</option>
             <option value="other">Other</option>
@@ -720,17 +719,8 @@ function updatePaidByFields() {
 </script>
 @endif
 
-{{-- =========================
-     HOSPITALITY CHARGES
-   ========================= --}}
-@if($purchase->status !== 'draft')
-@php
-  $hospitalityCharges = \App\Models\HospitalityCharge::where('purchase_id', $purchase->id)->orderByDesc('entry_date')->get();
-  $hospitalityTotal   = $hospitalityCharges->sum(fn($h) => (float)$h->amount_base ?: (float)$h->amount);
-  $cid = auth()->user()->active_company_id;
-  $hSuppliers  = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
-  $hPettyCash  = \App\Models\PettyCashAccount::where('company_id', $cid)->orderBy('name')->get();
-@endphp
+{{-- Hospitality module hidden — replaced by per-truck "other border charges" on border clearance form --}}
+@if(false)
 <div class="mt-6 rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] overflow-hidden">
   <div class="px-5 py-3 border-b border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] flex items-center justify-between">
     <span class="text-xs font-semibold text-[color:var(--tw-fg)]">Hospitality Charges</span>

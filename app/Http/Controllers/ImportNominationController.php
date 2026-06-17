@@ -275,16 +275,19 @@ class ImportNominationController extends Controller
         }
 
         $data = $request->validate([
-            'tr8_number'          => 'nullable|string|max:80',
-            't1_number'           => 'nullable|string|max:80',
-            'border_date'         => 'required|date',
-            'waive_duty'          => 'nullable|boolean',
-            'duty_vendor_type'    => ['nullable', Rule::in(['customs_authority', 'supplier', 'depot', 'transporter', 'self', ''])],
-            'duty_vendor_id'      => 'nullable|integer',
-            'duty_rate_per_1000l' => 'nullable|numeric|min:0',
-            'duty_qty'            => 'nullable|numeric|min:0',
-            'duty_currency'       => 'nullable|string|max:8',
-            'duty_notes'          => 'nullable|string|max:500',
+            'tr8_number'             => 'nullable|string|max:80',
+            't1_number'              => 'nullable|string|max:80',
+            'border_date'            => 'required|date',
+            'waive_duty'             => 'nullable|boolean',
+            'duty_vendor_type'       => ['nullable', Rule::in(['customs_authority', 'supplier', 'depot', 'transporter', 'self', ''])],
+            'duty_vendor_id'         => 'nullable|integer',
+            'duty_rate_per_1000l'    => 'nullable|numeric|min:0',
+            'duty_qty'               => 'nullable|numeric|min:0',
+            'duty_currency'          => 'nullable|string|max:8',
+            'duty_notes'             => 'nullable|string|max:500',
+            'other_border_charges'   => 'nullable|numeric|min:0',
+            'other_border_currency'  => 'nullable|string|max:8',
+            'other_border_notes'     => 'nullable|string|max:500',
         ]);
 
         $waiveDuty = (bool) ($data['waive_duty'] ?? false);
@@ -324,8 +327,14 @@ class ImportNominationController extends Controller
         $dutyQty  = $waiveDuty ? 0.0 : (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
         $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / 1000, 4) : null;
 
+        $otherChargesFields = [
+            'other_border_charges'  => ($data['other_border_charges'] ?? null) ? (float) $data['other_border_charges'] : null,
+            'other_border_currency' => ($data['other_border_currency'] ?? null) ?: ($truck->other_border_currency ?: 'USD'),
+            'other_border_notes'    => $data['other_border_notes'] ?? null,
+        ];
+
         if ($waiveDuty) {
-            $truck->update([
+            $truck->update(array_merge($otherChargesFields, [
                 'status'           => 'border_cleared',
                 'border_date'      => $data['border_date'],
                 'tr8_number'       => $data['tr8_number'] ?? null,
@@ -335,9 +344,9 @@ class ImportNominationController extends Controller
                 'duty_vendor_id'   => null,
                 'duty_amount'      => null,
                 'duty_notes'       => $data['duty_notes'] ?? null,
-            ]);
+            ]));
         } else {
-            $truck->update(array_merge($data, [
+            $truck->update(array_merge($data, $otherChargesFields, [
                 'status'              => 'border_cleared',
                 'duty_vendor_id'      => ($data['duty_vendor_id'] ?? null) ?: ($truck->duty_vendor_id ?: null),
                 'duty_vendor_type'    => ($data['duty_vendor_type'] ?? null) ?: ($truck->duty_vendor_type ?: null),

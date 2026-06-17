@@ -26,7 +26,6 @@
         'fuel'             => 'Fuel',
         'driver_advance'   => 'Driver advance',
         'border_fees'      => 'Border fees',
-        'hospitality'      => 'Hospitality',
         'office'           => 'Office supplies',
         'transport'        => 'Transport / logistics',
         'maintenance'      => 'Maintenance',

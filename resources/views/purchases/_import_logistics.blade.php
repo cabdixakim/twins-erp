@@ -987,6 +987,28 @@
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
           </div>
 
+          {{-- Other border charges --}}
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Other border charges</label>
+              <input type="number" name="other_border_charges" step="0.01" min="0" placeholder="0.00"
+                     value="{{ $truck->other_border_charges ?? '' }}"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
+              <input type="text" name="other_border_currency" maxlength="8" placeholder="USD"
+                     value="{{ $truck->other_border_currency ?? ($purchase->currency ?? 'USD') }}"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Other charges notes</label>
+            <input type="text" name="other_border_notes" maxlength="500" placeholder="Agent fees, facilitation, misc…"
+                   value="{{ $truck->other_border_notes ?? '' }}"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          </div>
+
           {{-- Duty section --}}
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
             <div class="flex items-center justify-between">
