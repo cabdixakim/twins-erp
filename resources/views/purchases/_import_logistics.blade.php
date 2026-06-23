@@ -995,10 +995,16 @@
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
           </div>
         </div>
-        <div class="p-4 pt-0">
+        <div class="px-5 pb-5">
           <button type="submit"
-                  class="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold transition">
-            Mark arrived at border
+                  class="btn-soft-orange w-full rounded-xl border px-4 py-3 flex items-center justify-between transition group">
+            <div class="text-left">
+              <div class="text-sm font-semibold">Stage truck at this border post</div>
+              <div class="text-xs opacity-70 mt-0.5">Status will change to <span class="font-semibold">At Border</span></div>
+            </div>
+            <svg class="w-5 h-5 opacity-70 group-hover:translate-x-0.5 transition-transform flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 12h12"/>
+            </svg>
           </button>
         </div>
       </form>
