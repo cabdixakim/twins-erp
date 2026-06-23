@@ -79,9 +79,7 @@
                 </thead>
                 <tbody>
                     @foreach($documents as $doc)
-                    @php
-                        $cm = $catMeta[$doc->category] ?? $catMeta['other'];
-                    @endphp
+                    @php $cm = $catMeta[$doc->category] ?? $catMeta['other']; @endphp
                     <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                         <td class="px-4 py-3">
                             <div class="font-semibold {{ $fg }} truncate max-w-[200px]">{{ $doc->name }}</div>
@@ -116,14 +114,19 @@
                                     </svg>
                                     Download
                                 </a>
-                                <form method="POST" action="{{ route('documents.destroy', $doc) }}"
-                                      onsubmit="return confirm('Delete this document?')">
+                                {{-- Hidden delete form, submitted by modal confirm --}}
+                                <form id="del-form-{{ $doc->id }}" method="POST"
+                                      action="{{ route('documents.destroy', $doc) }}" class="hidden">
                                     @csrf @method('DELETE')
-                                    <button type="submit"
-                                            class="h-8 px-3 rounded-xl border text-xs font-semibold transition btn-soft-rose">
-                                        Delete
-                                    </button>
                                 </form>
+                                <button type="button"
+                                        onclick="openDocDeleteModal({{ $doc->id }}, '{{ addslashes($doc->name) }}')"
+                                        class="h-8 px-3 rounded-xl border text-xs font-semibold transition btn-soft-rose flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -138,4 +141,80 @@
         @endif
     </div>
 </div>
+
+{{-- ── Delete Confirmation Modal ─────────────────────────── --}}
+<div id="doc-delete-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+     style="background:rgba(0,0,0,.45);backdrop-filter:blur(3px)"
+     onclick="if(event.target===this)closeDocDeleteModal()">
+    <div class="relative w-full max-w-sm rounded-2xl border shadow-2xl bg-[color:var(--tw-surface)] border-[color:var(--tw-border)] p-6 space-y-5"
+         onclick="event.stopPropagation()">
+
+        {{-- Icon --}}
+        <div class="flex items-center justify-center w-12 h-12 rounded-2xl mx-auto"
+             style="background:rgba(239,68,68,.12)">
+            <svg class="w-6 h-6" style="color:#ef4444" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+        </div>
+
+        {{-- Text --}}
+        <div class="text-center space-y-1">
+            <h3 class="text-base font-bold text-[color:var(--tw-fg)]">Delete document?</h3>
+            <p class="text-sm text-[color:var(--tw-muted)]">
+                "<span id="doc-delete-name" class="font-semibold text-[color:var(--tw-fg)]"></span>"
+                will be permanently removed. This cannot be undone.
+            </p>
+        </div>
+
+        {{-- Actions --}}
+        <div class="flex gap-3">
+            <button type="button"
+                    onclick="closeDocDeleteModal()"
+                    class="flex-1 h-10 rounded-xl border border-[color:var(--tw-border)] text-sm font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
+                Cancel
+            </button>
+            <button type="button"
+                    id="doc-delete-confirm-btn"
+                    onclick="submitDocDelete()"
+                    class="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition"
+                    style="background:#ef4444">
+                Yes, delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _docDeleteId = null;
+
+function openDocDeleteModal(id, name) {
+    _docDeleteId = id;
+    document.getElementById('doc-delete-name').textContent = name;
+    const modal = document.getElementById('doc-delete-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDocDeleteModal() {
+    _docDeleteId = null;
+    const modal = document.getElementById('doc-delete-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+}
+
+function submitDocDelete() {
+    if (!_docDeleteId) return;
+    const btn = document.getElementById('doc-delete-confirm-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    document.getElementById('del-form-' + _docDeleteId).submit();
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeDocDeleteModal();
+});
+</script>
 @endsection
