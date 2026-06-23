@@ -27,6 +27,11 @@ class DocumentController extends Controller
         return view('documents.index', compact('documents'));
     }
 
+    public function create()
+    {
+        return view('documents.create');
+    }
+
     public function store(Request $request)
     {
         $request->validate([

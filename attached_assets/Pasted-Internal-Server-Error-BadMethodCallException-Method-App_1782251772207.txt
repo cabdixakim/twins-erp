@@ -1,0 +1,76 @@
+Internal Server Error
+
+BadMethodCallException
+Method App\Http\Controllers\DocumentController::create does not exist.
+GET 69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+PHP 8.2.23 — Laravel 11.46.1
+public/index.php :7
+use Illuminate\Http\Request;
+define('LARAVEL_START', microtime(true));
+require __DIR__.'/../vendor/autoload.php';
+$app = require __DIR__.'/../bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$response = $kernel->handle($request = Request::capture());
+$response->send();
+$kernel->terminate($request, $response);
+Request
+GET /documents/create
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6Im1jZUs0eU5GaFlkK1U2YUhDR294UHc9PSIsInZhbHVlIjoiZ0pIWXdRa2ZHSlpIalV2UE1ZLzE2QTIrZ05GU1RGSEhvck5RMkZ1Q1JwSll2QVNxY0tHTGxWVXRNY2MwMm42SEFQN1U3UmJxUlF4MWlxMVUwQ3lybngwVFZpaDdWQW5WTGs4SjZRR05BUVlCZk1NT0pSMTROUkc3UmJZdmRMY1giLCJtYWMiOiIxODI4YzBmZDE2NmNjN2JkYjk5NzRkOTVkYzQ4MmI5ZDg3OWUxNDFjMGNhYjQzNDgxYTY1MWY5OTYyYjU0ZmJmIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6IlpPVytkMjU5ZEVWUDF6ZHNkQU9acEE9PSIsInZhbHVlIjoibzhMUmVLZDVRajIyNldNYnpXSGd6QmlVc3g1N1F6eEQ4cHlVVzhxLys1WEZNbkN1ZlZIakFjT3JwMDJBTlJqcmpPbGNlRjhYQkd2UE95TkZ2UG1MZWU2YXdqVnJybXM1Tm02SDBBenNTSmRudWYxenhzVldXSUxOSndwMVRLRlUiLCJtYWMiOiJmNThmZTYyNzY2OGQwMGEwZGVjZjBhNDZlYWQ2YzM3MzgzNDUxMWY1MmJjMWY4NTk5NWFmZGIyY2Q1ZTY0OGM1IiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/documents
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.6.14, 10.56.8.77, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\DocumentController@create
+route name
+documents.create
+middleware
+web
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
