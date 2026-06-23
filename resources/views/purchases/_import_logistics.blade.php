@@ -393,7 +393,7 @@
                     @if(in_array('mark_at_border', $truckActions))
                       <button type="button"
                               onclick="openTruckModal('atBorderModal-{{ $truck->id }}')"
-                              class="h-8 px-3 rounded-xl border border-orange-600/50 bg-orange-600 text-xs font-bold text-white hover:bg-orange-500 transition shadow-sm">
+                              class="h-8 px-3 rounded-xl border text-xs font-bold transition shadow-sm btn-soft-orange">
                         At border →
                       </button>
                     @endif

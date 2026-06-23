@@ -12,7 +12,7 @@
 
     $statusMeta = [
         'in_transit'     => ['label' => 'In Transit',     'dot' => 'bg-amber-400',   'pill' => 'bg-amber-400/15 text-amber-400'],
-        'at_border'      => ['label' => 'At Border',      'dot' => 'bg-orange-400',  'pill' => 'bg-orange-400/15 text-orange-400'],
+        'at_border'      => ['label' => 'At Border',      'dot' => 'bg-orange-400',  'pill' => 's-orange'],
         'border_cleared' => ['label' => 'Border Cleared', 'dot' => 'bg-purple-400',  'pill' => 'bg-purple-400/15 text-purple-400'],
         'loaded'         => ['label' => 'Loaded',         'dot' => 'bg-blue-400',    'pill' => 'bg-blue-400/15 text-blue-400'],
         'nominated'      => ['label' => 'Nominated',      'dot' => 'bg-slate-400',   'pill' => 'bg-slate-400/15 text-slate-500 dark:text-slate-300'],
@@ -239,7 +239,7 @@
                             $purchase = $nom?->purchase;
                             $unitLabel = ($nom->volume_unit ?? 'L') === 'M3' ? 'M³' : 'L';
 
-                            $sm = $statusMeta[$truck->status] ?? ['label' => ucfirst($truck->status), 'dot' => 'bg-slate-400', 'pill' => 'bg-slate-400/15 text-slate-500 dark:text-slate-300'];
+                            $sm = $statusMeta[$truck->status] ?? ['label' => ucfirst($truck->status), 'dot' => 'bg-slate-400', 'pill' => 's-slate'];
 
                             if (! $truck->duty_rate_per_1000l && ! $truck->duty_amount) {
                                 $dutyKey = 'na';
