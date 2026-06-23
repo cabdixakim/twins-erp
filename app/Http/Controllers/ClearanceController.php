@@ -15,7 +15,7 @@ class ClearanceController extends Controller
         $duty   = $request->query('duty', 'all');   // 'all' | 'pending' | 'posted' | 'waived' | 'na'
         $search = trim($request->query('search', ''));
 
-        $statuses = ['all', 'nominated', 'loaded', 'in_transit', 'border_cleared', 'delivered', 'loading_failed'];
+        $statuses = ['all', 'nominated', 'loaded', 'in_transit', 'at_border', 'border_cleared', 'delivered', 'loading_failed'];
         if (! in_array($status, $statuses)) {
             $status = 'all';
         }
@@ -36,11 +36,19 @@ class ClearanceController extends Controller
             ->toArray();
 
         $totalCount      = array_sum($counts);
-        $atBorderCount   = $counts['border_cleared'] ?? 0;
+        $atBorderCount   = $counts['at_border'] ?? 0;
         $inTransitCount  = $counts['in_transit'] ?? 0;
 
+        // Trucks staged at border, grouped by border post (for the summary banner)
+        $borderPostGroups = (clone $companyScope)
+            ->where('status', 'at_border')
+            ->selectRaw("COALESCE(border_post, 'Unknown crossing') as post, count(*) as cnt, sum(qty_loaded) as vol")
+            ->groupBy('post')
+            ->orderByDesc('cnt')
+            ->get();
+
         $qtyInTransit = (clone $companyScope)
-            ->whereIn('status', ['loaded', 'in_transit'])
+            ->whereIn('status', ['loaded', 'in_transit', 'at_border'])
             ->sum('qty_loaded');
 
         $docsMissingCount = (clone $companyScope)
@@ -95,13 +103,14 @@ class ClearanceController extends Controller
         }
 
         $trucks = $base->orderByRaw("CASE status
-                WHEN 'in_transit'     THEN 1
-                WHEN 'border_cleared' THEN 2
-                WHEN 'loaded'         THEN 3
-                WHEN 'nominated'      THEN 4
-                WHEN 'delivered'      THEN 5
-                WHEN 'loading_failed' THEN 6
-                ELSE 7 END")
+                WHEN 'at_border'      THEN 1
+                WHEN 'in_transit'     THEN 2
+                WHEN 'border_cleared' THEN 3
+                WHEN 'loaded'         THEN 4
+                WHEN 'nominated'      THEN 5
+                WHEN 'delivered'      THEN 6
+                WHEN 'loading_failed' THEN 7
+                ELSE 8 END")
             ->orderByDesc('id')
             ->paginate(30)
             ->withQueryString();
@@ -109,7 +118,7 @@ class ClearanceController extends Controller
         return view('clearances.index', compact(
             'trucks', 'status', 'duty', 'search', 'counts', 'totalCount',
             'atBorderCount', 'inTransitCount', 'qtyInTransit',
-            'docsMissingCount', 'dutyPendingCount'
+            'docsMissingCount', 'dutyPendingCount', 'borderPostGroups'
         ));
     }
 }

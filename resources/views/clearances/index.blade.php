@@ -12,6 +12,7 @@
 
     $statusMeta = [
         'in_transit'     => ['label' => 'In Transit',     'dot' => 'bg-amber-400',   'pill' => 'bg-amber-400/15 text-amber-400'],
+        'at_border'      => ['label' => 'At Border',      'dot' => 'bg-orange-400',  'pill' => 'bg-orange-400/15 text-orange-400'],
         'border_cleared' => ['label' => 'Border Cleared', 'dot' => 'bg-purple-400',  'pill' => 'bg-purple-400/15 text-purple-400'],
         'loaded'         => ['label' => 'Loaded',         'dot' => 'bg-blue-400',    'pill' => 'bg-blue-400/15 text-blue-400'],
         'nominated'      => ['label' => 'Nominated',      'dot' => 'bg-slate-400',   'pill' => 'bg-slate-400/15 text-slate-500 dark:text-slate-300'],
@@ -28,6 +29,7 @@
 
     $tabs = [
         'all'            => ['label' => 'All',           'count' => $totalCount],
+        'at_border'      => ['label' => 'At Border',     'count' => $counts['at_border']      ?? 0],
         'in_transit'     => ['label' => 'In Transit',    'count' => $counts['in_transit']     ?? 0],
         'border_cleared' => ['label' => 'Border Cleared','count' => $counts['border_cleared'] ?? 0],
         'loaded'         => ['label' => 'Loaded',        'count' => $counts['loaded']         ?? 0],
@@ -47,18 +49,44 @@
         </div>
     </div>
 
+    {{-- BORDER POST GROUPING BANNER (only when trucks are staged at border) --}}
+    @if($borderPostGroups->isNotEmpty())
+    <div class="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-4">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+            <span class="text-sm font-semibold text-orange-400">{{ $borderPostGroups->sum('cnt') }} truck{{ $borderPostGroups->sum('cnt') == 1 ? '' : 's' }} staged at border — awaiting clearance</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            @foreach($borderPostGroups as $group)
+            <a href="{{ route('clearances.index', ['status' => 'at_border', 'search' => $group->post]) }}"
+               class="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 hover:bg-orange-500/20 transition-colors">
+                <svg class="w-3.5 h-3.5 text-orange-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span class="text-sm font-semibold text-orange-300">{{ $group->post }}</span>
+                <span class="text-xs text-orange-400/80">{{ $group->cnt }} truck{{ $group->cnt == 1 ? '' : 's' }}</span>
+                @if($group->vol)
+                <span class="text-xs text-orange-400/60">· {{ number_format($group->vol, 0) }} L</span>
+                @endif
+            </a>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- KPI CARDS --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
 
         {{-- At border --}}
-        <a href="{{ route('clearances.index', ['status' => 'border_cleared']) }}"
-           class="rounded-2xl border {{ $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:{{ $surface2 }} transition-colors">
+        <a href="{{ route('clearances.index', ['status' => 'at_border']) }}"
+           class="rounded-2xl border {{ $atBorderCount > 0 ? 'border-orange-500/40' : $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:{{ $surface2 }} transition-colors">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-medium {{ $muted }}">At Border</span>
-                <span class="w-2 h-2 rounded-full bg-purple-400 {{ $atBorderCount > 0 ? 'animate-pulse' : 'opacity-30' }}"></span>
+                <span class="w-2 h-2 rounded-full bg-orange-400 {{ $atBorderCount > 0 ? 'animate-pulse' : 'opacity-30' }}"></span>
             </div>
-            <div class="text-2xl font-bold {{ $atBorderCount > 0 ? 'text-purple-400' : $muted }}">{{ $atBorderCount }}</div>
-            <div class="text-xs {{ $muted }}">Pending clearance</div>
+            <div class="text-2xl font-bold {{ $atBorderCount > 0 ? 'text-orange-400' : $muted }}">{{ $atBorderCount }}</div>
+            <div class="text-xs {{ $muted }}">Staged, awaiting clearance</div>
         </a>
 
         {{-- In transit --}}
@@ -291,12 +319,14 @@
                                 @else
                                     <span class="{{ $muted }}">—</span>
                                 @endif
-                                @if($truck->status === 'border_cleared' && $truck->border_date)
-                                    @php $daysAtBorder = $truck->border_date->diffInDays(now()); @endphp
+                                @if($truck->status === 'at_border' && $truck->arrived_at_border_at)
+                                    @php $daysAtBorder = $truck->arrived_at_border_at->diffInDays(now()); @endphp
                                     @if($daysAtBorder >= 3)
-                                        <div class="text-xs text-rose-500 mt-0.5">{{ $daysAtBorder }}d stuck</div>
+                                        <div class="text-xs text-rose-500 font-semibold mt-0.5">{{ $daysAtBorder }}d waiting</div>
                                     @elseif($daysAtBorder > 0)
-                                        <div class="text-xs text-amber-500 mt-0.5">{{ $daysAtBorder }}d here</div>
+                                        <div class="text-xs text-orange-400 mt-0.5">{{ $daysAtBorder }}d here</div>
+                                    @else
+                                        <div class="text-xs text-orange-400 mt-0.5">today</div>
                                     @endif
                                 @endif
                             </td>

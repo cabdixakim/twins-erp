@@ -263,6 +263,31 @@ class ImportNominationController extends Controller
         return back()->with('status', "Truck {$truck->truck_reg} marked as in transit.");
     }
 
+    // ── Mark arrived at border ───────────────────────────────────────────────
+
+    public function markAtBorder(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
+    {
+        $this->authorise($purchase);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
+
+        if ($truck->status !== 'in_transit') {
+            return back()->with('error', "Truck {$truck->truck_reg} must be In Transit before marking arrived at border (currently: {$truck->statusLabel()}).");
+        }
+
+        $data = $request->validate([
+            'border_post'          => 'required|string|max:120',
+            'arrived_at_border_at' => 'nullable|date',
+        ]);
+
+        $truck->update([
+            'status'               => 'at_border',
+            'border_post'          => $data['border_post'],
+            'arrived_at_border_at' => $data['arrived_at_border_at'] ? now()->parse($data['arrived_at_border_at']) : now(),
+        ]);
+
+        return back()->with('status', "Truck {$truck->truck_reg} marked as arrived at {$data['border_post']}.");
+    }
+
     // ── Record border clearance ──────────────────────────────────────────────
 
     public function recordBorder(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
@@ -270,8 +295,8 @@ class ImportNominationController extends Controller
         $cid = $this->authorise($purchase);
         abort_if((int) $truck->nomination_id !== $nomination->id, 403);
 
-        if ($truck->status !== 'in_transit') {
-            return back()->with('error', "Truck {$truck->truck_reg} must be In Transit before recording border clearance (currently: {$truck->statusLabel()}).");
+        if ($truck->status !== 'at_border') {
+            return back()->with('error', "Truck {$truck->truck_reg} must be At Border before recording clearance (currently: {$truck->statusLabel()}).");
         }
 
         $data = $request->validate([
@@ -914,7 +939,7 @@ class ImportNominationController extends Controller
 
         $trucks = ImportTruck::where('nomination_id', $nomination->id)
             ->whereIn('id', $ids)
-            ->where('status', 'in_transit')
+            ->where('status', 'at_border')
             ->get();
 
         $now      = now();

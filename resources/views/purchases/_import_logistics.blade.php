@@ -147,6 +147,7 @@
     @php
       $loadedTrucksForBulk    = $trucks->where('status', 'loaded');
       $inTransitTrucksForBulk = $trucks->where('status', 'in_transit');
+      $atBorderTrucksForBulk  = $trucks->where('status', 'at_border');
     @endphp
 
     @if($loadedTrucksForBulk->isNotEmpty())
@@ -170,21 +171,21 @@
     </form>
     @endif
 
-    @if($inTransitTrucksForBulk->isNotEmpty())
+    @if($atBorderTrucksForBulk->isNotEmpty())
     <form method="POST"
           action="{{ route('purchases.import-nomination.trucks.bulk-border-cleared', [$purchase, $nom]) }}"
           id="bulkBorderClearedForm">
       @csrf
-      <div class="mx-4 mt-1 mb-1 flex items-center gap-2 p-2.5 rounded-xl border border-sky-500/30 bg-sky-500/8">
-        <svg class="h-3.5 w-3.5 shrink-0 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
-        <span class="text-xs font-semibold text-sky-700 dark:text-sky-400 flex-1">
-          {{ $inTransitTrucksForBulk->count() }} truck(s) in transit — awaiting border clearance
+      <div class="mx-4 mt-1 mb-1 flex items-center gap-2 p-2.5 rounded-xl border border-purple-500/30 bg-purple-500/8">
+        <svg class="h-3.5 w-3.5 shrink-0 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+        <span class="text-xs font-semibold text-purple-700 dark:text-purple-400 flex-1">
+          {{ $atBorderTrucksForBulk->count() }} truck(s) at border — ready for bulk clearance
         </span>
-        @foreach($inTransitTrucksForBulk as $it)
+        @foreach($atBorderTrucksForBulk as $it)
           <input type="hidden" name="truck_ids[]" value="{{ $it->id }}">
         @endforeach
         <button type="submit"
-                class="h-7 px-3 rounded-lg border border-sky-500/40 bg-sky-600/10 text-[11px] font-semibold text-sky-700 dark:text-sky-400 hover:bg-sky-600/20 transition whitespace-nowrap">
+                class="h-7 px-3 rounded-lg border border-purple-500/40 bg-purple-600/10 text-[11px] font-semibold text-purple-700 dark:text-purple-400 hover:bg-purple-600/20 transition whitespace-nowrap">
           Mark all border cleared
         </button>
       </div>
@@ -386,6 +387,14 @@
                               onclick="openInTransitModal(this)"
                               class="h-8 px-3 rounded-xl border border-amber-600/50 bg-amber-600 text-xs font-bold text-white hover:bg-amber-500 transition shadow-sm">
                         In transit →
+                      </button>
+                    @endif
+
+                    @if(in_array('mark_at_border', $truckActions))
+                      <button type="button"
+                              onclick="openTruckModal('atBorderModal-{{ $truck->id }}')"
+                              class="h-8 px-3 rounded-xl border border-orange-600/50 bg-orange-600 text-xs font-bold text-white hover:bg-orange-500 transition shadow-sm">
+                        At border →
                       </button>
                     @endif
 
@@ -956,8 +965,49 @@
   </div>
   @endif
 
-  {{-- Border clearance modal --}}
+  {{-- Mark arrived at border modal --}}
   @if($truck->status === 'in_transit')
+  <div id="atBorderModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+        <div>
+          <div class="text-base font-semibold {{ $fg }}">Arrived at border — {{ $truck->truck_reg }}</div>
+          <div class="text-xs {{ $muted }} mt-0.5">Stage this truck at a border crossing</div>
+        </div>
+        <button type="button" onclick="closeTruckModal('atBorderModal-{{ $truck->id }}')"
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+      </div>
+      <form method="POST"
+            action="{{ route('purchases.import-nomination.trucks.mark-at-border', [$purchase, $nom, $truck]) }}">
+        @csrf
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Border post / crossing <span class="text-rose-400">*</span></label>
+            <input type="text" name="border_post" maxlength="120" required autofocus
+                   placeholder="e.g. Kasumbalesa, Chirundu, Beit Bridge…"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+            <p class="text-xs {{ $muted }} mt-1">Name of the border post where the truck is waiting.</p>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Arrival date at border</label>
+            <input type="date" name="arrived_at_border_at"
+                   value="{{ date('Y-m-d') }}"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+          </div>
+        </div>
+        <div class="p-4 pt-0">
+          <button type="submit"
+                  class="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold transition">
+            Mark arrived at border
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  @endif
+
+  {{-- Border clearance modal --}}
+  @if($truck->status === 'at_border')
   <div id="borderModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
     <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
       <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
@@ -969,13 +1019,16 @@
             action="{{ route('purchases.import-nomination.trucks.record-border', [$purchase, $nom, $truck]) }}">
         @csrf
         <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
-          <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Border post / crossing</label>
-            <input type="text" name="border_post" maxlength="120"
-                   value="{{ old('border_post', $truck->border_post ?? '') }}"
-                   placeholder="e.g. Kasumbalesa, Chirundu, Beit Bridge…"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          @if($truck->border_post)
+          <div class="flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/8 px-3 py-2">
+            <svg class="w-3.5 h-3.5 text-orange-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span class="text-sm font-semibold text-orange-400">{{ $truck->border_post }}</span>
+            <span class="text-xs {{ $muted }}">border crossing</span>
           </div>
+          @endif
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">TR8 number</label>
@@ -1943,7 +1996,7 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   // ESC closes all truck modals
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], [id^="quickDeliverModal-"], #addTruckModal, #nominationModal, #importTrucksModal, #bulkQuickPostModal')
+    document.querySelectorAll('[id^="loadModal-"], [id^="failLoadModal-"], [id^="atBorderModal-"], [id^="borderModal-"], [id^="deliveryModal-"], [id^="editTruckModal-"], [id^="quickDeliverModal-"], #addTruckModal, #nominationModal, #importTrucksModal, #bulkQuickPostModal')
       .forEach(el => el.classList.add('hidden'));
     document.documentElement.classList.remove('overflow-hidden');
   });

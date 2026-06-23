@@ -262,6 +262,10 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             [ImportNominationController::class, 'markInTransit'])
             ->name('purchases.import-nomination.trucks.mark-in-transit');
 
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/mark-at-border',
+            [ImportNominationController::class, 'markAtBorder'])
+            ->name('purchases.import-nomination.trucks.mark-at-border');
+
         Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/record-border',
             [ImportNominationController::class, 'recordBorder'])
             ->name('purchases.import-nomination.trucks.record-border');
