@@ -278,6 +278,7 @@ class ImportNominationController extends Controller
             'tr8_number'             => 'nullable|string|max:80',
             't1_number'              => 'nullable|string|max:80',
             'border_date'            => 'required|date',
+            'border_post'            => 'nullable|string|max:120',
             'waive_duty'             => 'nullable|boolean',
             'duty_vendor_type'       => ['nullable', Rule::in(['customs_authority', 'supplier', 'depot', 'transporter', 'self', ''])],
             'duty_vendor_id'         => 'nullable|integer',
@@ -337,6 +338,7 @@ class ImportNominationController extends Controller
             $truck->update(array_merge($otherChargesFields, [
                 'status'           => 'border_cleared',
                 'border_date'      => $data['border_date'],
+                'border_post'      => $data['border_post'] ?? null,
                 'tr8_number'       => $data['tr8_number'] ?? null,
                 't1_number'        => $data['t1_number'] ?? null,
                 'duty_status'      => 'waived',

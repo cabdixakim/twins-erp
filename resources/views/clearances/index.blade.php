@@ -195,7 +195,8 @@
                             <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Product</th>
                             <th class="text-right font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Qty Loaded</th>
                             <th class="text-right font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Qty Delivered</th>
-                            <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Border Date</th>
+                            <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Border</th>
+                            <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Date</th>
                             <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">TR8</th>
                             <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">T1</th>
                             <th class="text-left font-semibold {{ $muted }} px-3 py-3 whitespace-nowrap">Duty</th>
@@ -280,6 +281,23 @@
                                     @endif
                                 @else
                                     <span class="{{ $muted }}">—</span>
+                                @endif
+                            </td>
+
+                            {{-- Border post --}}
+                            <td class="px-3 py-3">
+                                @if($truck->border_post)
+                                    <span class="{{ $fg }} text-xs font-medium">{{ $truck->border_post }}</span>
+                                @else
+                                    <span class="{{ $muted }}">—</span>
+                                @endif
+                                @if($truck->status === 'border_cleared' && $truck->border_date)
+                                    @php $daysAtBorder = $truck->border_date->diffInDays(now()); @endphp
+                                    @if($daysAtBorder >= 3)
+                                        <div class="text-xs text-rose-500 mt-0.5">{{ $daysAtBorder }}d stuck</div>
+                                    @elseif($daysAtBorder > 0)
+                                        <div class="text-xs text-amber-500 mt-0.5">{{ $daysAtBorder }}d here</div>
+                                    @endif
                                 @endif
                             </td>
 

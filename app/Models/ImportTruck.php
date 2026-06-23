@@ -29,6 +29,7 @@ class ImportTruck extends Model
         'tr8_number',
         't1_number',
         'border_date',
+        'border_post',
         'depot_id',
         'qty_delivered',
         'delivery_date',

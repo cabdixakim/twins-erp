@@ -968,7 +968,14 @@
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.record-border', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4">
+        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Border post / crossing</label>
+            <input type="text" name="border_post" maxlength="120"
+                   value="{{ old('border_post', $truck->border_post ?? '') }}"
+                   placeholder="e.g. Kasumbalesa, Chirundu, Beit Bridge…"
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">TR8 number</label>
@@ -1178,7 +1185,7 @@
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.record-delivery', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4">
+        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid grid-cols-2 gap-2 text-xs">
             <div>
               <div class="{{ $muted }}">Loaded</div>
@@ -1252,7 +1259,7 @@
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.quick-load-deliver', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4">
+        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty loaded ({{ $unitLabel }}) <span class="text-rose-400">*</span></label>

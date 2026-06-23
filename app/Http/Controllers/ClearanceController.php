@@ -89,6 +89,7 @@ class ClearanceController extends Controller
                   ->orWhere('trailer_reg', 'ilike', "%{$search}%")
                   ->orWhere('tr8_number',  'ilike', "%{$search}%")
                   ->orWhere('t1_number',   'ilike', "%{$search}%")
+                  ->orWhere('border_post', 'ilike', "%{$search}%")
                   ->orWhereHas('nomination.purchase', fn($q2) => $q2->where('reference', 'ilike', "%{$search}%"));
             });
         }
