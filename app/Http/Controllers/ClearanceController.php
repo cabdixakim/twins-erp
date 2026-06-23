@@ -19,14 +19,51 @@ class ClearanceController extends Controller
             $status = 'all';
         }
 
-        $base = ImportTruck::query()
-            ->whereHas('nomination', fn($q) => $q->whereHas('purchase', fn($q2) => $q2->where('company_id', $cid)))
-            ->with([
-                'nomination.purchase.product',
-                'nomination.purchase.supplier',
-                'nomination.transporter',
-                'depot',
-            ]);
+        // Scope: all trucks belonging to this company's nominations/purchases
+        $companyScope = ImportTruck::query()
+            ->whereHas('nomination', fn($q) => $q->whereHas('purchase', fn($q2) => $q2->where('company_id', $cid)));
+
+        // -- KPI aggregates (unfiltered by status/search) --
+        $counts = (clone $companyScope)
+            ->selectRaw("status, count(*) as cnt")
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->toArray();
+
+        $totalCount = array_sum($counts);
+
+        // Trucks at border waiting to be delivered (border_cleared status)
+        $atBorderCount = $counts['border_cleared'] ?? 0;
+
+        // Trucks in transit (loaded and moving)
+        $inTransitCount = $counts['in_transit'] ?? 0;
+
+        // Total qty in transit (loaded + in_transit have qty_loaded but not yet delivered)
+        $qtyInTransit = (clone $companyScope)
+            ->whereIn('status', ['loaded', 'in_transit'])
+            ->sum('qty_loaded');
+
+        // Docs missing — border_cleared or delivered but TR8 or T1 not recorded
+        $docsMissingCount = (clone $companyScope)
+            ->whereIn('status', ['border_cleared', 'delivered'])
+            ->where(fn($q) => $q->whereNull('tr8_number')->orWhereNull('t1_number'))
+            ->count();
+
+        // Duty pending — has a rate or amount recorded but not yet posted
+        $dutyPendingCount = (clone $companyScope)
+            ->where(function ($q) {
+                $q->where(fn($q2) => $q2->where('duty_amount', '>', 0)->where(fn($q3) => $q3->whereNull('duty_status')->orWhere('duty_status', '!=', 'posted')))
+                  ->orWhere(fn($q2) => $q2->where('duty_rate_per_1000l', '>', 0)->whereNull('duty_amount'));
+            })
+            ->count();
+
+        // -- Filtered/searched query for the table --
+        $base = (clone $companyScope)->with([
+            'nomination.purchase.product',
+            'nomination.purchase.supplier',
+            'nomination.transporter',
+            'depot',
+        ]);
 
         if ($status !== 'all') {
             $base->where('status', $status);
@@ -34,10 +71,10 @@ class ClearanceController extends Controller
 
         if ($search !== '') {
             $base->where(function ($q) use ($search) {
-                $q->where('truck_reg',   'ilike', "%{$search}%")
+                $q->where('truck_reg',    'ilike', "%{$search}%")
                   ->orWhere('trailer_reg', 'ilike', "%{$search}%")
-                  ->orWhere('tr8_number', 'ilike', "%{$search}%")
-                  ->orWhere('t1_number',  'ilike', "%{$search}%")
+                  ->orWhere('tr8_number',  'ilike', "%{$search}%")
+                  ->orWhere('t1_number',   'ilike', "%{$search}%")
                   ->orWhereHas('nomination.purchase', fn($q2) => $q2->where('reference', 'ilike', "%{$search}%"));
             });
         }
@@ -54,15 +91,10 @@ class ClearanceController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        $counts = ImportTruck::query()
-            ->whereHas('nomination', fn($q) => $q->whereHas('purchase', fn($q2) => $q2->where('company_id', $cid)))
-            ->selectRaw("status, count(*) as cnt")
-            ->groupBy('status')
-            ->pluck('cnt', 'status')
-            ->toArray();
-
-        $totalCount = array_sum($counts);
-
-        return view('clearances.index', compact('trucks', 'status', 'search', 'counts', 'totalCount'));
+        return view('clearances.index', compact(
+            'trucks', 'status', 'search', 'counts', 'totalCount',
+            'atBorderCount', 'inTransitCount', 'qtyInTransit',
+            'docsMissingCount', 'dutyPendingCount'
+        ));
     }
 }

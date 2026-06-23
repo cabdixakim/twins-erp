@@ -50,6 +50,76 @@
         </div>
     </div>
 
+    {{-- KPI CARDS --}}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+
+        {{-- At border --}}
+        <a href="{{ route('clearances.index', ['status' => 'border_cleared']) }}"
+           class="rounded-2xl border {{ $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:bg-white/5 transition-colors group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium {{ $muted }}">At Border</span>
+                <span class="w-2 h-2 rounded-full bg-purple-400 {{ $atBorderCount > 0 ? 'animate-pulse' : 'opacity-40' }}"></span>
+            </div>
+            <div class="text-2xl font-bold {{ $atBorderCount > 0 ? 'text-purple-300' : $muted }}">{{ $atBorderCount }}</div>
+            <div class="text-xs {{ $muted }}">Pending clearance</div>
+        </a>
+
+        {{-- In transit --}}
+        <a href="{{ route('clearances.index', ['status' => 'in_transit']) }}"
+           class="rounded-2xl border {{ $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:bg-white/5 transition-colors group">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium {{ $muted }}">In Transit</span>
+                <span class="w-2 h-2 rounded-full bg-amber-400 {{ $inTransitCount > 0 ? 'animate-pulse' : 'opacity-40' }}"></span>
+            </div>
+            <div class="text-2xl font-bold {{ $inTransitCount > 0 ? 'text-amber-300' : $muted }}">{{ $inTransitCount }}</div>
+            <div class="text-xs {{ $muted }}">Trucks en route</div>
+        </a>
+
+        {{-- Qty in transit --}}
+        <a href="{{ route('clearances.index', ['status' => 'in_transit']) }}"
+           class="rounded-2xl border {{ $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:bg-white/5 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium {{ $muted }}">Vol. Moving</span>
+                <svg class="w-3.5 h-3.5 {{ $muted }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414A1 1 0 0121 11.414V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                </svg>
+            </div>
+            <div class="text-2xl font-bold {{ $qtyInTransit > 0 ? $fg : $muted }}">{{ number_format($qtyInTransit, 0) }}</div>
+            <div class="text-xs {{ $muted }}">Loaded + in transit</div>
+        </a>
+
+        {{-- Docs missing --}}
+        <a href="{{ route('clearances.index', ['status' => 'border_cleared']) }}"
+           class="rounded-2xl border {{ $docsMissingCount > 0 ? 'border-rose-500/30' : $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:bg-white/5 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium {{ $muted }}">Docs Missing</span>
+                @if($docsMissingCount > 0)
+                    <svg class="w-3.5 h-3.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                @endif
+            </div>
+            <div class="text-2xl font-bold {{ $docsMissingCount > 0 ? 'text-rose-400' : $muted }}">{{ $docsMissingCount }}</div>
+            <div class="text-xs {{ $muted }}">TR8 / T1 not recorded</div>
+        </a>
+
+        {{-- Duty pending --}}
+        <a href="{{ route('clearances.index') }}"
+           class="rounded-2xl border {{ $dutyPendingCount > 0 ? 'border-amber-500/30' : $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:bg-white/5 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium {{ $muted }}">Duty Pending</span>
+                @if($dutyPendingCount > 0)
+                    <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                @endif
+            </div>
+            <div class="text-2xl font-bold {{ $dutyPendingCount > 0 ? 'text-amber-300' : $muted }}">{{ $dutyPendingCount }}</div>
+            <div class="text-xs {{ $muted }}">Awaiting duty post</div>
+        </a>
+
+    </div>
+
     {{-- SEARCH + FILTER BAR --}}
     <form method="GET" action="{{ route('clearances.index') }}" class="flex flex-col sm:flex-row gap-3">
         <input type="hidden" name="status" value="{{ $status }}">
