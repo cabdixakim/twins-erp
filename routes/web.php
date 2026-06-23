@@ -200,6 +200,9 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
         Route::patch('/products/{product}', [ProductController::class, 'update'])->name('products.update');
         Route::patch('/products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
 
+        // Clearances
+        Route::get('/clearances', [\App\Http\Controllers\ClearanceController::class, 'index'])->name('clearances.index');
+
         // Purchases (was ago-purchases)
         Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
         Route::get('/purchases/export', [PurchaseController::class, 'exportCsv'])->name('purchases.export');
