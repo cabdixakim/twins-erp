@@ -59,15 +59,15 @@
         <div class="flex flex-wrap gap-2">
             @foreach($borderPostGroups as $group)
             <a href="{{ route('clearances.index', ['status' => 'at_border', 'search' => $group->post]) }}"
-               class="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 hover:bg-orange-500/20 transition-colors">
-                <svg class="w-3.5 h-3.5 text-orange-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               class="inline-flex items-center gap-2 rounded-xl border border-orange-500/40 bg-orange-500/15 px-3 py-1.5 hover:bg-orange-500/25 transition-colors">
+                <svg class="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                <span class="text-sm font-semibold text-orange-300">{{ $group->post }}</span>
-                <span class="text-xs text-orange-400/80">{{ $group->cnt }} truck{{ $group->cnt == 1 ? '' : 's' }}</span>
+                <span class="text-sm font-semibold text-orange-700 dark:text-orange-300">{{ $group->post }}</span>
+                <span class="text-xs text-orange-600 dark:text-orange-400">{{ $group->cnt }} truck{{ $group->cnt == 1 ? '' : 's' }}</span>
                 @if($group->vol)
-                <span class="text-xs text-orange-400/60">· {{ number_format($group->vol, 0) }} L</span>
+                <span class="text-xs text-orange-500 dark:text-orange-500/70">· {{ number_format($group->vol, 0) }} L</span>
                 @endif
             </a>
             @endforeach
