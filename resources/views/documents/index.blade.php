@@ -91,14 +91,14 @@
                             </span>
                         </td>
                         <td class="px-3 py-3 hidden md:table-cell">
-                            @php $morphed = $doc->documentable @endphp
+                            @php $morphed = $doc->documentable_id ? $doc->documentable : null @endphp
                             @if($morphed instanceof \App\Models\ImportTruck)
                                 <div class="text-xs {{ $fg }}">Truck: {{ $morphed->truck_reg }}</div>
                                 <div class="text-xs {{ $muted }}">{{ $morphed->nomination?->purchase?->reference ?? '—' }}</div>
                             @elseif($morphed instanceof \App\Models\Purchase)
                                 <div class="text-xs {{ $fg }}">Purchase: {{ $morphed->reference }}</div>
                             @else
-                                <span class="{{ $muted }}">—</span>
+                                <span class="text-xs {{ $muted }}">Standalone</span>
                             @endif
                         </td>
                         <td class="px-3 py-3 hidden md:table-cell">

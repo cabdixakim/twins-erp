@@ -29,15 +29,28 @@ class DocumentController extends Controller
 
     public function create()
     {
-        return view('documents.create');
+        $companyId = auth()->user()->active_company_id;
+
+        $trucks = \App\Models\ImportTruck::whereHas('nomination.purchase', fn($q) =>
+                $q->where('company_id', $companyId))
+            ->with(['nomination.purchase'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $purchases = \App\Models\Purchase::where('company_id', $companyId)
+            ->whereIn('status', ['confirmed','nominated','received','transferred','dispatched','border_cleared'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('documents.create', compact('trucks', 'purchases'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'file'              => 'required|file|max:20480|mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx',
-            'documentable_type' => 'required|string',
-            'documentable_id'   => 'required|integer',
+            'attach_to'         => 'nullable|in:truck,purchase',
+            'documentable_id'   => 'nullable|integer',
             'category'          => 'required|in:tr8,t1,customs,invoice,permit,contract,other',
             'name'              => 'nullable|string|max:255',
         ]);
@@ -45,13 +58,28 @@ class DocumentController extends Controller
         $companyId = auth()->user()->active_company_id;
         $file      = $request->file('file');
 
+        // Resolve morph target
+        $morphType = null;
+        $morphId   = null;
+        if ($request->filled('attach_to') && $request->filled('documentable_id')) {
+            if ($request->attach_to === 'truck') {
+                $model = \App\Models\ImportTruck::findOrFail($request->documentable_id);
+                $morphType = \App\Models\ImportTruck::class;
+                $morphId   = $model->id;
+            } elseif ($request->attach_to === 'purchase') {
+                $model = \App\Models\Purchase::where('company_id', $companyId)->findOrFail($request->documentable_id);
+                $morphType = \App\Models\Purchase::class;
+                $morphId   = $model->id;
+            }
+        }
+
         $yearMonth = now()->format('Y/m');
         $path = $file->store("documents/{$companyId}/{$yearMonth}", 'local');
 
         $doc = Document::create([
             'company_id'        => $companyId,
-            'documentable_type' => $request->documentable_type,
-            'documentable_id'   => (int) $request->documentable_id,
+            'documentable_type' => $morphType,
+            'documentable_id'   => $morphId,
             'name'              => $request->filled('name') ? $request->name : $file->getClientOriginalName(),
             'original_name'     => $file->getClientOriginalName(),
             'file_path'         => $path,
