@@ -658,7 +658,7 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate / 1000L</label>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate / 1000{{ $unitLabel }}</label>
               <input type="number" name="default_duty_rate_per_1000l" step="0.0001" min="0"
                      value="{{ $nom?->default_duty_rate_per_1000l ?? '' }}"
                      placeholder="0.0000"
@@ -1099,7 +1099,7 @@
             <div class="grid grid-cols-3 gap-3" id="dutyFieldsGrid-{{ $truck->id }}">
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">
-                  Rate / 1000L
+                  Rate / 1000{{ $unitLabel }}
                   @if($purchase->product_id)
                   <button type="button" onclick="autoFillDutyRate({{ $truck->id }}, {{ $purchase->product_id }})"
                           class="ml-1 text-[10px] text-[color:var(--tw-accent)] hover:underline font-normal">auto-fill</button>
