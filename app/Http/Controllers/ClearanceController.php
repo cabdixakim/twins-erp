@@ -12,52 +12,51 @@ class ClearanceController extends Controller
     {
         $cid    = auth()->user()->active_company_id;
         $status = $request->query('status', 'all');
+        $duty   = $request->query('duty', 'all');   // 'all' | 'pending' | 'posted' | 'waived' | 'na'
         $search = trim($request->query('search', ''));
 
         $statuses = ['all', 'nominated', 'loaded', 'in_transit', 'border_cleared', 'delivered', 'loading_failed'];
         if (! in_array($status, $statuses)) {
             $status = 'all';
         }
+        $dutyFilters = ['all', 'pending', 'posted', 'waived', 'na'];
+        if (! in_array($duty, $dutyFilters)) {
+            $duty = 'all';
+        }
 
-        // Scope: all trucks belonging to this company's nominations/purchases
+        // Base scope: all trucks for this company
         $companyScope = ImportTruck::query()
             ->whereHas('nomination', fn($q) => $q->whereHas('purchase', fn($q2) => $q2->where('company_id', $cid)));
 
-        // -- KPI aggregates (unfiltered by status/search) --
+        // -- KPI aggregates (always unfiltered) --
         $counts = (clone $companyScope)
             ->selectRaw("status, count(*) as cnt")
             ->groupBy('status')
             ->pluck('cnt', 'status')
             ->toArray();
 
-        $totalCount = array_sum($counts);
+        $totalCount      = array_sum($counts);
+        $atBorderCount   = $counts['border_cleared'] ?? 0;
+        $inTransitCount  = $counts['in_transit'] ?? 0;
 
-        // Trucks at border waiting to be delivered (border_cleared status)
-        $atBorderCount = $counts['border_cleared'] ?? 0;
-
-        // Trucks in transit (loaded and moving)
-        $inTransitCount = $counts['in_transit'] ?? 0;
-
-        // Total qty in transit (loaded + in_transit have qty_loaded but not yet delivered)
         $qtyInTransit = (clone $companyScope)
             ->whereIn('status', ['loaded', 'in_transit'])
             ->sum('qty_loaded');
 
-        // Docs missing — border_cleared or delivered but TR8 or T1 not recorded
         $docsMissingCount = (clone $companyScope)
             ->whereIn('status', ['border_cleared', 'delivered'])
             ->where(fn($q) => $q->whereNull('tr8_number')->orWhereNull('t1_number'))
             ->count();
 
-        // Duty pending — has a rate or amount recorded but not yet posted
         $dutyPendingCount = (clone $companyScope)
-            ->where(function ($q) {
-                $q->where(fn($q2) => $q2->where('duty_amount', '>', 0)->where(fn($q3) => $q3->whereNull('duty_status')->orWhere('duty_status', '!=', 'posted')))
-                  ->orWhere(fn($q2) => $q2->where('duty_rate_per_1000l', '>', 0)->whereNull('duty_amount'));
-            })
+            ->where(fn($q) => $q
+                ->where(fn($q2) => $q2->where('duty_amount', '>', 0)
+                    ->where(fn($q3) => $q3->whereNull('duty_status')->orWhere('duty_status', '!=', 'posted')))
+                ->orWhere(fn($q2) => $q2->where('duty_rate_per_1000l', '>', 0)->whereNull('duty_amount'))
+            )
             ->count();
 
-        // -- Filtered/searched query for the table --
+        // -- Filtered query for the table --
         $base = (clone $companyScope)->with([
             'nomination.purchase.product',
             'nomination.purchase.supplier',
@@ -67,6 +66,21 @@ class ClearanceController extends Controller
 
         if ($status !== 'all') {
             $base->where('status', $status);
+        }
+
+        // Duty filter
+        if ($duty === 'pending') {
+            $base->where(fn($q) => $q
+                ->where(fn($q2) => $q2->where('duty_amount', '>', 0)
+                    ->where(fn($q3) => $q3->whereNull('duty_status')->orWhere('duty_status', '!=', 'posted')))
+                ->orWhere(fn($q2) => $q2->where('duty_rate_per_1000l', '>', 0)->whereNull('duty_amount'))
+            );
+        } elseif ($duty === 'posted') {
+            $base->where('duty_status', 'posted');
+        } elseif ($duty === 'waived') {
+            $base->where('duty_amount', 0)->where('duty_rate_per_1000l', 0);
+        } elseif ($duty === 'na') {
+            $base->whereNull('duty_rate_per_1000l')->whereNull('duty_amount');
         }
 
         if ($search !== '') {
@@ -92,7 +106,7 @@ class ClearanceController extends Controller
             ->withQueryString();
 
         return view('clearances.index', compact(
-            'trucks', 'status', 'search', 'counts', 'totalCount',
+            'trucks', 'status', 'duty', 'search', 'counts', 'totalCount',
             'atBorderCount', 'inTransitCount', 'qtyInTransit',
             'docsMissingCount', 'dutyPendingCount'
         ));

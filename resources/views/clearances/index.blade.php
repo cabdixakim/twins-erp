@@ -101,8 +101,8 @@
         </a>
 
         {{-- Duty pending --}}
-        <a href="{{ route('clearances.index') }}"
-           class="rounded-2xl border {{ $dutyPendingCount > 0 ? 'border-amber-500/40' : $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:{{ $surface2 }} transition-colors">
+        <a href="{{ route('clearances.index', ['duty' => 'pending']) }}"
+           class="rounded-2xl border {{ $dutyPendingCount > 0 ? 'border-amber-500/40' : $border }} {{ $surface }} p-4 flex flex-col gap-1 hover:{{ $surface2 }} transition-colors {{ $duty === 'pending' ? 'ring-2 ring-amber-500/40' : '' }}">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-medium {{ $muted }}">Duty Pending</span>
                 @if($dutyPendingCount > 0)
@@ -117,9 +117,24 @@
 
     </div>
 
+    {{-- ACTIVE DUTY FILTER CHIP --}}
+    @if($duty !== 'all')
+    <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-medium bg-amber-400/15 text-amber-500 dark:text-amber-300 border border-amber-500/30">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            Duty: {{ ucfirst($duty) }}
+        </span>
+        <a href="{{ route('clearances.index', array_filter(['status' => $status !== 'all' ? $status : null, 'search' => $search ?: null])) }}"
+           class="text-xs {{ $muted }} hover:text-[color:var(--tw-fg)] transition-colors">
+            ✕ Clear filter
+        </a>
+    </div>
+    @endif
+
     {{-- SEARCH + FILTER BAR --}}
     <form method="GET" action="{{ route('clearances.index') }}" class="flex flex-col sm:flex-row gap-3">
         <input type="hidden" name="status" value="{{ $status }}">
+        <input type="hidden" name="duty" value="{{ $duty }}">
         <div class="relative flex-1 max-w-sm">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 {{ $muted }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
@@ -130,7 +145,7 @@
                    onchange="this.form.submit()">
         </div>
         @if($search)
-            <a href="{{ route('clearances.index', ['status' => $status]) }}"
+            <a href="{{ route('clearances.index', array_filter(['status' => $status !== 'all' ? $status : null, 'duty' => $duty !== 'all' ? $duty : null])) }}"
                class="flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm {{ $muted }} {{ $surface2 }} border {{ $border }} hover:{{ $fg }} transition-colors">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 Clear
@@ -142,7 +157,7 @@
     <div class="flex gap-1 flex-wrap">
         @foreach($tabs as $key => $tab)
             @if($tab['count'] > 0 || $key === 'all')
-            <a href="{{ route('clearances.index', array_filter(['status' => $key === 'all' ? null : $key, 'search' => $search ?: null])) }}"
+            <a href="{{ route('clearances.index', array_filter(['status' => $key === 'all' ? null : $key, 'duty' => $duty !== 'all' ? $duty : null, 'search' => $search ?: null])) }}"
                class="flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-medium transition-colors
                       {{ $status === $key
                            ? $surface2.' '.$fg
