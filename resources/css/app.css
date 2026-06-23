@@ -406,7 +406,7 @@ html.dark .alert-warn { border-color:rgba(253,230,138,.60); background:rgba(245,
    ========================= */
 .btn-soft-green  { background:rgba(16,185,129,.10);  border-color:rgba(52,211,153,.40);  color:#047857; }
 .btn-soft-amber  { background:rgba(245,158,11,.10);  border-color:rgba(251,191,36,.40);  color:#92400e; }
-.btn-soft-orange { background:rgba(249,115,22,.10);  border-color:rgba(234,88,12,.40);   color:#9a3412; }
+.btn-soft-orange { background:rgba(249,115,22,.18);  border-color:rgba(234,88,12,.55);   color:#7c2d12; }
 .btn-soft-blue   { background:rgba(59,130,246,.10);  border-color:rgba(96,165,250,.40);  color:#1e40af; }
 .btn-soft-rose   { background:rgba(239,68,68,.10);   border-color:rgba(252,165,165,.40); color:#991b1b; }
 .btn-soft-purple { background:rgba(168,85,247,.10);  border-color:rgba(216,180,254,.40); color:#6b21a8; }
@@ -420,7 +420,7 @@ html.dark .btn-soft-purple { background:rgba(168,85,247,.22);  border-color:rgba
 
 .btn-soft-green:hover  { background:rgba(16,185,129,.20); }
 .btn-soft-amber:hover  { background:rgba(245,158,11,.20); }
-.btn-soft-orange:hover { background:rgba(249,115,22,.20); }
+.btn-soft-orange:hover { background:rgba(249,115,22,.28); }
 .btn-soft-blue:hover   { background:rgba(59,130,246,.20); }
 .btn-soft-rose:hover   { background:rgba(239,68,68,.20);  }
 .btn-soft-purple:hover { background:rgba(168,85,247,.20); }
