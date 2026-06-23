@@ -72,6 +72,14 @@ class ImportNominationController extends Controller
 
         $this->syncAdvanceEntry($cid, $nom, $data);
 
+        \App\Models\AuditLog::record(
+            'nominated',
+            "Import nomination created for purchase {$purchase->reference} (transporter rate: {$data['rate_per_1000l']} {$data['currency']}/1000L).",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'info',
+            after: ['rate_per_1000l' => $data['rate_per_1000l'], 'currency' => $data['currency'], 'allowed_loss_pct' => $data['allowed_loss_pct']],
+        );
+
         return back()->with('status', 'Import nomination created. You can now add trucks.');
     }
 
@@ -159,12 +167,20 @@ class ImportNominationController extends Controller
             ];
         }
 
-        ImportTruck::create(array_merge($data, $dutyDefaults, [
+        $truck = ImportTruck::create(array_merge($data, $dutyDefaults, [
             'company_id'    => $cid,
             'nomination_id' => $nomination->id,
             'status'        => 'nominated',
             'created_by'    => auth()->id(),
         ]));
+
+        \App\Models\AuditLog::record(
+            'created',
+            "Truck {$data['truck_reg']} added to purchase {$purchase->reference} (capacity: {$data['capacity']}).",
+            $truck, "Truck {$data['truck_reg']} · {$purchase->reference}",
+            severity: 'info',
+            after: ['truck_reg' => $data['truck_reg'], 'capacity' => $data['capacity'], 'driver' => $data['driver_name'] ?? null],
+        );
 
         return back()->with('status', "Truck {$data['truck_reg']} added.");
     }
@@ -231,6 +247,14 @@ class ImportNominationController extends Controller
 
         $truck->update(array_merge($data, ['status' => 'loaded']));
 
+        \App\Models\AuditLog::record(
+            'updated',
+            "Truck {$truck->truck_reg} loaded: {$data['qty_loaded']} L at {$data['pickup_terminal']} on {$data['pickup_date']} · {$purchase->reference}.",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'loaded', 'qty_loaded' => $data['qty_loaded'], 'pickup_date' => $data['pickup_date'], 'pickup_terminal' => $data['pickup_terminal'] ?? null],
+        );
+
         return back()->with('status', "Load recorded: {$data['qty_loaded']} L on {$data['pickup_date']}.");
     }
 
@@ -243,6 +267,14 @@ class ImportNominationController extends Controller
         abort_if($truck->status !== 'nominated', 422, 'Only nominated trucks can be marked as load-failed.');
 
         $truck->update(['status' => 'loading_failed', 'load_notes' => $request->input('load_notes')]);
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Truck {$truck->truck_reg} loading failed · {$purchase->reference}. Reason: " . ($request->input('load_notes') ?: 'none provided') . ".",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'warning',
+            after: ['status' => 'loading_failed', 'notes' => $request->input('load_notes')],
+        );
 
         return back()->with('status', "Truck {$truck->truck_reg} marked as loading failed.");
     }
@@ -258,7 +290,15 @@ class ImportNominationController extends Controller
             return back()->with('error', "Truck {$truck->truck_reg} must be in Loaded status before marking in transit (currently: {$truck->statusLabel()}).");
         }
 
-        $truck->update(['status' => 'in_transit']);
+        $truck->update(['status' => 'in_transit', 'in_transit_at' => now()]);
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Truck {$truck->truck_reg} marked in transit · {$purchase->reference}.",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'in_transit', 'in_transit_at' => now()->toDateTimeString()],
+        );
 
         return back()->with('status', "Truck {$truck->truck_reg} marked as in transit.");
     }
@@ -284,6 +324,14 @@ class ImportNominationController extends Controller
             'border_post'          => $data['border_post'],
             'arrived_at_border_at' => $data['arrived_at_border_at'] ? now()->parse($data['arrived_at_border_at']) : now(),
         ]);
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Truck {$truck->truck_reg} arrived at border post '{$data['border_post']}' · {$purchase->reference}.",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'at_border', 'border_post' => $data['border_post'], 'arrived_at_border_at' => now()->toDateTimeString()],
+        );
 
         return back()->with('status', "Truck {$truck->truck_reg} marked as arrived at {$data['border_post']}.");
     }
@@ -403,6 +451,17 @@ class ImportNominationController extends Controller
         \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 'tr8_doc', 'tr8');
         \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 't1_doc', 't1');
         \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 'other_doc', 'customs');
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Border clearance recorded for truck {$truck->truck_reg} · {$purchase->reference}. " .
+                ($data['tr8_number'] ?? null ? "TR8: {$data['tr8_number']}. " : '') .
+                ($data['t1_number'] ?? null ? "T1: {$data['t1_number']}. " : '') .
+                ($waiveDuty ? 'Duty waived.' : ($dutyAmt ? "Duty: {$truck->duty_currency} {$dutyAmt}." : 'No duty.')),
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'border_cleared', 'tr8_number' => $data['tr8_number'] ?? null, 't1_number' => $data['t1_number'] ?? null, 'duty_amount' => $dutyAmt, 'duty_waived' => $waiveDuty],
+        );
 
         $msg = "Border clearance recorded for {$truck->truck_reg}.";
         if ($dutyMsg) {
@@ -589,6 +648,15 @@ class ImportNominationController extends Controller
         if (!empty($depotChargesPosted)) {
             $msg .= " Depot charges: " . implode('; ', $depotChargesPosted) . ".";
         }
+
+        \App\Models\AuditLog::record(
+            'received',
+            "Delivery recorded for truck {$truck->truck_reg} · {$purchase->reference}: {$qtyDelivered} L delivered" .
+                ($excessLossQty > 0 ? ", shortfall charge {$nomination->short_charge_currency} " . number_format($shortfallCharge, 2) : '') . ".",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: $excessLossQty > 0 ? 'warning' : 'info',
+            after: ['status' => 'delivered', 'qty_delivered' => $qtyDelivered, 'shortfall_qty' => $shortfallQty, 'excess_loss_qty' => $excessLossQty, 'shortfall_charge' => $shortfallCharge],
+        );
 
         return back()->with('status', $msg);
     }

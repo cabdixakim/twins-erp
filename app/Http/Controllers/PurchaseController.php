@@ -329,6 +329,14 @@ class PurchaseController extends Controller
             ]);
         });
 
+        \App\Models\AuditLog::record(
+            'created',
+            "Purchase {$purchase->reference} created as draft ({$purchase->type}, {$purchase->qty} {$purchase->currency}).",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'info',
+            after: ['reference' => $purchase->reference, 'type' => $purchase->type, 'qty' => $purchase->qty, 'unit_price' => $purchase->unit_price, 'currency' => $purchase->currency, 'status' => 'draft'],
+        );
+
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Purchase created (draft).');
     }
@@ -769,6 +777,14 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             $purchase->save();
         });
 
+        \App\Models\AuditLog::record(
+            'updated',
+            "Receipt reversed on purchase {$purchase->reference} — stock and supplier invoice rolled back.",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'warning',
+            after: ['status' => 'confirmed', 'action' => 'undo_receipt'],
+        );
+
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Receipt reversed. Purchase is back to Confirmed — ready to receive again.');
     }
@@ -878,6 +894,14 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             $purchase->save();
         });
 
+        \App\Models\AuditLog::record(
+            'transferred',
+            "Cross-dock purchase {$purchase->reference} transferred to depot #{$purchase->depot_id} ({$qty} units).",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'transferred', 'depot_id' => $purchase->depot_id, 'qty' => $qty],
+        );
+
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Stock transferred from Cross Dock into the selected depot.');
     }
@@ -943,6 +967,14 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             $purchase->updated_by  = $u?->id;
             $purchase->save();
         });
+
+        \App\Models\AuditLog::record(
+            'dispatched',
+            "Cross-dock purchase {$purchase->reference} dispatched ({$qty} units)" . ($clientName ? " to {$clientName}" : '') . ".",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'info',
+            after: ['status' => 'dispatched', 'qty' => $qty, 'client_id' => $clientId, 'client' => $clientName],
+        );
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Cross-dock stock dispatched. Inventory issued from Cross Dock.');
@@ -1025,9 +1057,19 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             return back()->withErrors(['depot_id' => 'Depot is required for local depot purchases.'])->withInput();
         }
 
+        $before = $purchase->only(['qty','unit_price','currency','depot_id','supplier_id','notes','reference']);
         $purchase->fill($data);
         $purchase->updated_by = $u?->id;
         $purchase->save();
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Purchase {$purchase->reference} draft edited.",
+            $purchase, "Purchase {$purchase->reference}",
+            severity: 'info',
+            before: $before,
+            after: $purchase->only(['qty','unit_price','currency','depot_id','supplier_id','notes','reference']),
+        );
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Purchase updated.');

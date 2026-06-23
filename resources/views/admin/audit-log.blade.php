@@ -230,7 +230,32 @@
                 </td>
                 <td class="px-3 py-3">
                     @if($log->model_label)
+                        @php
+                            $recordUrl = null;
+                            if ($log->model_type && $log->model_id) {
+                                try {
+                                    $recordUrl = match(class_basename($log->model_type)) {
+                                        'Purchase'            => route('purchases.show', $log->model_id),
+                                        'ImportTruck'         => route('purchases.show', \App\Models\ImportTruck::find($log->model_id)?->nomination?->purchase_id ?? 0),
+                                        'Client'              => route('clients.show', $log->model_id),
+                                        'Supplier'            => route('suppliers.show', $log->model_id),
+                                        'Depot'               => route('depots.show', $log->model_id),
+                                        'User'                => route('admin.users'),
+                                        default               => null,
+                                    };
+                                } catch (\Throwable) { $recordUrl = null; }
+                                // Discard routes pointing to model_id = 0 (unresolved)
+                                if ($recordUrl && str_ends_with($recordUrl, '/0')) $recordUrl = null;
+                            }
+                        @endphp
+                        @if($recordUrl)
+                        <a href="{{ $recordUrl }}"
+                           class="font-semibold hover:underline"
+                           style="color:var(--tw-accent)"
+                           title="Open record">{{ $log->model_label }}</a>
+                        @else
                         <div class="{{ $fg }} font-medium">{{ $log->model_label }}</div>
+                        @endif
                         @if($log->model_type)
                         <div class="{{ $muted }} text-[10px]">{{ class_basename($log->model_type) }}</div>
                         @endif

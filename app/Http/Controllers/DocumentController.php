@@ -90,6 +90,16 @@ class DocumentController extends Controller
             'uploaded_by'       => auth()->id(),
         ]);
 
+        \App\Models\AuditLog::record(
+            'created',
+            "Document '{$doc->name}' ({$doc->category}) uploaded" .
+                ($morphType ? " to " . class_basename($morphType) . " #{$morphId}" : ' (standalone)') . ".",
+            $doc, "Document {$doc->name}",
+            severity: 'info',
+            module: 'Document',
+            after: ['name' => $doc->name, 'category' => $doc->category, 'size' => $doc->file_size],
+        );
+
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'document' => $doc]);
         }
@@ -109,6 +119,16 @@ class DocumentController extends Controller
     public function destroy(Document $document)
     {
         abort_if($document->company_id !== auth()->user()->active_company_id, 403);
+
+        \App\Models\AuditLog::record(
+            'deleted',
+            "Document '{$document->name}' ({$document->category}) deleted.",
+            $document, "Document {$document->name}",
+            severity: 'warning',
+            module: 'Document',
+            before: ['name' => $document->name, 'category' => $document->category, 'size' => $document->file_size],
+        );
+
         $document->delete();
 
         if (request()->wantsJson()) {
