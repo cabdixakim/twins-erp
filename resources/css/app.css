@@ -404,12 +404,21 @@ html.dark .alert-warn { border-color:rgba(253,230,138,.60); background:rgba(245,
 /* =========================
    Semi-transparent action buttons — theme-aware
    ========================= */
-.btn-soft-green  { background:rgba(16,185,129,.10);  border-color:rgba(52,211,153,.40);  color:#047857; }
-.btn-soft-amber  { background:rgba(245,158,11,.10);  border-color:rgba(251,191,36,.40);  color:#92400e; }
+/* Soft tinted buttons */
+.btn-soft-green  { background:rgba(16,185,129,.15);  border-color:rgba(52,211,153,.50);  color:#047857; }
+.btn-soft-amber  { background:rgba(245,158,11,.18);  border-color:rgba(251,191,36,.55);  color:#78350f; }
 .btn-soft-orange { background:rgba(249,115,22,.18);  border-color:rgba(234,88,12,.55);   color:#7c2d12; }
-.btn-soft-blue   { background:rgba(59,130,246,.10);  border-color:rgba(96,165,250,.40);  color:#1e40af; }
-.btn-soft-rose   { background:rgba(239,68,68,.10);   border-color:rgba(252,165,165,.40); color:#991b1b; }
-.btn-soft-purple { background:rgba(168,85,247,.10);  border-color:rgba(216,180,254,.40); color:#6b21a8; }
+.btn-soft-blue   { background:rgba(59,130,246,.15);  border-color:rgba(96,165,250,.50);  color:#1e40af; }
+.btn-soft-rose   { background:rgba(239,68,68,.15);   border-color:rgba(252,165,165,.50); color:#991b1b; }
+.btn-soft-purple { background:rgba(168,85,247,.15);  border-color:rgba(216,180,254,.50); color:#6b21a8; }
+
+/* Solid action buttons — white text, no opacity tricks needed */
+.btn-amber   { background:#d97706; border-color:#b45309; color:#fff; }
+.btn-amber:hover   { background:#b45309; }
+.btn-purple  { background:#9333ea; border-color:#7e22ce; color:#fff; }
+.btn-purple:hover  { background:#7e22ce; }
+.btn-emerald { background:#059669; border-color:#047857; color:#fff; }
+.btn-emerald:hover { background:#047857; }
 
 html.dark .btn-soft-green  { background:rgba(16,185,129,.22);  border-color:rgba(52,211,153,.55);  color:#6ee7b7; }
 html.dark .btn-soft-amber  { background:rgba(245,158,11,.22);  border-color:rgba(251,191,36,.55);  color:#fcd34d; }

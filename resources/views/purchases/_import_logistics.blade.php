@@ -375,7 +375,7 @@
                     @if(in_array('fail_load', $truckActions))
                       <button type="button"
                               onclick="openTruckModal('failLoadModal-{{ $truck->id }}')"
-                              class="h-7 px-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-[11px] font-semibold text-rose-500 hover:bg-rose-500/20 transition">
+                              class="h-7 px-2 rounded-lg border text-[11px] font-semibold transition btn-soft-rose">
                         Fail
                       </button>
                     @endif
@@ -385,7 +385,7 @@
                               data-truck-reg="{{ $truck->truck_reg }}"
                               data-transit-action="{{ route('purchases.import-nomination.trucks.mark-in-transit', [$purchase, $nom, $truck]) }}"
                               onclick="openInTransitModal(this)"
-                              class="h-8 px-3 rounded-xl border border-amber-600/50 bg-amber-600 text-xs font-bold text-white hover:bg-amber-500 transition shadow-sm">
+                              class="h-8 px-3 rounded-xl border text-xs font-bold transition shadow-sm btn-amber">
                         In transit →
                       </button>
                     @endif
@@ -401,7 +401,7 @@
                     @if(in_array('record_border', $truckActions))
                       <button type="button"
                               onclick="openTruckModal('borderModal-{{ $truck->id }}')"
-                              class="h-8 px-3 rounded-xl border border-purple-600/50 bg-purple-600 text-xs font-bold text-white hover:bg-purple-500 transition shadow-sm">
+                              class="h-8 px-3 rounded-xl border text-xs font-bold transition shadow-sm btn-purple">
                         Border ✓
                       </button>
                     @endif
@@ -409,7 +409,7 @@
                     @if(in_array('record_delivery', $truckActions))
                       <button type="button"
                               onclick="openTruckModal('deliveryModal-{{ $truck->id }}')"
-                              class="h-8 px-3 rounded-xl border border-emerald-600/50 bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-sm">
+                              class="h-8 px-3 rounded-xl border text-xs font-bold transition shadow-sm btn-emerald">
                         Deliver ↓
                       </button>
                     @endif
