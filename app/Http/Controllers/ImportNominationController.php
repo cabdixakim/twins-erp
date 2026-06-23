@@ -314,6 +314,9 @@ class ImportNominationController extends Controller
             'other_border_charges'   => 'nullable|numeric|min:0',
             'other_border_currency'  => 'nullable|string|max:8',
             'other_border_notes'     => 'nullable|string|max:500',
+            'tr8_doc'                => 'nullable|file|max:20480|mimes:pdf,jpg,jpeg,png',
+            't1_doc'                 => 'nullable|file|max:20480|mimes:pdf,jpg,jpeg,png',
+            'other_doc'              => 'nullable|file|max:20480|mimes:pdf,jpg,jpeg,png,doc,docx',
         ]);
 
         $waiveDuty = (bool) ($data['waive_duty'] ?? false);
@@ -395,6 +398,11 @@ class ImportNominationController extends Controller
                 return back()->with('status', "Border cleared. Duty auto-post failed: {$e->getMessage()}");
             }
         }
+
+        // Attach uploaded border documents
+        \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 'tr8_doc', 'tr8');
+        \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 't1_doc', 't1');
+        \App\Http\Controllers\DocumentController::attachFromRequest($request, $truck, 'other_doc', 'customs');
 
         $msg = "Border clearance recorded for {$truck->truck_reg}.";
         if ($dutyMsg) {

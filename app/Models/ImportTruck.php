@@ -126,4 +126,9 @@ class ImportTruck extends Model
             default          => [],
         };
     }
+
+    public function documents()
+    {
+        return $this->morphMany(\App\Models\Document::class, 'documentable');
+    }
 }

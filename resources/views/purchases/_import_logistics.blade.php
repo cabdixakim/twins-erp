@@ -1021,7 +1021,7 @@
         <button type="button" onclick="closeTruckModal('borderModal-{{ $truck->id }}')"
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
-      <form method="POST"
+      <form method="POST" enctype="multipart/form-data"
             action="{{ route('purchases.import-nomination.trucks.record-border', [$purchase, $nom, $truck]) }}">
         @csrf
         <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
@@ -1035,16 +1035,73 @@
             <span class="text-xs opacity-70">border crossing</span>
           </div>
           @endif
+
+          {{-- TR8 + T1 numbers (both optional — upload docs below instead) --}}
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold {{ $fg }} mb-1">TR8 number</label>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">
+                TR8 number
+                <span class="font-normal opacity-60">(optional)</span>
+              </label>
               <input type="text" name="tr8_number" maxlength="80" placeholder="TR8-…"
+                     value="{{ old('tr8_number', $truck->tr8_number) }}"
                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
             </div>
             <div>
-              <label class="block text-xs font-semibold {{ $fg }} mb-1">T1 number</label>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">
+                T1 number
+                <span class="font-normal opacity-60">(optional)</span>
+              </label>
               <input type="text" name="t1_number" maxlength="80" placeholder="T1-…"
+                     value="{{ old('t1_number', $truck->t1_number) }}"
                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-purple-500/40" />
+            </div>
+          </div>
+
+          {{-- Document uploads --}}
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
+            <div class="text-xs font-bold {{ $fg }} uppercase tracking-wider flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Documents
+              <span class="font-normal opacity-60 normal-case">— upload TR8, T1, or other border docs</span>
+            </div>
+            @php $existingDocs = $truck->documents()->orderBy('created_at')->get(); @endphp
+            @if($existingDocs->isNotEmpty())
+              <div class="space-y-1.5">
+                @foreach($existingDocs as $doc)
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold s-purple">{{ strtoupper($doc->category) }}</span>
+                      <a href="{{ route('documents.download', $doc) }}"
+                         class="text-[color:var(--tw-accent)] hover:underline truncate">{{ $doc->original_name }}</a>
+                    </div>
+                    <form method="POST" action="{{ route('documents.destroy', $doc) }}" class="inline">
+                      @csrf @method('DELETE')
+                      <button type="submit" class="opacity-40 hover:opacity-100 transition text-rose-500 text-[10px]">✕</button>
+                    </form>
+                  </div>
+                @endforeach
+              </div>
+              <div class="h-px {{ $border }} -mx-4"></div>
+            @endif
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold {{ $muted }} mb-1">TR8 document</label>
+                <input type="file" name="tr8_doc" accept=".pdf,.jpg,.jpeg,.png"
+                       class="w-full text-xs {{ $fg }} file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:btn-soft-purple file:cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold {{ $muted }} mb-1">T1 document</label>
+                <input type="file" name="t1_doc" accept=".pdf,.jpg,.jpeg,.png"
+                       class="w-full text-xs {{ $fg }} file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:btn-soft-purple file:cursor-pointer">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold {{ $muted }} mb-1">Other document</label>
+              <input type="file" name="other_doc" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                     class="w-full text-xs {{ $fg }} file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:btn-soft-purple file:cursor-pointer">
             </div>
           </div>
           <div>

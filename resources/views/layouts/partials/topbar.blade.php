@@ -118,11 +118,17 @@
                 </svg>
             </button>
 
-            <button type="button" data-popover-btn="notif" class="{{ $iconBtn }}" aria-label="Notifications">
+            @php
+                $__nb = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0;
+            @endphp
+            <button type="button" data-popover-btn="notif" class="{{ $iconBtn }} relative" aria-label="Notifications">
                 <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
+                @if($__nb > 0)
+                <span class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold pointer-events-none" style="background:#ef4444;color:#fff;line-height:1">{{ min($__nb,9) }}{{ $__nb>9?'+':'' }}</span>
+                @endif
             </button>
 
             <button type="button" data-popover-btn="profile" class="{{ $iconBtn }}" aria-label="Profile">
@@ -208,24 +214,55 @@
 </div>
 
 {{-- POP: Notifications --}}
+@php
+    $__alerts = auth()->check() ? \App\Services\AlertService::getForCompany(auth()->user()->active_company_id) : [];
+    $__preview = array_slice($__alerts, 0, 5);
+@endphp
 <div id="pop-notif" class="{{ $popover }}">
     <div class="px-4 py-3 border-b border-[color:var(--tw-border)] flex items-center justify-between">
         <div>
-            <div class="text-[13px] font-semibold">Notifications</div>
-            <div class="text-[11px] tw-muted">Later: approvals, credit, stock alerts</div>
+            <div class="text-[13px] font-semibold">Alerts</div>
+            <div class="text-[11px] tw-muted">{{ count($__alerts) > 0 ? count($__alerts).' active '.Str::plural('alert', count($__alerts)) : 'All clear' }}</div>
         </div>
-        <button type="button"
-                class="tw-pill cursor-pointer select-none text-[11px] px-2 py-1 rounded-xl">
-            Mark all
-        </button>
+        @if(count($__alerts) > 0)
+        <a href="{{ route('alerts.index') }}"
+           class="tw-pill cursor-pointer select-none text-[11px] px-2 py-1 rounded-xl">
+            View all
+        </a>
+        @endif
     </div>
-    <div class="p-3">
-        <div class="rounded-2xl p-3 bg-[color:var(--tw-surface-2)] border border-[color:var(--tw-border)]">
-            <div class="text-[13px] font-semibold">No notifications</div>
-            <div class="text-[11px] tw-muted mt-1 leading-relaxed">
-                This panel will feel like a real app once we wire events.
+    <div class="p-2 space-y-1 max-h-[320px] overflow-y-auto">
+        @forelse($__preview as $al)
+        @php $isWarn = $al['type'] === 'warning'; @endphp
+        <a href="{{ $al['link'] ?? route('alerts.index') }}"
+           class="flex items-start gap-2.5 px-2 py-2 rounded-xl transition hover:bg-[color:var(--tw-surface-2)] cursor-pointer select-none">
+            <span class="flex-shrink-0 mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center"
+                  style="{{ $isWarn ? 'background:rgba(245,158,11,.15);color:#d97706' : 'background:rgba(59,130,246,.15);color:#60a5fa' }}">
+                @if($al['icon'] === 'truck')
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 1m8-1h3l3-3-1-5h-5v9z"/></svg>
+                @elseif($al['icon'] === 'border')
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                @else
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                @endif
+            </span>
+            <div class="min-w-0 flex-1">
+                <div class="text-[12px] font-semibold truncate text-[color:var(--tw-fg)]">{{ $al['title'] }}</div>
+                <div class="text-[11px] tw-muted truncate">{{ $al['body'] }}</div>
             </div>
+        </a>
+        @empty
+        <div class="px-3 py-4 text-center">
+            <div class="text-[13px] font-semibold text-[color:var(--tw-fg)]">All clear</div>
+            <div class="text-[11px] tw-muted mt-1">No active alerts right now.</div>
         </div>
+        @endforelse
+        @if(count($__alerts) > 5)
+        <a href="{{ route('alerts.index') }}"
+           class="block text-center text-[11px] font-semibold text-[color:var(--tw-accent)] py-2 hover:underline">
+            +{{ count($__alerts) - 5 }} more — view all
+        </a>
+        @endif
     </div>
 </div>
 

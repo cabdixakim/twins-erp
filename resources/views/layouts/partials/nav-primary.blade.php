@@ -42,6 +42,27 @@
         <span class="tw-nav-label sidebar-label">Clearances</span>
     </a>
 
+    {{-- ALERTS --}}
+    @php $__alertCount = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0; @endphp
+    <a href="{{ route('alerts.index') }}"
+       class="tw-nav-item {{ ($onAlerts ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon relative">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            @if($__alertCount > 0)
+            <span class="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full flex items-center justify-center text-[8px] font-bold" style="background:#ef4444;color:#fff;line-height:1">{{ min($__alertCount,9) }}{{ $__alertCount>9?'+':'' }}</span>
+            @endif
+        </span>
+        <span class="tw-nav-label sidebar-label flex items-center gap-2">
+            Alerts
+            @if($__alertCount > 0)
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:#ef4444;color:#fff">{{ $__alertCount }}</span>
+            @endif
+        </span>
+    </a>
+
     {{-- PURCHASES --}}
     <a href="{{ route('purchases.index') }}"
        class="tw-nav-item {{ $onPurchases ? 'active' : '' }} sidebar-label-parent">
@@ -195,6 +216,18 @@
             </svg>
         </span>
         <span class="tw-nav-label sidebar-label">Accounting</span>
+    </a>
+
+    {{-- DOCUMENTS --}}
+    <a href="{{ route('documents.index') }}"
+       class="tw-nav-item {{ ($onDocuments ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Documents</span>
     </a>
 
 </nav>
