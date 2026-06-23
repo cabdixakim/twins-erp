@@ -494,64 +494,95 @@ class InventoryLedger
             return;
         }
 
-        if (!$purchase->batch_id || !$purchase->depot_id || !$purchase->product_id) {
+        if (!$purchase->batch_id || !$purchase->product_id) {
             return;
         }
 
         $companyId = (int) $purchase->company_id;
-        $depotId   = (int) $purchase->depot_id;
         $productId = (int) $purchase->product_id;
         $batchId   = (int) $purchase->batch_id;
 
-        // Sum all landed costs for this purchase that are included in cost
+        // Sum all landed costs for this purchase
         $totalLandedCosts = (float) DB::table('batch_costs')
             ->where('purchase_id', $purchase->id)
             ->sum('amount_base');
 
-        // Qty received for this batch (use qty as proxy if no movement exists yet)
-        $qtyReceived = (float) DB::table('inventory_movements')
+        // Total qty received across ALL depots for this batch
+        $totalQtyReceived = (float) DB::table('inventory_movements')
             ->where('company_id', $companyId)
             ->where('batch_id', $batchId)
-            ->where('to_depot_id', $depotId)
             ->where('type', 'receipt')
             ->sum('qty');
 
-        if ($qtyReceived <= 0) {
-            $qtyReceived = (float) ($purchase->qty ?: 1);
+        if ($totalQtyReceived <= 0) {
+            return; // Nothing received yet — nothing to recompute
         }
 
-        $purchaseValue = (float) $purchase->unit_price * $qtyReceived;
-        $newUnitCost   = round(($purchaseValue + $totalLandedCosts) / $qtyReceived, 6);
-
-        // Update the specific depot_stock row for this batch in this depot
-        $stockRow = DepotStock::where('company_id', $companyId)
-            ->where('depot_id', $depotId)
-            ->where('product_id', $productId)
-            ->where('batch_id', $batchId)
-            ->first();
-
-        if ($stockRow) {
-            $stockRow->update(['unit_cost' => $newUnitCost, 'updated_at' => now()]);
+        // Determine which depots to recompute:
+        //   - local_depot / cross_dock: purchase->depot_id is set → single depot
+        //   - import: no depot_id → multiple trucks, each to its own depot; discover from movements
+        if ($purchase->depot_id) {
+            $depotIds = [(int) $purchase->depot_id];
+        } else {
+            $depotIds = DB::table('inventory_movements')
+                ->where('company_id', $companyId)
+                ->where('batch_id', $batchId)
+                ->where('type', 'receipt')
+                ->whereNotNull('to_depot_id')
+                ->distinct()
+                ->pluck('to_depot_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
         }
 
-        // Recompute the cross-batch weighted average for the full depot+product
-        $result = DepotStock::where('company_id', $companyId)
-            ->where('depot_id', $depotId)
-            ->where('product_id', $productId)
-            ->whereRaw('qty_on_hand > 0')
-            ->selectRaw('SUM(qty_on_hand) as total_qty, SUM(qty_on_hand * unit_cost) as total_value')
-            ->first();
+        foreach ($depotIds as $depotId) {
+            // Qty received at this specific depot for this batch
+            $depotQtyReceived = (float) DB::table('inventory_movements')
+                ->where('company_id', $companyId)
+                ->where('batch_id', $batchId)
+                ->where('to_depot_id', $depotId)
+                ->where('type', 'receipt')
+                ->sum('qty');
 
-        $totalQty   = (float) ($result->total_qty ?? 0);
-        $totalValue = (float) ($result->total_value ?? 0);
+            if ($depotQtyReceived <= 0) {
+                continue;
+            }
 
-        if ($totalQty > 0) {
-            $newAvg = round($totalValue / $totalQty, 6);
-            // Propagate to all rows (no exclusion — we already updated the batch row above)
-            DepotStock::where('company_id', $companyId)
+            // Prorate landed costs by this depot's share of total delivered qty.
+            // e.g. if depot received 60% of the batch, it gets 60% of landed costs.
+            $proratedLanded = $totalLandedCosts * ($depotQtyReceived / $totalQtyReceived);
+            $purchaseValue  = (float) $purchase->unit_price * $depotQtyReceived;
+            $newUnitCost    = round(($purchaseValue + $proratedLanded) / $depotQtyReceived, 6);
+
+            // Update the depot_stock row for this batch+depot
+            $stockRow = DepotStock::where('company_id', $companyId)
                 ->where('depot_id', $depotId)
                 ->where('product_id', $productId)
-                ->update(['unit_cost' => $newAvg, 'updated_at' => now()]);
+                ->where('batch_id', $batchId)
+                ->first();
+
+            if ($stockRow) {
+                $stockRow->update(['unit_cost' => $newUnitCost, 'updated_at' => now()]);
+            }
+
+            // Recompute the cross-batch weighted average for this depot+product
+            $result = DepotStock::where('company_id', $companyId)
+                ->where('depot_id', $depotId)
+                ->where('product_id', $productId)
+                ->whereRaw('qty_on_hand > 0')
+                ->selectRaw('SUM(qty_on_hand) as total_qty, SUM(qty_on_hand * unit_cost) as total_value')
+                ->first();
+
+            $totalQty   = (float) ($result->total_qty ?? 0);
+            $totalValue = (float) ($result->total_value ?? 0);
+
+            if ($totalQty > 0) {
+                $newAvg = round($totalValue / $totalQty, 6);
+                DepotStock::where('company_id', $companyId)
+                    ->where('depot_id', $depotId)
+                    ->where('product_id', $productId)
+                    ->update(['unit_cost' => $newAvg, 'updated_at' => now()]);
+            }
         }
     }
 }
