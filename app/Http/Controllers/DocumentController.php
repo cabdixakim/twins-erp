@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
-use App\Models\ImportTruck;
-use App\Models\Purchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,11 +13,26 @@ class DocumentController extends Controller
         $companyId = auth()->user()->active_company_id;
 
         $query = Document::where('company_id', $companyId)
+            ->whereIn('category', Document::$categories)   // vault docs only
             ->with(['uploader'])
+            ->orderByRaw("CASE WHEN valid_until IS NULL THEN 1 ELSE 0 END, valid_until ASC")
             ->orderByDesc('created_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
+        }
+
+        if ($request->filled('status')) {
+            $today = now()->toDateString();
+            match ($request->status) {
+                'expired'       => $query->whereNotNull('valid_until')->whereDate('valid_until', '<', $today),
+                'expiring_soon' => $query->whereNotNull('valid_until')
+                                         ->whereDate('valid_until', '>=', $today)
+                                         ->whereDate('valid_until', '<=', now()->addDays(30)->toDateString()),
+                'valid'         => $query->whereNotNull('valid_until')->whereDate('valid_until', '>', now()->addDays(30)->toDateString()),
+                'no_expiry'     => $query->whereNull('valid_until'),
+                default         => null,
+            };
         }
 
         $documents = $query->paginate(30)->withQueryString();
@@ -29,82 +42,50 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $companyId = auth()->user()->active_company_id;
-
-        $trucks = \App\Models\ImportTruck::whereHas('nomination.purchase', fn($q) =>
-                $q->where('company_id', $companyId))
-            ->with(['nomination.purchase'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        $purchases = \App\Models\Purchase::where('company_id', $companyId)
-            ->whereIn('status', ['confirmed','nominated','received','transferred','dispatched','border_cleared'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        return view('documents.create', compact('trucks', 'purchases'));
+        return view('documents.create');
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'file'              => 'required|file|max:20480|mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx',
-            'attach_to'         => 'nullable|in:truck,purchase',
-            'documentable_id'   => 'nullable|integer',
-            'category'          => 'required|in:tr8,t1,customs,invoice,permit,contract,other',
-            'name'              => 'nullable|string|max:255',
+            'file'        => 'required|file|max:20480|mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx',
+            'category'    => 'required|in:' . implode(',', Document::$categories),
+            'name'        => 'nullable|string|max:255',
+            'valid_from'  => 'nullable|date',
+            'valid_until' => 'nullable|date|after_or_equal:valid_from',
+            'notes'       => 'nullable|string|max:2000',
         ]);
 
         $companyId = auth()->user()->active_company_id;
         $file      = $request->file('file');
-
-        // Resolve morph target
-        $morphType = null;
-        $morphId   = null;
-        if ($request->filled('attach_to') && $request->filled('documentable_id')) {
-            if ($request->attach_to === 'truck') {
-                $model = \App\Models\ImportTruck::findOrFail($request->documentable_id);
-                $morphType = \App\Models\ImportTruck::class;
-                $morphId   = $model->id;
-            } elseif ($request->attach_to === 'purchase') {
-                $model = \App\Models\Purchase::where('company_id', $companyId)->findOrFail($request->documentable_id);
-                $morphType = \App\Models\Purchase::class;
-                $morphId   = $model->id;
-            }
-        }
-
         $yearMonth = now()->format('Y/m');
-        $path = $file->store("documents/{$companyId}/{$yearMonth}", 'local');
+        $path      = $file->store("documents/{$companyId}/{$yearMonth}", 'local');
 
         $doc = Document::create([
-            'company_id'        => $companyId,
-            'documentable_type' => $morphType,
-            'documentable_id'   => $morphId,
-            'name'              => $request->filled('name') ? $request->name : $file->getClientOriginalName(),
-            'original_name'     => $file->getClientOriginalName(),
-            'file_path'         => $path,
-            'file_size'         => $file->getSize(),
-            'mime_type'         => $file->getMimeType(),
-            'category'          => $request->category,
-            'notes'             => $request->notes,
-            'uploaded_by'       => auth()->id(),
+            'company_id'   => $companyId,
+            'name'         => $request->filled('name') ? $request->name : $file->getClientOriginalName(),
+            'original_name'=> $file->getClientOriginalName(),
+            'file_path'    => $path,
+            'file_size'    => $file->getSize(),
+            'mime_type'    => $file->getMimeType(),
+            'category'     => $request->category,
+            'valid_from'   => $request->valid_from ?: null,
+            'valid_until'  => $request->valid_until ?: null,
+            'notes'        => $request->notes,
+            'uploaded_by'  => auth()->id(),
         ]);
 
         \App\Models\AuditLog::record(
             'created',
-            "Document '{$doc->name}' ({$doc->category}) uploaded" .
-                ($morphType ? " to " . class_basename($morphType) . " #{$morphId}" : ' (standalone)') . ".",
+            "Document '{$doc->name}' ({$doc->category}) uploaded to company vault" .
+                ($doc->valid_until ? ", expires {$doc->valid_until->format('d M Y')}" : '') . ".",
             $doc, "Document {$doc->name}",
             severity: 'info',
             module: 'Document',
-            after: ['name' => $doc->name, 'category' => $doc->category, 'size' => $doc->file_size],
+            after: ['name' => $doc->name, 'category' => $doc->category, 'valid_until' => $doc->valid_until?->toDateString()],
         );
 
-        if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'document' => $doc]);
-        }
-
-        return back()->with('success', 'Document uploaded.');
+        return redirect()->route('documents.index')->with('success', 'Document uploaded to vault.');
     }
 
     public function download(Document $document)
@@ -126,7 +107,7 @@ class DocumentController extends Controller
             $document, "Document {$document->name}",
             severity: 'warning',
             module: 'Document',
-            before: ['name' => $document->name, 'category' => $document->category, 'size' => $document->file_size],
+            before: ['name' => $document->name, 'category' => $document->category],
         );
 
         $document->delete();
@@ -138,6 +119,11 @@ class DocumentController extends Controller
         return back()->with('success', 'Document deleted.');
     }
 
+    /**
+     * Internal helper — attaches a file from a request to any model (e.g. ImportTruck).
+     * Used by ImportNominationController for border clearance docs.
+     * NOT exposed via user-facing routes.
+     */
     public static function attachFromRequest(Request $request, object $model, string $fileField, string $category): ?Document
     {
         if (! $request->hasFile($fileField) || ! $request->file($fileField)->isValid()) {

@@ -1,0 +1,83 @@
+Internal Server Error
+
+ErrorException
+Attempt to read property "active_company_id" on null
+GET 69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+PHP 8.2.23 — Laravel 11.46.1
+app/Http/Controllers/DocumentController.php :32
+        return view('documents.index', compact('documents'));
+    }
+ 
+    public function create()
+    {
+        $companyId = auth()->user()->active_company_id;
+ 
+        $trucks = \App\Models\ImportTruck::whereHas('nomination.purchase', fn($q) =>
+                $q->where('company_id', $companyId))
+            ->with(['nomination.purchase'])
+            ->orderByDesc('created_at')
+            ->get();
+ 
+        $purchases = \App\Models\Purchase::where('company_id', $companyId)
+            ->whereIn('status', ['confirmed','nominated','received','transferred','dispatched','border_cleared'])
+            ->orderByDesc('created_at')
+            ->get();
+Request
+GET /documents/create
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2Fdocuments%2Fcreate&id=default-start-application
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.10.171, 10.56.8.160, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\DocumentController@create
+route name
+documents.create
+middleware
+web
+Database Queries
+pgsql
+select * from "users" where "id" = '1' limit 1

@@ -8,200 +8,162 @@
     $border  = 'border-[color:var(--tw-border)]';
     $surface = 'bg-[color:var(--tw-surface)]';
     $surface2= 'bg-[color:var(--tw-surface-2)]';
+
+    $categories = [
+        'trade_license'         => 'Trade Licence',
+        'insurance_certificate' => 'Insurance Certificate',
+        'tax_clearance'         => 'Tax Clearance',
+        'company_registration'  => 'Company Registration',
+        'contract'              => 'Contract',
+        'certificate'           => 'Certificate',
+        'company_profile'       => 'Company Profile',
+        'permit'                => 'Permit',
+        'other'                 => 'Other',
+    ];
 @endphp
 
-<div class="max-w-lg mx-auto space-y-6">
-    <div>
-        <a href="{{ route('documents.index') }}" class="text-sm {{ $muted }} hover:text-[color:var(--tw-fg)] flex items-center gap-1.5 mb-4">
+<div class="max-w-2xl mx-auto space-y-6">
+
+    {{-- Header --}}
+    <div class="flex items-center gap-3">
+        <a href="{{ route('documents.index') }}"
+           class="h-8 w-8 rounded-xl border {{ $border }} flex items-center justify-center {{ $muted }} hover:bg-[color:var(--tw-surface-2)] transition">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
-            Documents
         </a>
-        <h1 class="text-xl font-bold {{ $fg }}">Upload Document</h1>
-        <p class="text-sm {{ $muted }} mt-0.5">Attach a file to a truck, a purchase, or save as a standalone document.</p>
+        <div>
+            <h1 class="text-xl font-bold {{ $fg }}">Upload Company Document</h1>
+            <p class="{{ $muted }} text-sm mt-0.5">Add a certificate, licence, contract or any important company file</p>
+        </div>
     </div>
 
     @if($errors->any())
-        <div class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-600">
-            {{ $errors->first() }}
-        </div>
+    <div class="rounded-xl border border-rose-300 px-4 py-3 text-sm text-rose-700 space-y-1" style="background:rgba(239,68,68,.06)">
+        @foreach($errors->all() as $e)<div>• {{ $e }}</div>@endforeach
+    </div>
     @endif
 
+    @if(session('success'))
+    <div class="rounded-xl border border-emerald-300 px-4 py-3 text-sm text-emerald-700" style="background:rgba(16,185,129,.06)">
+        {{ session('success') }}
+    </div>
+    @endif
+
+    {{-- Form --}}
     <form method="POST" action="{{ route('documents.store') }}" enctype="multipart/form-data"
-          class="rounded-2xl border {{ $border }} {{ $surface }} p-6 space-y-5">
+          class="rounded-2xl border {{ $border }} {{ $surface }} divide-y divide-[color:var(--tw-border)]">
         @csrf
 
-        {{-- File --}}
-        <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1.5">
-                File <span class="text-rose-400">*</span>
-            </label>
-            <input type="file" name="file" required
+        {{-- File drop zone --}}
+        <div class="p-5 space-y-2">
+            <label class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">File <span class="text-rose-500">*</span></label>
+            <div id="drop-zone"
+                 class="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 transition cursor-pointer"
+                 style="border-color:var(--tw-border)"
+                 onclick="document.getElementById('file-input').click()">
+                <svg class="w-9 h-9 {{ $muted }} opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-sm {{ $muted }}">Click to select a file, or drag &amp; drop</p>
+                <p class="text-xs {{ $muted }} opacity-60">PDF, Word, Excel or image · max 20 MB</p>
+                <p id="file-name" class="hidden text-sm font-semibold" style="color:var(--tw-accent)"></p>
+            </div>
+            <input type="file" id="file-input" name="file" class="hidden"
                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
-                   class="w-full text-sm {{ $fg }} file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:btn-soft-green file:cursor-pointer">
-            <p class="text-xs {{ $muted }} mt-1">PDF, images, Word, Excel — max 20 MB</p>
+                   onchange="showFileName(this)">
+        </div>
+
+        {{-- Display name --}}
+        <div class="p-5 space-y-1">
+            <label for="name" class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">
+                Display Name <span class="{{ $muted }} font-normal normal-case">(optional — uses filename if blank)</span>
+            </label>
+            <input type="text" id="name" name="name" value="{{ old('name') }}"
+                   placeholder="e.g. Trade Licence 2025–2026"
+                   class="mt-1.5 w-full h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
         </div>
 
         {{-- Category --}}
-        <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1.5">
-                Category <span class="text-rose-400">*</span>
-            </label>
-            <select name="category" required
-                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-                @foreach(\App\Models\Document::$categories as $cat)
-                    <option value="{{ $cat }}" {{ old('category') === $cat ? 'selected' : '' }}>
-                        {{ ucfirst($cat) }}
-                    </option>
+        <div class="p-5 space-y-1">
+            <label for="category" class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">Category <span class="text-rose-500">*</span></label>
+            <select id="category" name="category"
+                    class="mt-1.5 w-full h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+                <option value="">Select category…</option>
+                @foreach($categories as $value => $label)
+                    <option value="{{ $value }}" {{ old('category') === $value ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
 
-        {{-- Attach to --}}
-        <div class="space-y-3">
-            <label class="block text-xs font-semibold {{ $fg }}">
-                Attach to <span class="{{ $muted }} font-normal">(optional)</span>
-            </label>
-
-            {{-- Type selector --}}
-            <div class="flex gap-2">
-                <button type="button" onclick="setAttachTo('')"
-                        id="attach-btn-none"
-                        class="flex-1 h-9 rounded-xl border text-xs font-semibold transition attach-type-btn active-attach"
-                        style="">
-                    None
-                </button>
-                <button type="button" onclick="setAttachTo('truck')"
-                        id="attach-btn-truck"
-                        class="flex-1 h-9 rounded-xl border text-xs font-semibold transition attach-type-btn">
-                    Truck
-                </button>
-                <button type="button" onclick="setAttachTo('purchase')"
-                        id="attach-btn-purchase"
-                        class="flex-1 h-9 rounded-xl border text-xs font-semibold transition attach-type-btn">
-                    Purchase
-                </button>
+        {{-- Validity dates --}}
+        <div class="p-5 space-y-3">
+            <div>
+                <p class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">Validity / Expiry Dates <span class="{{ $muted }} font-normal normal-case">(optional)</span></p>
+                <p class="text-xs {{ $muted }} mt-0.5">Set these to receive expiry alerts before the document lapses</p>
             </div>
-
-            <input type="hidden" name="attach_to" id="attach-to-input" value="">
-
-            {{-- Truck picker --}}
-            <div id="picker-truck" class="hidden">
-                <select name="documentable_id" id="truck-select"
-                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-                    <option value="">Select a truck…</option>
-                    @foreach($trucks as $truck)
-                        <option value="{{ $truck->id }}">
-                            {{ $truck->truck_reg }}
-                            @if($truck->nomination?->purchase)
-                                — {{ $truck->nomination->purchase->reference }}
-                            @endif
-                            ({{ ucfirst(str_replace('_',' ',$truck->status)) }})
-                        </option>
-                    @endforeach
-                </select>
-                @if($trucks->isEmpty())
-                    <p class="text-xs {{ $muted }} mt-1">No trucks found for this company.</p>
-                @endif
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label for="valid_from" class="text-xs {{ $muted }}">Valid from</label>
+                    <input type="date" id="valid_from" name="valid_from" value="{{ old('valid_from') }}"
+                           class="w-full h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+                </div>
+                <div class="space-y-1">
+                    <label for="valid_until" class="text-xs {{ $muted }}">Expires on</label>
+                    <input type="date" id="valid_until" name="valid_until" value="{{ old('valid_until') }}"
+                           class="w-full h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+                </div>
             </div>
-
-            {{-- Purchase picker --}}
-            <div id="picker-purchase" class="hidden">
-                <select name="documentable_id" id="purchase-select"
-                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-                    <option value="">Select a purchase…</option>
-                    @foreach($purchases as $p)
-                        <option value="{{ $p->id }}">
-                            {{ $p->reference }} — {{ ucfirst(str_replace('_',' ',$p->type)) }}
-                            ({{ ucfirst($p->status) }})
-                        </option>
-                    @endforeach
-                </select>
-                @if($purchases->isEmpty())
-                    <p class="text-xs {{ $muted }} mt-1">No active purchases found.</p>
-                @endif
-            </div>
-        </div>
-
-        {{-- Display name --}}
-        <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1.5">
-                Display name <span class="{{ $muted }} font-normal">(optional — leave blank to use filename)</span>
-            </label>
-            <input type="text" name="name" maxlength="255" value="{{ old('name') }}"
-                   placeholder="e.g. TR8 clearance doc"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
         </div>
 
         {{-- Notes --}}
-        <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1.5">
-                Notes <span class="{{ $muted }} font-normal">(optional)</span>
-            </label>
-            <input type="text" name="notes" maxlength="500" value="{{ old('notes') }}"
-                   placeholder="Any notes about this document"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+        <div class="p-5 space-y-1">
+            <label for="notes" class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">Notes <span class="{{ $muted }} font-normal normal-case">(optional)</span></label>
+            <textarea id="notes" name="notes" rows="3"
+                      placeholder="Any relevant details, licence number, issuing authority…"
+                      class="mt-1.5 w-full px-3 py-2 rounded-xl border {{ $border }} {{ $surface2 }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40 resize-none">{{ old('notes') }}</textarea>
         </div>
 
-        <div class="pt-1 flex gap-3">
-            <button type="submit"
-                    class="h-10 px-6 rounded-xl border text-sm font-bold transition btn-soft-green">
-                Upload document
-            </button>
+        {{-- Actions --}}
+        <div class="p-5 flex items-center justify-end gap-3">
             <a href="{{ route('documents.index') }}"
-               class="h-10 px-5 rounded-xl border {{ $border }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition flex items-center">
+               class="h-10 px-5 rounded-xl border {{ $border }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
                 Cancel
             </a>
+            <button type="submit"
+                    class="h-10 px-6 rounded-xl text-sm font-semibold text-white transition"
+                    style="background:var(--tw-accent)">
+                Upload Document
+            </button>
         </div>
     </form>
 </div>
 
-<style>
-.attach-type-btn {
-    background: var(--tw-surface-2);
-    border-color: var(--tw-border);
-    color: var(--tw-muted);
-}
-.attach-type-btn:hover {
-    border-color: var(--tw-accent);
-    color: var(--tw-fg);
-}
-.attach-type-btn.active-attach {
-    background: rgba(16,185,129,.12);
-    border-color: rgba(16,185,129,.5);
-    color: var(--tw-accent);
-}
-</style>
-
 <script>
-function setAttachTo(type) {
-    document.getElementById('attach-to-input').value = type;
-
-    // Reset button styles
-    document.querySelectorAll('.attach-type-btn').forEach(b => b.classList.remove('active-attach'));
-    document.getElementById('picker-truck').classList.add('hidden');
-    document.getElementById('picker-purchase').classList.add('hidden');
-
-    // Disable all selects so they don't send with the form
-    document.getElementById('truck-select').disabled = true;
-    document.getElementById('purchase-select').disabled = true;
-
-    if (type === 'truck') {
-        document.getElementById('attach-btn-truck').classList.add('active-attach');
-        document.getElementById('picker-truck').classList.remove('hidden');
-        document.getElementById('truck-select').disabled = false;
-    } else if (type === 'purchase') {
-        document.getElementById('attach-btn-purchase').classList.add('active-attach');
-        document.getElementById('picker-purchase').classList.remove('hidden');
-        document.getElementById('purchase-select').disabled = false;
+function showFileName(input) {
+    const el = document.getElementById('file-name');
+    if (input.files[0]) {
+        el.textContent = input.files[0].name;
+        el.classList.remove('hidden');
     } else {
-        document.getElementById('attach-btn-none').classList.add('active-attach');
+        el.textContent = '';
+        el.classList.add('hidden');
     }
 }
 
-// Init: both selects disabled, "None" active
-document.getElementById('truck-select').disabled = true;
-document.getElementById('purchase-select').disabled = true;
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.style.borderColor = 'var(--tw-accent)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = 'var(--tw-border)'; });
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.style.borderColor = 'var(--tw-border)';
+    const fi = document.getElementById('file-input');
+    if (e.dataTransfer.files.length) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        fi.files = dt.files;
+        showFileName(fi);
+    }
+});
 </script>
 @endsection

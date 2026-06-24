@@ -13,6 +13,8 @@
         'overdue_transit' => ['label' => 'Overdue In Transit', 'class' => 's-amber'],
         'overdue_border'  => ['label' => 'Stuck at Border',    'class' => 's-orange'],
         'pending_duty'    => ['label' => 'Pending Duty',       'class' => 's-blue'],
+        'doc_expired'     => ['label' => 'Document Expired',   'class' => 's-rose'],
+        'doc_expiring'    => ['label' => 'Expiring Soon',      'class' => 's-amber'],
     ];
 @endphp
 
@@ -83,7 +85,11 @@
                     @if($alert['link'])
                         <a href="{{ $alert['link'] }}"
                            class="mt-2 text-xs font-semibold text-[color:var(--tw-accent)] hover:underline inline-flex items-center gap-1">
-                            View purchase
+                            @if(in_array($alert['category'], ['doc_expired','doc_expiring']))
+                                View documents
+                            @else
+                                View purchase
+                            @endif
                             <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 12h12"/>
                             </svg>

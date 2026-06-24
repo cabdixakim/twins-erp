@@ -566,12 +566,15 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active', 'ro
             ->middleware('role:owner,admin,manager')
             ->name('audit-log');
     });
-    // Documents
-    Route::get('/documents',                     [\App\Http\Controllers\DocumentController::class, 'index'])->name('documents.index');
-    Route::get('/documents/create',              [\App\Http\Controllers\DocumentController::class, 'create'])->name('documents.create');
-    Route::post('/documents',                    [\App\Http\Controllers\DocumentController::class, 'store'])->name('documents.store');
-    Route::get('/documents/{document}/download', [\App\Http\Controllers\DocumentController::class, 'download'])->name('documents.download');
-    Route::delete('/documents/{document}',       [\App\Http\Controllers\DocumentController::class, 'destroy'])->name('documents.destroy');
+Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
+    ->group(function () {
+        // Documents
+        Route::get('/documents',                     [\App\Http\Controllers\DocumentController::class, 'index'])->name('documents.index');
+        Route::get('/documents/create',              [\App\Http\Controllers\DocumentController::class, 'create'])->name('documents.create');
+        Route::post('/documents',                    [\App\Http\Controllers\DocumentController::class, 'store'])->name('documents.store');
+        Route::get('/documents/{document}/download', [\App\Http\Controllers\DocumentController::class, 'download'])->name('documents.download');
+        Route::delete('/documents/{document}',       [\App\Http\Controllers\DocumentController::class, 'destroy'])->name('documents.destroy');
 
-    // Alerts
-    Route::get('/alerts', [\App\Http\Controllers\AlertController::class, 'index'])->name('alerts.index');
+        // Alerts
+        Route::get('/alerts', [\App\Http\Controllers\AlertController::class, 'index'])->name('alerts.index');
+    });

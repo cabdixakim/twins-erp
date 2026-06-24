@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ImportTruck;
+use App\Models\Document;
 use Illuminate\Support\Collection;
 
 class AlertService
@@ -11,7 +12,7 @@ class AlertService
     {
         $alerts = [];
 
-        // Trucks in_transit for > 3 days
+        // ── Trucks in_transit for > 3 days ───────────────────────────────────
         ImportTruck::where('status', 'in_transit')
             ->whereNotNull('in_transit_at')
             ->where('in_transit_at', '<', now()->subDays(3))
@@ -34,7 +35,7 @@ class AlertService
                 ];
             });
 
-        // Trucks at_border for > 2 days
+        // ── Trucks at_border for > 2 days ─────────────────────────────────────
         ImportTruck::where('status', 'at_border')
             ->whereNotNull('arrived_at_border_at')
             ->where('arrived_at_border_at', '<', now()->subDays(2))
@@ -57,7 +58,7 @@ class AlertService
                 ];
             });
 
-        // Trucks border_cleared with pending duty
+        // ── Trucks border_cleared with pending duty ───────────────────────────
         ImportTruck::where('duty_status', 'pending')
             ->whereNotNull('duty_amount')
             ->where('duty_amount', '>', 0)
@@ -80,12 +81,53 @@ class AlertService
                 ];
             });
 
-        // Sort by most urgent (warnings first, then by age descending)
+        // ── Expired company documents ─────────────────────────────────────────
+        Document::where('company_id', $companyId)
+            ->whereIn('category', Document::$categories)
+            ->whereNotNull('valid_until')
+            ->whereDate('valid_until', '<', now()->toDateString())
+            ->orderBy('valid_until')
+            ->get()
+            ->each(function ($doc) use (&$alerts) {
+                $daysAgo = (int) now()->diffInDays($doc->valid_until);
+                $alerts[] = [
+                    'type'     => 'warning',
+                    'category' => 'doc_expired',
+                    'icon'     => 'document',
+                    'title'    => "{$doc->category_label} expired",
+                    'body'     => "{$doc->name} — expired {$daysAgo} day" . ($daysAgo === 1 ? '' : 's') . " ago",
+                    'link'     => route('documents.index'),
+                    'age'      => $doc->valid_until,
+                ];
+            });
+
+        // ── Documents expiring within 30 days ────────────────────────────────
+        Document::where('company_id', $companyId)
+            ->whereIn('category', Document::$categories)
+            ->whereNotNull('valid_until')
+            ->whereDate('valid_until', '>=', now()->toDateString())
+            ->whereDate('valid_until', '<=', now()->addDays(30)->toDateString())
+            ->orderBy('valid_until')
+            ->get()
+            ->each(function ($doc) use (&$alerts) {
+                $days = (int) now()->diffInDays($doc->valid_until);
+                $alerts[] = [
+                    'type'     => 'info',
+                    'category' => 'doc_expiring',
+                    'icon'     => 'document',
+                    'title'    => "{$doc->category_label} expiring soon",
+                    'body'     => "{$doc->name} — " . ($days === 0 ? 'expires today' : "expires in {$days} day" . ($days === 1 ? '' : 's')),
+                    'link'     => route('documents.index'),
+                    'age'      => $doc->valid_until,
+                ];
+            });
+
+        // Sort: warnings first, then by age (most urgent / oldest date first)
         usort($alerts, function ($a, $b) {
             if ($a['type'] !== $b['type']) {
                 return $a['type'] === 'warning' ? -1 : 1;
             }
-            return strcmp((string) ($b['age'] ?? ''), (string) ($a['age'] ?? ''));
+            return strcmp((string) ($a['age'] ?? ''), (string) ($b['age'] ?? ''));
         });
 
         return $alerts;
