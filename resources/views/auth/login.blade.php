@@ -150,43 +150,80 @@
 
       {{-- Left panel — always dark brand panel --}}
       <div class="hidden md:flex md:col-span-2 login-divider flex-col justify-between
-                  bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 px-6 py-6">
-        <div>
-          <div class="inline-flex items-center gap-2 mb-6">
-            <div class="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500
-                        flex items-center justify-center text-slate-950 font-bold text-sm">
-              Tw
+                  px-6 py-6 relative overflow-hidden"
+           style="background:linear-gradient(160deg,#0a1628 0%,#0f1e35 60%,#0a2010 100%)">
+
+        {{-- Subtle grid pattern --}}
+        <div class="absolute inset-0 pointer-events-none" style="
+          background-image:
+            linear-gradient(rgba(52,211,153,.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(52,211,153,.04) 1px, transparent 1px);
+          background-size: 28px 28px;
+        "></div>
+
+        {{-- Glow orb --}}
+        <div class="absolute -bottom-16 -left-16 w-56 h-56 rounded-full pointer-events-none"
+             style="background:radial-gradient(circle, rgba(16,185,129,.18) 0%, transparent 70%)"></div>
+
+        <div class="relative">
+          {{-- Logo mark --}}
+          <div class="inline-flex items-center gap-2.5 mb-8">
+            <div class="h-9 w-9 rounded-2xl flex items-center justify-center font-bold text-sm"
+                 style="background:linear-gradient(135deg,#34d399,#06b6d4);color:#0a1628;letter-spacing:-.5px">
+              {{ mb_strtoupper(mb_substr(config('app.name'), 0, 2)) }}
             </div>
             <div>
-              <div class="text-sm font-semibold text-slate-50 tracking-wide">{{ config('app.name') }}</div>
-              <div class="text-[11px] text-slate-400">Fuel &amp; Transport ERP</div>
+              <div class="text-sm font-bold text-slate-50 tracking-wide">{{ config('app.name') }}</div>
+              <div class="text-[10px] font-medium tracking-widest uppercase"
+                   style="color:rgba(52,211,153,.7)">Fuel &amp; Transport ERP</div>
             </div>
           </div>
 
-          <h1 class="text-xl font-semibold text-slate-50 mb-2">Sign in to {{ config('app.name') }}</h1>
-          <p class="text-xs leading-relaxed text-slate-400 mb-6">
-            Access your fuel stock, depot positions, local &amp; international transport,
-            and profitability in one clean workspace.
+          {{-- Main headline --}}
+          <div class="mb-1 text-[11px] font-semibold tracking-widest uppercase"
+               style="color:rgba(52,211,153,.6)">Fuel Operations Platform</div>
+          <h1 class="text-2xl font-bold text-slate-50 leading-tight mb-3"
+              style="letter-spacing:-.3px">
+            Every litre.<br>Accounted for.
+          </h1>
+          <p class="text-xs leading-relaxed mb-7" style="color:#64748b">
+            Depot stock · import pipelines · transporter ledgers ·
+            supplier payables — all in one workspace.
           </p>
 
-          <ul class="space-y-2 text-xs text-slate-300">
-            <li class="flex items-center gap-2">
-              <span class="h-1.5 w-4 rounded-full bg-emerald-400"></span>
+          <ul class="space-y-2.5">
+            <li class="flex items-center gap-2.5 text-xs" style="color:#94a3b8">
+              <span class="flex-shrink-0 h-5 w-5 rounded-lg flex items-center justify-center"
+                    style="background:rgba(52,211,153,.15)">
+                <svg class="w-3 h-3" style="color:#34d399" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
               Live depot stock &amp; batch tracking
             </li>
-            <li class="flex items-center gap-2">
-              <span class="h-1.5 w-4 rounded-full bg-cyan-400"></span>
-              Local &amp; international freight modules
+            <li class="flex items-center gap-2.5 text-xs" style="color:#94a3b8">
+              <span class="flex-shrink-0 h-5 w-5 rounded-lg flex items-center justify-center"
+                    style="background:rgba(6,182,212,.15)">
+                <svg class="w-3 h-3" style="color:#22d3ee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
+              Import pipeline &amp; truck-level logistics
             </li>
-            <li class="flex items-center gap-2">
-              <span class="h-1.5 w-4 rounded-full bg-emerald-300/80"></span>
-              Margin &amp; shortfall analytics
+            <li class="flex items-center gap-2.5 text-xs" style="color:#94a3b8">
+              <span class="flex-shrink-0 h-5 w-5 rounded-lg flex items-center justify-center"
+                    style="background:rgba(52,211,153,.15)">
+                <svg class="w-3 h-3" style="color:#34d399" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
+              Margin, shortfall &amp; payables analytics
             </li>
           </ul>
         </div>
 
-        <p class="mt-6 text-[11px] text-slate-500">
-          Don't have an account yet? Ask your {{ config('app.name') }} administrator to add you.
+        <p class="relative text-[10px]" style="color:#334155">
+          Contact your administrator to get access.
         </p>
       </div>
 
