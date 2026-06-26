@@ -119,15 +119,19 @@
             </button>
 
             @php
-                $__nb = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0;
+                $__nb      = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0;
+                $__nbSeen  = (int) session('alerts_seen_count', 0);
+                $__nbNew   = max(0, $__nb - $__nbSeen);
             @endphp
-            <button type="button" data-popover-btn="notif" class="{{ $iconBtn }} relative" aria-label="Notifications">
+            <button type="button" data-popover-btn="notif" id="twBellBtn" class="{{ $iconBtn }} relative" aria-label="Notifications">
                 <svg class="w-4 h-4 md:w-[17px] md:h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
-                @if($__nb > 0)
-                <span class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold pointer-events-none" style="background:#ef4444;color:#fff;line-height:1">{{ min($__nb,9) }}{{ $__nb>9?'+':'' }}</span>
+                @if($__nbNew > 0)
+                <span id="twBellBadge" class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold pointer-events-none" style="background:#ef4444;color:#fff;line-height:1">{{ min($__nbNew,9) }}{{ $__nbNew>9?'+':'' }}</span>
+                @elseif($__nb > 0)
+                <span id="twBellBadge" class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full pointer-events-none" style="background:#f59e0b"></span>
                 @endif
             </button>
 
@@ -357,6 +361,30 @@
             place(p, btn);
             if (key === 'search') document.getElementById('twTopbarSearch')?.focus();
         });
+
+        // When bell popover opens: call mark-seen so badge clears on next page load
+        // and immediately hide the red dot to give instant feedback
+        if (key === 'notif') {
+            const badge = document.getElementById('twBellBadge');
+            if (badge) {
+                // Shrink to a small amber dot (still alerts exist, just "seen")
+                badge.style.transition = 'all .2s ease';
+                badge.style.width  = '8px';
+                badge.style.height = '8px';
+                badge.style.background = '#f59e0b';
+                badge.textContent = '';
+                badge.style.transform = 'none';
+            }
+            fetch('{{ route("alerts.mark-seen") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                        || '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+            }).catch(() => {});
+        }
     }
 
     /* -------------------------------

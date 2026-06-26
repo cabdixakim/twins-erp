@@ -850,6 +850,7 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
             ->name('documents.destroy');
 
         Route::get('/alerts', [\App\Http\Controllers\AlertController::class, 'index'])->name('alerts.index');
+        Route::post('/alerts/mark-seen', [\App\Http\Controllers\AlertController::class, 'markSeen'])->name('alerts.mark-seen');
 
         // Audit log — managers and above (anyone with purchases.view)
         Route::get('/admin/audit-log', [AuditLogController::class, 'index'])
