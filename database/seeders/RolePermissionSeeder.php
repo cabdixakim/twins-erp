@@ -2,133 +2,122 @@
 
 namespace Database\Seeders;
 
-use App\Models\Permission;
-use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // -----------------------------
-        // Permissions (slug is the key)
-        // -----------------------------
-        $permissions = [
-            // Settings / Master Data
-            ['name' => 'View depots',        'slug' => 'depots.view',        'group' => 'Settings', 'description' => null],
-            ['name' => 'Manage depots',      'slug' => 'depots.manage',      'group' => 'Settings', 'description' => null],
+        // Map: role slug => permission slugs it gets by default
+        $matrix = [
 
-            ['name' => 'View suppliers',     'slug' => 'suppliers.view',     'group' => 'Settings', 'description' => null],
-            ['name' => 'Manage suppliers',   'slug' => 'suppliers.manage',   'group' => 'Settings', 'description' => null],
+            'manager' => [
+                // Purchases — full operational access (no void)
+                'purchases.view', 'purchases.create', 'purchases.confirm',
+                'purchases.receive', 'purchases.undo-receipt', 'purchases.cancel',
+                'purchases.cross-dock-transfer', 'purchases.cross-dock-dispatch',
+                'purchases.import-nominations', 'purchases.batch-costs',
+                // Sales — full
+                'sales.view', 'sales.create', 'sales.edit', 'sales.post',
+                // Clients
+                'clients.view', 'clients.create', 'clients.edit', 'clients.delete',
+                // Suppliers
+                'suppliers.view', 'suppliers.manage', 'suppliers.payments', 'suppliers.credits',
+                // Depots
+                'depots.view', 'depots.manage', 'depots.charges', 'depots.payments',
+                // Transporters
+                'transporters.view', 'transporters.manage',
+                'transporters.charges', 'transporters.payments',
+                // Inventory
+                'inventory.view', 'inventory.adjust', 'inventory.periods',
+                // Petty cash
+                'petty-cash.view', 'petty-cash.transact', 'petty-cash.manage',
+                // Reports
+                'reports.export',
+                // Settings
+                'settings.company', 'settings.products', 'settings.inventory',
+            ],
 
-            ['name' => 'View transporters',  'slug' => 'transporters.view',  'group' => 'Settings', 'description' => null],
-            ['name' => 'Manage transporters','slug' => 'transporters.manage','group' => 'Settings', 'description' => null],
+            'accountant' => [
+                // Purchases — view + landed costs only
+                'purchases.view', 'purchases.batch-costs',
+                // Sales — view + posting + edit (needed for invoicing)
+                'sales.view', 'sales.edit', 'sales.post',
+                // Clients
+                'clients.view',
+                // Suppliers — view + record payments + credits
+                'suppliers.view', 'suppliers.payments', 'suppliers.credits',
+                // Depots — view + charges + payments
+                'depots.view', 'depots.charges', 'depots.payments',
+                // Transporters — view + charges + payments
+                'transporters.view', 'transporters.charges', 'transporters.payments',
+                // Inventory — view + period management
+                'inventory.view', 'inventory.periods',
+                // Petty cash — full
+                'petty-cash.view', 'petty-cash.transact', 'petty-cash.manage',
+                // Reports
+                'reports.export',
+                // Settings
+                'settings.inventory',
+            ],
 
-            // Inventory / Depot Stock (future)
-            ['name' => 'View inventory',     'slug' => 'inventory.view',     'group' => 'Operations', 'description' => null],
-            ['name' => 'Adjust inventory',   'slug' => 'inventory.adjust',   'group' => 'Operations', 'description' => null],
+            'transport-controller' => [
+                // Purchases — view + import logistics only
+                'purchases.view', 'purchases.import-nominations',
+                // Sales — view
+                'sales.view',
+                // Clients — view
+                'clients.view',
+                // Suppliers — view
+                'suppliers.view',
+                // Depots — view
+                'depots.view',
+                // Transporters — operational
+                'transporters.view', 'transporters.manage', 'transporters.charges',
+                // Inventory — view
+                'inventory.view',
+                // Petty cash — view
+                'petty-cash.view',
+                // Reports — export
+                'reports.export',
+            ],
 
-            // Sales (future)
-            ['name' => 'Create sales',       'slug' => 'sales.create',       'group' => 'Sales', 'description' => null],
-            ['name' => 'Approve sales',      'slug' => 'sales.approve',      'group' => 'Sales', 'description' => null],
-            ['name' => 'View sales',         'slug' => 'sales.view',         'group' => 'Sales', 'description' => null],
-
-            // Transport (future)
-            ['name' => 'Manage local transport', 'slug' => 'transport.local', 'group' => 'Transport', 'description' => null],
-            ['name' => 'Manage intl transport',  'slug' => 'transport.intl',  'group' => 'Transport', 'description' => null],
-
-            // Finance (future)
-            ['name' => 'View financials',    'slug' => 'finance.view',       'group' => 'Finance', 'description' => null],
-            ['name' => 'Post expenses',      'slug' => 'finance.expense',    'group' => 'Finance', 'description' => null],
-
-            // System / Admin
-            ['name' => 'Manage users',       'slug' => 'users.manage',       'group' => 'System', 'description' => null],
-            ['name' => 'Manage roles',       'slug' => 'roles.manage',       'group' => 'System', 'description' => null],
+            'viewer' => [
+                'purchases.view',
+                'sales.view',
+                'clients.view',
+                'suppliers.view',
+                'depots.view',
+                'transporters.view',
+                'inventory.view',
+                'petty-cash.view',
+            ],
         ];
 
-        $permModels = [];
-        foreach ($permissions as $perm) {
-            $model = Permission::updateOrCreate(
-                ['slug' => $perm['slug']],
-                [
-                    'name'        => $perm['name'],
-                    'group'       => $perm['group'],
-                    'description' => $perm['description'],
-                    'is_active'   => true,
-                ]
-            );
-            $permModels[$model->slug] = $model;
-        }
-
-        // -----------------------------
-        // Roles (slug is the key)
-        // -----------------------------
-        $roles = [
-            'owner'      => ['name' => 'Owner',      'description' => 'Full access to everything'],
-            'manager'    => ['name' => 'Manager',    'description' => 'Oversees operations & finance'],
-            'accountant' => ['name' => 'Accountant', 'description' => 'Finance & reporting'],
-            'operations' => ['name' => 'Operations', 'description' => 'Depots & stock operations'],
-            'transport'  => ['name' => 'Transport',  'description' => 'Local & international transport operations'],
-            'viewer'     => ['name' => 'Viewer',     'description' => 'Read-only access'],
-        ];
-
-        $roleModels = [];
-        foreach ($roles as $slug => $meta) {
-            $roleModels[$slug] = Role::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name'        => $meta['name'],
-                    'description' => $meta['description'],
-                    'is_active'   => true,
-                ]
-            );
-        }
-
-        // -----------------------------
-        // Attach permissions to roles
-        // -----------------------------
-        // NOTE: Owner bypass is handled in code, so we don't need to sync any permissions for owner.
-
-        $sync = function (string $roleSlug, array $permissionSlugs) use ($roleModels, $permModels) {
-            $ids = [];
-            foreach ($permissionSlugs as $ps) {
-                if (isset($permModels[$ps])) $ids[] = $permModels[$ps]->id;
+        foreach ($matrix as $roleSlug => $permSlugs) {
+            $roleId = DB::table('roles')->where('slug', $roleSlug)->value('id');
+            if (! $roleId) {
+                $this->command->warn("Role '{$roleSlug}' not found — skipping.");
+                continue;
             }
-            $roleModels[$roleSlug]->permissions()->sync($ids);
-        };
 
-        $sync('manager', [
-            'depots.view','depots.manage',
-            'suppliers.view','suppliers.manage',
-            'transporters.view','transporters.manage',
-            'inventory.view','inventory.adjust',
-            'sales.create','sales.approve','sales.view',
-            'transport.local','transport.intl',
-            'finance.view','finance.expense',
-            'users.manage','roles.manage',
-        ]);
+            $permIds = DB::table('permissions')
+                ->whereIn('slug', $permSlugs)
+                ->pluck('id')
+                ->toArray();
 
-        $sync('accountant', [
-            'finance.view','finance.expense','sales.view',
-        ]);
+            // Sync (replaces whatever is there)
+            DB::table('role_permission')->where('role_id', $roleId)->delete();
+            $rows = array_map(fn($pid) => [
+                'role_id'       => $roleId,
+                'permission_id' => $pid,
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ], $permIds);
+            DB::table('role_permission')->insert($rows);
 
-        $sync('operations', [
-            'depots.view','depots.manage',
-            'inventory.view','inventory.adjust',
-            'sales.create','sales.view',
-        ]);
-
-        $sync('transport', [
-            'transport.local','transport.intl',
-        ]);
-
-        $sync('viewer', [
-            'depots.view',
-            'suppliers.view',
-            'transporters.view',
-            'inventory.view',
-            'sales.view',
-            'finance.view',
-        ]);
+            $this->command->info("  {$roleSlug}: assigned " . count($permIds) . " permissions.");
+        }
     }
 }
