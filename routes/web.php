@@ -761,10 +761,10 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
     ->name('accounting.')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\AccountingController::class, 'index'])
-            ->middleware('permission:settings.inventory')
+            ->middleware('permission:reports.export')
             ->name('index');
         Route::get('/chart-of-accounts', [\App\Http\Controllers\AccountingController::class, 'chartOfAccounts'])
-            ->middleware('permission:settings.inventory')
+            ->middleware('permission:reports.export')
             ->name('coa');
         Route::post('/chart-of-accounts', [\App\Http\Controllers\AccountingController::class, 'storeAccount'])
             ->middleware('permission:settings.inventory')
@@ -785,7 +785,7 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
             ->middleware('permission:reports.export')
             ->name('balance-sheet');
         Route::get('/journals', [\App\Http\Controllers\AccountingController::class, 'journals'])
-            ->middleware('permission:settings.inventory')
+            ->middleware('permission:reports.export')
             ->name('journals');
         Route::post('/journals', [\App\Http\Controllers\AccountingController::class, 'storeJournal'])
             ->middleware('permission:settings.inventory')
