@@ -8,8 +8,24 @@
     now()->hour < 17 => 'Good afternoon',
     default          => 'Good evening',
   };
-  $firstName = explode(' ', auth()->user()->name)[0];
+  $firstName   = explode(' ', auth()->user()->name)[0];
   $netPositive = $netPosition >= 0;
+
+  // Permission flags for conditional rendering (no N+1 — loadMissing is idempotent)
+  $_u = auth()->user();
+  $_u->loadMissing('role.permissions');
+  $dCan = [
+    'purchases.create'  => $_u->hasPermission('purchases.create'),
+    'purchases.view'    => $_u->hasPermission('purchases.view'),
+    'sales.view'        => $_u->hasPermission('sales.view'),
+    'petty-cash.view'   => $_u->hasPermission('petty-cash.view'),
+    'reports.export'    => $_u->hasPermission('reports.export'),
+    'suppliers.view'    => $_u->hasPermission('suppliers.view'),
+    'depots.view'       => $_u->hasPermission('depots.view'),
+    'clients.view'      => $_u->hasPermission('clients.view'),
+    'inventory.view'    => $_u->hasPermission('inventory.view'),
+    'transporters.view' => $_u->hasPermission('transporters.view'),
+  ];
 @endphp
 
 <div class="space-y-5">
@@ -28,6 +44,7 @@
     </div>
     {{-- Quick actions: icon-only on mobile, icon+label on sm+ --}}
     <div class="flex items-center gap-2">
+      @if($dCan['purchases.create'])
       <a href="{{ route('purchases.create') }}"
          class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
          style="border-color:var(--tw-border); background:var(--tw-surface)"
@@ -37,6 +54,8 @@
         </svg>
         <span class="hidden sm:inline">New Purchase</span>
       </a>
+      @endif
+      @if($dCan['sales.view'])
       <a href="{{ route('sales.index') }}"
          class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
          style="border-color:var(--tw-border); background:var(--tw-surface)"
@@ -46,6 +65,8 @@
         </svg>
         <span class="hidden sm:inline">New Sale</span>
       </a>
+      @endif
+      @if($dCan['petty-cash.view'])
       <a href="{{ route('petty-cash.index') }}"
          class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
          style="border-color:var(--tw-border); background:var(--tw-surface)"
@@ -55,6 +76,8 @@
         </svg>
         <span class="hidden sm:inline">Petty Cash</span>
       </a>
+      @endif
+      @if($dCan['reports.export'])
       <a href="{{ route('reports.index') }}"
          class="h-9 w-9 sm:w-auto sm:px-3.5 rounded-xl border text-xs font-semibold tw-fg transition inline-flex items-center justify-center gap-1.5"
          style="border-color:var(--tw-border); background:var(--tw-surface)"
@@ -64,6 +87,7 @@
         </svg>
         <span class="hidden sm:inline">Reports</span>
       </a>
+      @endif
     </div>
   </div>
 
@@ -224,10 +248,12 @@
     <div class="tw-card rounded-2xl p-5 flex flex-col">
       <div class="flex items-center justify-between mb-4">
         <div class="text-sm font-semibold tw-fg">Open Purchases</div>
+        @if($dCan['purchases.view'])
         <a href="{{ route('purchases.index') }}"
            class="text-[10px] font-semibold underline underline-offset-2 tw-muted hover:tw-fg transition">
           View all →
         </a>
+        @endif
       </div>
 
       {{-- Big number --}}
@@ -269,6 +295,7 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
     {{-- Supplier AP --}}
+    @if($dCan['suppliers.view'])
     <a href="{{ route('suppliers.index') }}"
        class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
       <div class="flex items-center gap-3 mb-4">
@@ -315,7 +342,9 @@
       @endif
     </a>
 
+    @endif
     {{-- Depot Charges AP --}}
+    @if($dCan['depots.view'])
     <a href="{{ route('depots.index') }}"
        class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
       <div class="flex items-center gap-3 mb-4">
@@ -364,7 +393,9 @@
       @endif
     </a>
 
+    @endif
     {{-- Client AR --}}
+    @if($dCan['clients.view'])
     <a href="{{ route('clients.index') }}"
        class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
       <div class="flex items-center gap-3 mb-4">
@@ -410,6 +441,7 @@
         <p class="text-xs tw-muted pt-3" style="border-top:1px solid var(--tw-border)">All clients settled.</p>
       @endif
     </a>
+    @endif
 
   </div>
 
@@ -419,6 +451,7 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
     {{-- Stock by Depot --}}
+    @if($dCan['inventory.view'])
     <a href="{{ route('depot-stock.index') }}"
        class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
       <div class="flex items-center justify-between mb-4">
@@ -460,11 +493,13 @@
         <p class="text-xs tw-muted">No stock on hand — all depots are empty.</p>
       @endif
     </a>
+    @endif
 
     {{-- Bank Balances + Transporter Payables --}}
     <div class="space-y-4">
 
       {{-- Bank Balances --}}
+      @if($dCan['petty-cash.view'])
       <a href="{{ route('banks.index') }}"
          class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
         <div class="flex items-center justify-between mb-4">
@@ -508,8 +543,10 @@
           <p class="text-xs tw-muted">Add bank accounts to track balances.</p>
         @endif
       </a>
+      @endif
 
       {{-- Transporter Payables --}}
+      @if($dCan['transporters.view'])
       <a href="{{ route('transporters.index') }}"
          class="tw-card group block rounded-2xl p-5 hover:-translate-y-0.5 transition-transform duration-150">
         <div class="flex items-center justify-between mb-3">
@@ -552,6 +589,7 @@
           <p class="text-xs tw-muted">No outstanding transporter balances.</p>
         @endif
       </a>
+      @endif
 
     </div>
   </div>
