@@ -8,11 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hospitality_charges')) {
+            return;
+        }
         Schema::create('hospitality_charges', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('company_id');
             $table->unsignedBigInteger('purchase_id');
-            $table->string('paid_to_type', 20); // supplier | petty_cash
+            $table->string('paid_to_type', 20);
             $table->unsignedBigInteger('paid_to_id')->nullable();
             $table->string('paid_to_name', 200)->nullable();
             $table->decimal('amount', 14, 4);
@@ -23,7 +26,6 @@ return new class extends Migration
             $table->string('description', 500)->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
-
             $table->index(['company_id', 'purchase_id']);
         });
     }

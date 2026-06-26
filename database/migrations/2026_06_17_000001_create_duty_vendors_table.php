@@ -8,6 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('duty_vendors')) {
+            return;
+        }
         Schema::create('duty_vendors', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('company_id');
@@ -22,7 +25,6 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
-
             $table->index(['company_id', 'is_active']);
         });
     }

@@ -9,14 +9,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('batch_costs', function (Blueprint $table) {
-            $table->unsignedBigInteger('hospitality_charge_id')->nullable()->after('truck_id');
+            if (! Schema::hasColumn('batch_costs', 'hospitality_charge_id')) {
+                $table->unsignedBigInteger('hospitality_charge_id')->nullable()->after('truck_id');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('batch_costs', function (Blueprint $table) {
-            $table->dropColumn('hospitality_charge_id');
+            if (Schema::hasColumn('batch_costs', 'hospitality_charge_id')) {
+                $table->dropColumn('hospitality_charge_id');
+            }
         });
     }
 };

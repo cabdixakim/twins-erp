@@ -8,14 +8,18 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('import_trucks', function (Blueprint $table) {
-            $table->timestamp('arrived_at_border_at')->nullable()->after('border_post');
+            if (! Schema::hasColumn('import_trucks', 'arrived_at_border_at')) {
+                $table->timestamp('arrived_at_border_at')->nullable()->after('border_post');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('import_trucks', function (Blueprint $table) {
-            $table->dropColumn('arrived_at_border_at');
+            if (Schema::hasColumn('import_trucks', 'arrived_at_border_at')) {
+                $table->dropColumn('arrived_at_border_at');
+            }
         });
     }
 };
