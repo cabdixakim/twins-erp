@@ -14,7 +14,7 @@
         <span class="tw-nav-label sidebar-label">Settings</span>
     </a>
 
-    @if(in_array($userRole ?? '', ['owner','admin','manager','accountant'], true))
+    @if($can['purchases.view'] ?? false)
     <a href="{{ route('admin.audit-log') }}"
        class="tw-nav-item sidebar-label-parent"
        style="opacity:.75">

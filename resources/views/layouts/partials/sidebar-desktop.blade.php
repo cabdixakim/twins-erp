@@ -49,8 +49,8 @@
     {{-- Navigation --}}
     <div class="flex-1 overflow-hidden">
         <div class="h-full overflow-y-auto px-3 py-4 space-y-4 text-sm">
-            @include('layouts.partials.nav-primary', compact('onDashboard','onDepotStock','onPurchases','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onPettyCash','onBanks','onReports','onAccounting'))
-            @include('layouts.partials.nav-settings', compact('user','userRole','onSettingsRoute','onSales'))
+            @include('layouts.partials.nav-primary', compact('can','onDashboard','onDepotStock','onPurchases','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onPettyCash','onBanks','onReports','onAccounting','onDuties','onClearances','onDocuments','onAlerts'))
+            @include('layouts.partials.nav-settings', compact('can','user','userRole','onSettingsRoute','onSales'))
         </div>
     </div>
 

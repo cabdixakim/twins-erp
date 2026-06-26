@@ -29,8 +29,8 @@
 
     {{-- Nav --}}
     <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-4 text-sm">
-        @include('layouts.partials.nav-primary', compact('onDashboard','onDepotStock','onPurchases','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onPettyCash','onBanks','onReports','onAccounting'))
-        @include('layouts.partials.nav-settings', compact('user','userRole','onSettingsRoute'))
+        @include('layouts.partials.nav-primary', compact('can','onDashboard','onDepotStock','onPurchases','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onPettyCash','onBanks','onReports','onAccounting','onDuties','onClearances','onDocuments','onAlerts'))
+        @include('layouts.partials.nav-settings', compact('can','user','userRole','onSettingsRoute'))
     </nav>
 
     {{-- Footer --}}

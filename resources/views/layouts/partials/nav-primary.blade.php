@@ -4,7 +4,7 @@
 
 <nav class="space-y-0.5">
 
-    {{-- SUMMARY --}}
+    {{-- SUMMARY — always visible --}}
     <a href="{{ route('dashboard') }}"
        class="tw-nav-item {{ $onDashboard ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -17,6 +17,7 @@
     </a>
 
     {{-- DEPOT STOCK --}}
+    @if($can['inventory.view'])
     <a href="{{ route('depot-stock.index') }}"
        class="tw-nav-item {{ $onDepotStock ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -29,8 +30,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Depot Stock</span>
     </a>
+    @endif
 
     {{-- CLEARANCES --}}
+    @if($can['reports.export'])
     <a href="{{ route('clearances.index') }}"
        class="tw-nav-item {{ ($onClearances ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -41,8 +44,9 @@
         </span>
         <span class="tw-nav-label sidebar-label">Clearances</span>
     </a>
+    @endif
 
-    {{-- ALERTS --}}
+    {{-- ALERTS — always visible --}}
     @php $__alertCount = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0; @endphp
     <a href="{{ route('alerts.index') }}"
        class="tw-nav-item {{ ($onAlerts ?? false) ? 'active' : '' }} sidebar-label-parent">
@@ -64,6 +68,7 @@
     </a>
 
     {{-- PURCHASES --}}
+    @if($can['purchases.view'])
     <a href="{{ route('purchases.index') }}"
        class="tw-nav-item {{ $onPurchases ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -74,8 +79,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Purchases</span>
     </a>
+    @endif
 
     {{-- SALES --}}
+    @if($can['sales.view'])
     <a href="{{ route('sales.index') }}"
        class="tw-nav-item {{ ($onSales ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -87,8 +94,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Sales</span>
     </a>
+    @endif
 
     {{-- CLIENTS (AR) --}}
+    @if($can['clients.view'])
     <a href="{{ route('clients.index') }}"
        class="tw-nav-item {{ ($onClients ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -99,8 +108,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Clients</span>
     </a>
+    @endif
 
     {{-- INVOICES --}}
+    @if($can['sales.view'])
     <a href="{{ route('invoices.index') }}"
        class="tw-nav-item {{ ($onInvoices ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -113,10 +124,14 @@
         </span>
         <span class="tw-nav-label sidebar-label">Invoices</span>
     </a>
+    @endif
 
+    @if($can['transporters.view'] || $can['suppliers.view'] || $can['depots.view'] || $can['reports.export'])
     <div class="tw-nav-divider"></div>
+    @endif
 
     {{-- TRANSPORTERS --}}
+    @if($can['transporters.view'])
     <a href="{{ route('transporters.index') }}"
        class="tw-nav-item {{ ($onTransporters ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -128,8 +143,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Transporters</span>
     </a>
+    @endif
 
     {{-- SUPPLIERS --}}
+    @if($can['suppliers.view'])
     <a href="{{ route('suppliers.index') }}"
        class="tw-nav-item {{ ($onSuppliers ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -140,8 +157,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Suppliers</span>
     </a>
+    @endif
 
     {{-- DEPOTS --}}
+    @if($can['depots.view'])
     <a href="{{ route('depots.index') }}"
        class="tw-nav-item {{ ($onDepotLedger ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -153,8 +172,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Depots</span>
     </a>
+    @endif
 
     {{-- DUTIES --}}
+    @if($can['reports.export'])
     <a href="{{ route('duties.index') }}"
        class="tw-nav-item {{ ($onDuties ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -165,10 +186,14 @@
         </span>
         <span class="tw-nav-label sidebar-label">Duties</span>
     </a>
+    @endif
 
+    @if($can['petty-cash.view'] || $can['reports.export'])
     <div class="tw-nav-divider"></div>
+    @endif
 
     {{-- PETTY CASH --}}
+    @if($can['petty-cash.view'])
     <a href="{{ route('petty-cash.index') }}"
        class="tw-nav-item {{ ($onPettyCash ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -179,8 +204,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Petty Cash</span>
     </a>
+    @endif
 
     {{-- BANKS --}}
+    @if($can['petty-cash.view'])
     <a href="{{ route('banks.index') }}"
        class="tw-nav-item {{ ($onBanks ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -193,8 +220,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Banks</span>
     </a>
+    @endif
 
     {{-- REPORTS --}}
+    @if($can['reports.export'])
     <a href="{{ route('reports.index') }}"
        class="tw-nav-item {{ ($onReports ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -205,8 +234,10 @@
         </span>
         <span class="tw-nav-label sidebar-label">Reports</span>
     </a>
+    @endif
 
     {{-- ACCOUNTING --}}
+    @if($can['reports.export'])
     <a href="{{ route('accounting.index') }}"
        class="tw-nav-item {{ ($onAccounting ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>
@@ -217,8 +248,9 @@
         </span>
         <span class="tw-nav-label sidebar-label">Accounting</span>
     </a>
+    @endif
 
-    {{-- DOCUMENTS --}}
+    {{-- DOCUMENTS — always visible (no write permission needed to view) --}}
     <a href="{{ route('documents.index') }}"
        class="tw-nav-item {{ ($onDocuments ?? false) ? 'active' : '' }} sidebar-label-parent">
         <span class="tw-nav-pip"></span>

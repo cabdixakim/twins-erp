@@ -67,6 +67,24 @@
     $isFinanceRole   = in_array($userRole, ['owner','admin','manager','accountant'], true);
     $isTransport     = in_array($userRole, ['owner','admin','manager','transport-controller'], true);
 
+    // Eager-load permissions once so hasPermission() calls below don't N+1
+    $user?->loadMissing('role.permissions');
+
+    // Precomputed permission flags used in nav partials
+    $can = [
+        'inventory.view'    => (bool) $user?->hasPermission('inventory.view'),
+        'purchases.view'    => (bool) $user?->hasPermission('purchases.view'),
+        'sales.view'        => (bool) $user?->hasPermission('sales.view'),
+        'clients.view'      => (bool) $user?->hasPermission('clients.view'),
+        'transporters.view' => (bool) $user?->hasPermission('transporters.view'),
+        'suppliers.view'    => (bool) $user?->hasPermission('suppliers.view'),
+        'depots.view'       => (bool) $user?->hasPermission('depots.view'),
+        'petty-cash.view'   => (bool) $user?->hasPermission('petty-cash.view'),
+        'reports.export'    => (bool) $user?->hasPermission('reports.export'),
+        'settings.company'  => (bool) $user?->hasPermission('settings.company'),
+        'admin.users'       => (bool) $user?->hasPermission('admin.users'),
+    ];
+
     $onDashboard     = request()->routeIs('dashboard');
     $onDepotStock    = request()->routeIs('depot-stock.*');
     $onPurchases     = request()->routeIs('purchases.*');
@@ -88,12 +106,12 @@
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
-    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
+    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport','can',
     'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
-    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport',
+    'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport','can',
     'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts'
 ))
 
