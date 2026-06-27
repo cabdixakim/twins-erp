@@ -626,18 +626,9 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ]
         );
 
-        // Auto-apply depot shrinkage immediately on receipt
-        $this->postDepotShrinkage(
-            $ledger,
-            (int) $purchase->company_id,
-            (int) $purchase->product_id,
-            (int) $purchase->depot_id,
-            (int) $purchase->batch_id,
-            $qty,
-            $u?->id,
-            'purchase',
-            (int) $purchase->id
-        );
+        // Note: no shrinkage on local depot receipts — the seller already absorbed
+        // storage loss before you took custody. Shrinkage is only auto-applied on
+        // cross-dock transfers and import truck deliveries (your transit/handling).
 
         // Mark as received (make sure your app recognises this status in filters/UI)
         $purchase->status = 'received';
