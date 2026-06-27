@@ -429,6 +429,48 @@
       </div>
     @endif
 
+    {{-- Shipper remainder resolution --}}
+    @if($remainingAtShipper > 0 || $purchase->shipper_remainder_resolution)
+    <div class="px-5 py-4 border-t {{ $border }}" style="background:rgba(245,158,11,.06)">
+      <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-3">Remaining at shipper</div>
+      @if($purchase->shipper_remainder_resolution)
+        {{-- Already resolved --}}
+        @php
+          $resLabel = $purchase->shipper_remainder_resolution === 'credit_note' ? 'Credit note issued' : 'Carried forward';
+          $resColour = $purchase->shipper_remainder_resolution === 'credit_note' ? 'text-emerald-400' : 'text-sky-400';
+        @endphp
+        <div class="flex flex-wrap items-center gap-4 text-sm">
+          <div>
+            <div class="text-[10px] {{ $muted }}">Qty</div>
+            <div class="font-semibold {{ $fg }}">{{ number_format((float)$purchase->shipper_remainder_qty, 0) }} L</div>
+          </div>
+          <div>
+            <div class="text-[10px] {{ $muted }}">Resolution</div>
+            <div class="font-semibold {{ $resColour }}">{{ $resLabel }}</div>
+          </div>
+          @if($purchase->shipper_remainder_note)
+          <div class="flex-1">
+            <div class="text-[10px] {{ $muted }}">Note</div>
+            <div class="text-xs {{ $fg }}">{{ $purchase->shipper_remainder_note }}</div>
+          </div>
+          @endif
+        </div>
+      @else
+        {{-- Not yet resolved --}}
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="text-sm {{ $fg }}">
+            <span class="font-bold text-amber-400">{{ number_format($remainingAtShipper, 0) }} L</span>
+            <span class="{{ $muted }} ml-1">not yet loaded — still at the shipper's terminal</span>
+          </div>
+          <button type="button" onclick="document.getElementById('shipperRemainderModal').classList.remove('hidden')"
+                  class="h-8 px-4 rounded-xl border border-amber-500/60 bg-amber-500/10 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition">
+            Close remainder
+          </button>
+        </div>
+      @endif
+    </div>
+    @endif
+
     {{-- Financial summary --}}
     <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }}">
       <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-3">Transporter payable</div>
@@ -3220,6 +3262,110 @@ function closeInTransitModal() {
   document.documentElement.classList.remove('overflow-hidden');
 }
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeInTransitModal();
+  if (e.key === 'Escape') {
+    closeInTransitModal();
+    closeShipperModal();
+  }
 });
 </script>
+
+{{-- ── Shipper remainder modal ── --}}
+@if($remainingAtShipper > 0 && !$purchase->shipper_remainder_resolution)
+<div id="shipperRemainderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.6)">
+  <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }}" style="background:rgba(245,158,11,.08)">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+               style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3)">
+            <svg class="w-4 h-4" style="color:#f59e0b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold tw-fg">Close shipper remainder</div>
+            <div class="text-xs tw-muted">{{ number_format($remainingAtShipper, 0) }} L still at shipper</div>
+          </div>
+        </div>
+        <button type="button" onclick="closeShipperModal()" class="tw-muted hover:tw-fg transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ route('purchases.shipper-credit-note', $purchase) }}" id="shipperRemainderForm">
+      @csrf
+      <div class="px-5 py-4 space-y-4">
+
+        {{-- Resolution type --}}
+        <div>
+          <label class="block text-xs font-semibold tw-fg mb-2">How to resolve?</label>
+          <div class="space-y-2">
+            <label class="flex items-start gap-3 rounded-xl border {{ $border }} p-3 cursor-pointer hover:border-emerald-500/60 transition" id="optCreditNote">
+              <input type="radio" name="resolution" value="credit_note" class="mt-0.5" onchange="toggleResolutionFields()" checked>
+              <div>
+                <div class="text-sm font-semibold tw-fg">Supplier credit note</div>
+                <div class="text-xs tw-muted">Supplier refunds / discounts the unloaded qty. Posts a credit note to AP.</div>
+              </div>
+            </label>
+            <label class="flex items-start gap-3 rounded-xl border {{ $border }} p-3 cursor-pointer hover:border-sky-500/60 transition" id="optCarryFwd">
+              <input type="radio" name="resolution" value="carried_forward" class="mt-0.5" onchange="toggleResolutionFields()">
+              <div>
+                <div class="text-sm font-semibold tw-fg">Carry forward</div>
+                <div class="text-xs tw-muted">Supplier holds it for a future order. No AP entry — informational only.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {{-- Qty --}}
+        <div>
+          <label class="block text-xs font-semibold tw-fg mb-1">Qty to close (L)</label>
+          <input type="number" name="remainder_qty" step="0.001" min="0.001"
+                 value="{{ $remainingAtShipper }}" required
+                 class="w-full h-10 rounded-xl border {{ $border }} tw-surface tw-fg text-sm px-3 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+        </div>
+
+        {{-- Entry date (only for credit note) --}}
+        <div id="entryDateField">
+          <label class="block text-xs font-semibold tw-fg mb-1">Credit note date</label>
+          <input type="date" name="entry_date" value="{{ now()->toDateString() }}" required
+                 class="w-full h-10 rounded-xl border {{ $border }} tw-surface tw-fg text-sm px-3 focus:outline-none focus:ring-2 focus:ring-amber-500/40">
+        </div>
+
+        {{-- Note --}}
+        <div>
+          <label class="block text-xs font-semibold tw-fg mb-1">Note <span class="tw-muted font-normal">(optional)</span></label>
+          <textarea name="note" rows="2" placeholder="Reference number, context…"
+                    class="w-full rounded-xl border {{ $border }} tw-surface tw-fg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t {{ $border }} flex items-center gap-2 justify-end">
+        <button type="button" onclick="closeShipperModal()"
+                class="h-9 px-4 rounded-xl border {{ $border }} text-sm font-semibold tw-fg hover:opacity-80 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="h-9 px-5 rounded-xl border border-amber-600 bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition">
+          Confirm
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function closeShipperModal() {
+  document.getElementById('shipperRemainderModal').classList.add('hidden');
+}
+function toggleResolutionFields() {
+  const isCreditNote = document.querySelector('[name="resolution"]:checked')?.value === 'credit_note';
+  document.getElementById('entryDateField').style.display = isCreditNote ? '' : 'none';
+  const reqField = document.querySelector('[name="entry_date"]');
+  if (reqField) reqField.required = isCreditNote;
+}
+</script>
+@endif

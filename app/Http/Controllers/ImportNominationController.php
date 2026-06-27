@@ -545,6 +545,28 @@ class ImportNominationController extends Controller
                 ],
                 ['type' => 'receipt', 'ref_type' => 'import_truck', 'ref_id' => (int) $truck->id]
             );
+
+            // Auto-apply depot shrinkage immediately on receipt
+            $depot        = \App\Models\Depot::find((int) $data['depot_id']);
+            $shrinkagePct = (float) ($depot?->default_shrinkage_pct ?? 0);
+            if ($shrinkagePct > 0) {
+                $shrinkageQty = round($qtyDelivered * $shrinkagePct / 100, 4);
+                if ($shrinkageQty > 0.0001) {
+                    $ledger->adjustment([
+                        'company_id'  => $cid,
+                        'product_id'  => (int) $purchase->product_id,
+                        'depot_id'    => (int) $data['depot_id'],
+                        'batch_id'    => (int) $purchase->batch_id,
+                        'reason_type' => 'depot_shrinkage',
+                        'qty'         => $shrinkageQty,
+                        'ref_type'    => 'import_truck',
+                        'ref_id'      => (int) $truck->id,
+                        'reference'   => 'shrinkage:truck:' . $truck->id,
+                        'notes'       => "Auto depot shrinkage ({$shrinkagePct}%) — truck {$truck->truck_reg}",
+                        'created_by'  => auth()->id(),
+                    ], ['type' => 'adjustment', 'reference' => 'shrinkage:truck:' . $truck->id]);
+                }
+            }
         }
 
         // Post ledger entries for freight earned + short charge (idempotent per truck)

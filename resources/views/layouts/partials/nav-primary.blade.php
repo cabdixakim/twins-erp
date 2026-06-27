@@ -32,6 +32,20 @@
     </a>
     @endif
 
+    {{-- STOCK ADJUSTMENTS --}}
+    @if($can['inventory.view'])
+    <a href="{{ route('inventory-adjustments.index') }}"
+       class="tw-nav-item {{ ($onAdjustments ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Stock Losses</span>
+    </a>
+    @endif
+
     {{-- CLEARANCES --}}
     @if($can['reports.export'])
     <a href="{{ route('clearances.index') }}"
@@ -239,6 +253,18 @@
             </svg>
         </span>
         <span class="tw-nav-label sidebar-label">Documents</span>
+    </a>
+
+    {{-- ALERTS --}}
+    <a href="{{ route('alerts.index') }}"
+       class="tw-nav-item {{ ($onAlerts ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Alerts</span>
     </a>
 
 </nav>

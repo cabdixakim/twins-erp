@@ -103,16 +103,17 @@
     $onClearances    = request()->routeIs('clearances.*');
     $onDocuments     = request()->routeIs('documents.*');
     $onAlerts        = request()->routeIs('alerts.*');
+    $onAdjustments   = request()->routeIs('inventory-adjustments.*');
 @endphp
 
 @include('layouts.partials.sidebar-desktop', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport','can',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts','onAdjustments'
 ))
 
 @include('layouts.partials.sidebar-mobile', compact(
     'user','userRole','company','canManageUsers','isOwnerOrAdmin','isFinanceRole','isTransport','can',
-    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts'
+    'onDashboard','onDepotStock','onPurchases','onSettingsRoute','onSales','onClients','onInvoices','onTransporters','onSuppliers','onDepotLedger','onReports','onPettyCash','onBanks','onAccounting','onDuties','onClearances','onDocuments','onAlerts','onAdjustments'
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">

@@ -626,6 +626,19 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ]
         );
 
+        // Auto-apply depot shrinkage immediately on receipt
+        $this->postDepotShrinkage(
+            $ledger,
+            (int) $purchase->company_id,
+            (int) $purchase->product_id,
+            (int) $purchase->depot_id,
+            (int) $purchase->batch_id,
+            $qty,
+            $u?->id,
+            'purchase',
+            (int) $purchase->id
+        );
+
         // Mark as received (make sure your app recognises this status in filters/UI)
         $purchase->status = 'received';
         $purchase->updated_by = $u?->id;
@@ -884,6 +897,19 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
                     ->whereKey((int) $purchase->batch_id)
                     ->decrement('qty_received', $qty);
             }
+
+            // Auto-apply depot shrinkage immediately on transfer
+            $this->postDepotShrinkage(
+                $ledger,
+                $cid,
+                (int) $purchase->product_id,
+                $depotId,
+                (int) $purchase->batch_id,
+                $qty,
+                $u?->id,
+                'purchase',
+                (int) $purchase->id
+            );
 
             $purchase->status      = 'transferred';
             $purchase->depot_id    = $depotId;
@@ -1380,6 +1406,101 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         $msg = $purchase->status === 'received'
             ? "Delivery posted.\nPurchase fully received ({$delivered} L) — stock is now in depot."
             : "Delivery posted (" . number_format($qty, 3) . " L).\n{$delivered} / {$total} L delivered so far.";
+
+        return redirect()->route('purchases.show', $purchase)->with('status', $msg);
+    }
+
+    /**
+     * Post depot shrinkage immediately after a receipt into a depot.
+     * Idempotent — uses a stable reference key so it never double-posts.
+     */
+    private function postDepotShrinkage(
+        InventoryLedger $ledger,
+        int $companyId,
+        int $productId,
+        int $depotId,
+        int $batchId,
+        float $receivedQty,
+        ?int $userId,
+        string $refType,
+        int $refId
+    ): void {
+        $depot        = \App\Models\Depot::find($depotId);
+        $shrinkagePct = (float) ($depot?->default_shrinkage_pct ?? 0);
+        if ($shrinkagePct <= 0) return;
+
+        $shrinkageQty = round($receivedQty * $shrinkagePct / 100, 4);
+        if ($shrinkageQty < 0.0001) return;
+
+        try {
+            $ledger->adjustment([
+                'company_id'  => $companyId,
+                'product_id'  => $productId,
+                'depot_id'    => $depotId,
+                'batch_id'    => $batchId,
+                'reason_type' => 'depot_shrinkage',
+                'qty'         => $shrinkageQty,
+                'ref_type'    => $refType,
+                'ref_id'      => $refId,
+                'reference'   => "shrinkage:{$refType}:{$refId}",
+                'notes'       => "Auto depot shrinkage ({$shrinkagePct}%) on receipt",
+                'created_by'  => $userId,
+            ], ['type' => 'adjustment', 'reference' => "shrinkage:{$refType}:{$refId}"]);
+        } catch (\RuntimeException $e) {
+            // Swallow PostingGate blocks silently — shrinkage is best-effort
+            // The main receipt already succeeded; don't roll back for shrinkage failure
+        }
+    }
+
+    /**
+     * Record resolution for qty remaining at shipper on an import purchase.
+     * Supports: credit_note (reduces AP) or carried_forward (informational).
+     */
+    public function shipperCreditNote(Purchase $purchase)
+    {
+        $u   = auth()->user();
+        $cid = (int) $u->active_company_id;
+        abort_if((int) $purchase->company_id !== $cid, 403);
+        abort_if($purchase->type !== 'import', 400, 'Only import purchases have a shipper remainder.');
+        abort_if($purchase->shipper_remainder_resolution !== null, 400, 'Shipper remainder already resolved.');
+
+        $data = request()->validate([
+            'resolution'       => 'required|in:credit_note,carried_forward',
+            'remainder_qty'    => 'required|numeric|min:0.001',
+            'note'             => 'nullable|string|max:1000',
+            'entry_date'       => 'required_if:resolution,credit_note|nullable|date',
+        ]);
+
+        $remainderQty = (float) $data['remainder_qty'];
+        $resolution   = $data['resolution'];
+
+        DB::transaction(function () use ($purchase, $u, $cid, $data, $remainderQty, $resolution) {
+            $purchase->shipper_remainder_resolution = $resolution;
+            $purchase->shipper_remainder_qty        = $remainderQty;
+            $purchase->shipper_remainder_note       = $data['note'] ?? null;
+            $purchase->updated_by                   = $u?->id;
+            $purchase->save();
+
+            if ($resolution === 'credit_note' && $purchase->supplier_id) {
+                $creditAmt = round($remainderQty * (float) $purchase->unit_price, 4);
+                \App\Models\SupplierLedgerEntry::create([
+                    'company_id'  => $cid,
+                    'supplier_id' => (int) $purchase->supplier_id,
+                    'type'        => 'credit_note',
+                    'amount'      => -$creditAmt,
+                    'currency'    => $purchase->currency ?? 'USD',
+                    'description' => "Credit note — unloaded remainder {$remainderQty} L from {$purchase->reference}",
+                    'entry_date'  => $data['entry_date'],
+                    'ref_type'    => 'purchase',
+                    'ref_id'      => (int) $purchase->id,
+                    'created_by'  => $u?->id,
+                ]);
+            }
+        });
+
+        $msg = $resolution === 'credit_note'
+            ? 'Credit note posted for remaining ' . number_format($remainderQty, 0) . ' L at shipper.'
+            : 'Remaining ' . number_format($remainderQty, 0) . ' L marked as carried forward.';
 
         return redirect()->route('purchases.show', $purchase)->with('status', $msg);
     }

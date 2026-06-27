@@ -113,6 +113,16 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
         Route::get('/depot-stock', [DepotStockController::class, 'index'])
             ->middleware('permission:inventory.view')
             ->name('depot-stock.index');
+
+        Route::get('/inventory-adjustments', [\App\Http\Controllers\InventoryAdjustmentController::class, 'index'])
+            ->middleware('permission:inventory.view')
+            ->name('inventory-adjustments.index');
+        Route::get('/inventory-adjustments/create', [\App\Http\Controllers\InventoryAdjustmentController::class, 'create'])
+            ->middleware('permission:purchases.receive')
+            ->name('inventory-adjustments.create');
+        Route::post('/inventory-adjustments', [\App\Http\Controllers\InventoryAdjustmentController::class, 'store'])
+            ->middleware('permission:purchases.receive')
+            ->name('inventory-adjustments.store');
         Route::get('/depot-stock/available', [DepotStockController::class, 'available'])
             ->middleware('permission:inventory.view')
             ->name('depot-stock.available');
@@ -310,6 +320,9 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
         Route::patch('/purchases/{purchase}', [PurchaseController::class, 'update'])
             ->middleware('permission:purchases.create')
             ->name('purchases.update');
+        Route::post('/purchases/{purchase}/shipper-credit-note', [PurchaseController::class, 'shipperCreditNote'])
+            ->middleware('permission:purchases.receive')
+            ->name('purchases.shipper-credit-note');
         Route::post('/purchases/{purchase}/cancel', [PurchaseController::class, 'cancel'])
             ->middleware('permission:purchases.cancel')
             ->name('purchases.cancel');

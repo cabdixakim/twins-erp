@@ -437,9 +437,134 @@ class InventoryLedger
     }
 
     /**
+     * Post an ADJUSTMENT movement (stock reduction: shrinkage, write-off, etc.).
+     *
+     * Unit cost is taken from the current depot+product weighted average (or the
+     * explicit unit_cost in $data if provided).  The weighted average is NOT
+     * recalculated after a loss — the loss is expensed at current cost, remaining
+     * stock keeps its value.  Call with reason_type:
+     *   depot_shrinkage | write_off | meter_variance | stock_count_correction | transit_loss
+     */
+    public function adjustment(array $data, array $idempotencyWhere = []): InventoryMovement
+    {
+        return DB::transaction(function () use ($data, $idempotencyWhere) {
+            $companyId = (int) $data['company_id'];
+            $productId = (int) $data['product_id'];
+            $depotId   = (int) $data['depot_id'];
+            $batchId   = isset($data['batch_id']) && $data['batch_id'] ? (int) $data['batch_id'] : null;
+            $qty       = abs((float) $data['qty']);
+
+            $period = $this->postingGate->assertCanPost($companyId);
+
+            if (!empty($idempotencyWhere)) {
+                $existing = InventoryMovement::query()
+                    ->where('company_id', $companyId)
+                    ->where($idempotencyWhere)
+                    ->first();
+                if ($existing) return $existing;
+            }
+
+            $unitCost   = isset($data['unit_cost']) && $data['unit_cost'] > 0
+                            ? (float) $data['unit_cost']
+                            : $this->currentWeightedAverageCost($companyId, $productId, $depotId);
+            $totalValue = round($qty * $unitCost, 4);
+
+            $movement = InventoryMovement::create([
+                'company_id'    => $companyId,
+                'period_id'     => $period->id,
+                'product_id'    => $productId,
+                'type'          => 'adjustment',
+                'ref_type'      => $data['ref_type'] ?? null,
+                'ref_id'        => $data['ref_id'] ?? null,
+                'reference'     => $data['reference'] ?? null,
+                'batch_id'      => $batchId,
+                'from_depot_id' => $depotId,
+                'to_depot_id'   => null,
+                'qty'           => -$qty,
+                'unit_cost'     => $unitCost,
+                'total_cost'    => -$totalValue,
+                'notes'         => $data['notes'] ?? null,
+                'created_by'    => $data['created_by'] ?? null,
+                'updated_by'    => $data['updated_by'] ?? ($data['created_by'] ?? null),
+            ]);
+
+            // Reduce depot stock (specific batch or proportional across all layers)
+            if ($batchId) {
+                DepotStock::query()
+                    ->where('company_id', $companyId)
+                    ->where('depot_id', $depotId)
+                    ->where('product_id', $productId)
+                    ->where('batch_id', $batchId)
+                    ->update([
+                        'qty_on_hand' => DB::raw('GREATEST(0, qty_on_hand - ' . $qty . ')'),
+                        'updated_by'  => $data['created_by'] ?? null,
+                        'updated_at'  => now(),
+                    ]);
+
+                Batch::query()
+                    ->where('company_id', $companyId)
+                    ->whereKey($batchId)
+                    ->update([
+                        'qty_remaining' => DB::raw('GREATEST(0, qty_remaining - ' . $qty . ')'),
+                        'updated_at'    => now(),
+                    ]);
+            } else {
+                $layers    = DepotStock::query()
+                    ->where('company_id', $companyId)
+                    ->where('depot_id', $depotId)
+                    ->where('product_id', $productId)
+                    ->whereRaw('qty_on_hand > 0')
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $remaining = $qty;
+                foreach ($layers as $layer) {
+                    if ($remaining <= 0) break;
+                    $take = min($remaining, (float) $layer->qty_on_hand);
+                    DepotStock::query()->where('id', $layer->id)->update([
+                        'qty_on_hand' => DB::raw('GREATEST(0, qty_on_hand - ' . $take . ')'),
+                        'updated_at'  => now(),
+                    ]);
+                    if ($layer->batch_id) {
+                        Batch::query()
+                            ->where('company_id', $companyId)
+                            ->whereKey((int) $layer->batch_id)
+                            ->update([
+                                'qty_remaining' => DB::raw('GREATEST(0, qty_remaining - ' . $take . ')'),
+                                'updated_at'    => now(),
+                            ]);
+                    }
+                    $remaining -= $take;
+                }
+            }
+
+            // Financial loss record
+            \App\Models\InventoryAdjustment::create([
+                'company_id'            => $companyId,
+                'period_id'             => $period->id,
+                'product_id'            => $productId,
+                'depot_id'              => $depotId,
+                'batch_id'              => $batchId,
+                'inventory_movement_id' => $movement->id,
+                'reason_type'           => $data['reason_type'] ?? 'write_off',
+                'qty'                   => $qty,
+                'unit_cost'             => $unitCost,
+                'total_value'           => $totalValue,
+                'ref_type'              => $data['ref_type'] ?? null,
+                'ref_id'                => $data['ref_id'] ?? null,
+                'notes'                 => $data['notes'] ?? null,
+                'created_by'            => $data['created_by'] ?? null,
+                'updated_by'            => $data['updated_by'] ?? ($data['created_by'] ?? null),
+            ]);
+
+            return $movement;
+        });
+    }
+
+    /**
      * Get the current weighted average unit cost for a depot+product.
      */
-    private function currentWeightedAverageCost(int $companyId, int $productId, int $depotId): float
+    public function currentWeightedAverageCost(int $companyId, int $productId, int $depotId): float
     {
         $result = DepotStock::query()
             ->where('company_id', $companyId)
