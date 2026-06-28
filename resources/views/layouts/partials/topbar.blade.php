@@ -129,9 +129,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
                 @if($__nbNew > 0)
-                <span id="twBellBadge" class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold pointer-events-none" style="background:#ef4444;color:#fff;line-height:1">{{ min($__nbNew,9) }}{{ $__nbNew>9?'+':'' }}</span>
+                <span id="twBellBadge" class="rounded-full flex items-center justify-center font-bold pointer-events-none" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;font-size:9px;background:#ef4444;color:#fff;line-height:1">{{ min($__nbNew,9) }}{{ $__nbNew>9?'+':'' }}</span>
                 @elseif($__nb > 0)
-                <span id="twBellBadge" class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full pointer-events-none" style="background:#f59e0b"></span>
+                <span id="twBellBadge" class="rounded-full pointer-events-none" style="position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:#f59e0b"></span>
                 @endif
             </button>
 
