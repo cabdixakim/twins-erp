@@ -58,7 +58,7 @@ class InventoryAdjustmentController extends Controller
             ->whereNotNull('t.shortfall_qty')
             ->where('t.shortfall_qty', '>', 0)
             ->select([
-                't.id', 't.truck_reg', 't.delivered_at',
+                't.id', 't.truck_reg', 't.delivery_date',
                 't.qty_loaded', 't.qty_delivered',
                 't.shortfall_qty', 't.allowed_loss_qty', 't.excess_loss_qty',
                 'pr.name as product_name',
@@ -71,13 +71,13 @@ class InventoryAdjustmentController extends Controller
             $tlQuery->where('t.depot_id', (int) $request->depot);
         }
         if ($request->filled('from')) {
-            $tlQuery->whereDate('t.delivered_at', '>=', $request->from);
+            $tlQuery->whereDate('t.delivery_date', '>=', $request->from);
         }
         if ($request->filled('to')) {
-            $tlQuery->whereDate('t.delivered_at', '<=', $request->to);
+            $tlQuery->whereDate('t.delivery_date', '<=', $request->to);
         }
 
-        $transitLosses      = $tlQuery->orderByDesc('t.delivered_at')->get();
+        $transitLosses      = $tlQuery->orderByDesc('t.delivery_date')->get();
         $transitTotalLitres = $transitLosses->sum('shortfall_qty');
         $transitWithin      = $transitLosses->sum('allowed_loss_qty');
         $transitExcess      = $transitLosses->sum('excess_loss_qty');

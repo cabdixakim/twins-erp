@@ -177,7 +177,7 @@
             @foreach($transitLosses as $tl)
             <tr class="hover:{{ $surface2 }} transition">
               <td class="px-4 py-3 {{ $muted }} text-xs whitespace-nowrap">
-                {{ $tl->delivered_at ? \Carbon\Carbon::parse($tl->delivered_at)->format('d M Y') : '—' }}
+                {{ $tl->delivery_date ? \Carbon\Carbon::parse($tl->delivery_date)->format('d M Y') : '—' }}
               </td>
               <td class="px-4 py-3 {{ $fg }} text-xs font-medium">{{ $tl->truck_reg }}</td>
               <td class="px-4 py-3 {{ $muted }} text-xs">{{ $tl->purchase_ref ?: '—' }}</td>

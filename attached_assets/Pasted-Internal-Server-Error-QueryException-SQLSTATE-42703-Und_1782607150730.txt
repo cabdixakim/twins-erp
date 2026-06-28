@@ -1,0 +1,75 @@
+Internal Server Error
+
+QueryException
+SQLSTATE[42703]: Undefined column: 7 ERROR: column t.delivered_at does not exist LINE 1: select "t"."id", "t"."truck_reg", "t"."delivered_at", "t"."q... ^ (Connection: pgsql, SQL: select "t"."id", "t"."truck_reg", "t"."delivered_at", "t"."qty_loaded", "t"."qty_delivered", "t"."shortfall_qty", "t"."allowed_loss_qty", "t"."excess_loss_qty", "pr"."name" as "product_name", "d"."name" as "depot_name", "p"."reference" as "purchase_ref", "p"."unit_price", "p"."currency" from "import_trucks" as "t" inner join "import_nominations" as "n" on "n"."id" = "t"."nomination_id" inner join "purchases" as "p" on "p"."id" = "n"."purchase_id" left join "products" as "pr" on "pr"."id" = "p"."product_id" left join "depots" as "d" on "d"."id" = "t"."depot_id" where "p"."company_id" = 1 and "t"."shortfall_qty" is not null and "t"."shortfall_qty" > 0 order by "t"."delivered_at" desc)
+app/Http/Controllers/InventoryAdjustmentController.php :80
+        }
+        if ($request->filled('to')) {
+            $tlQuery->whereDate('t.delivered_at', '<=', $request->to);
+        }
+ 
+        $transitLosses      = $tlQuery->orderByDesc('t.delivered_at')->get();
+        $transitTotalLitres = $transitLosses->sum('shortfall_qty');
+        $transitWithin      = $transitLosses->sum('allowed_loss_qty');
+        $transitExcess      = $transitLosses->sum('excess_loss_qty');
+ 
+        return view('inventory-adjustments.index', compact(
+            'adjustments', 'depots', 'totalValue',
+            'transitLosses', 'transitTotalLitres', 'transitWithin', 'transitExcess'
+        ));
+    }
+ 
+    public function create(Request $request)
+Request
+GET /inventory-adjustments
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en;q=0.9
+cookie
+XSRF-TOKEN=eyJpdiI6IkIxWm93YU1CQTRLMnFSRGQzMzQ1bEE9PSIsInZhbHVlIjoiZjYzemRBczdnbjVkQkpVZDBhNUptb281V3hydmtuZFh5VnlMcndTRVBCZk5kam5aYnYrMk1wYmlTMjV1dDliMnFrR0VoRHNCUFppaG5wdVl6L0Vab2tDM3BpUjNTRWhwQ3Y3dlB2cFJ2c3VNbTBZN0VoNEVSUmFxTUZYRGVSZm4iLCJtYWMiOiI5MGZjOWYyOWEyNDM1YTdlMWJiNzk1ODQzN2FjZjE0ZTMzYTgzYjYyMGI0MGQyNDgyZTMxNWJlMmU2Y2M2ZTk5IiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6ImNnUEJCeER2VWRNUDBSSEs4VEc4eEE9PSIsInZhbHVlIjoiaHdjZFIvei9zYUE4akltMHVBcklkNEx1U3lyYngrZ21leENML1p0T2tBREZTWEJya09vZk4yZG9oUUJlQjJKbm1qOWVxSlNPMlpiTm5mRzM4SVpSR1loQVo0VWpkNDVicWpZOVlUOGxubnlyWS9UdDgxVjVqY1l4bCtxeWxLMnMiLCJtYWMiOiJhOTk0MTRjOTNkZTM4NGE2MjRmNjExMjE3YzQwYWUwZGVkYWYzZDIxMjExNGFmOTkzNWJmNGI0ZWRkZWJjNzk3IiwidGFnIjoiIn0%3D
+priority
+u=0, i
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/alerts
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+x-forwarded-for
+217.171.84.50, 10.83.8.47, 10.56.3.177, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\InventoryAdjustmentController@index
+route name
+inventory-adjustments.index
+middleware
+web, auth, company.setup, user.active, active.company, permission:inventory.view
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select c
