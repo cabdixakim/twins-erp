@@ -48,44 +48,7 @@ class InventoryAdjustmentController extends Controller
 
         $totalValue = InventoryAdjustment::where('company_id', $cid)->sum('total_value');
 
-        // ── Transit losses from import truck deliveries ───────────────────────
-        $tlQuery = DB::table('import_trucks as t')
-            ->join('import_nominations as n', 'n.id', '=', 't.nomination_id')
-            ->join('purchases as p', 'p.id', '=', 'n.purchase_id')
-            ->leftJoin('products as pr', 'pr.id', '=', 'p.product_id')
-            ->leftJoin('depots as d', 'd.id', '=', 't.depot_id')
-            ->where('p.company_id', $cid)
-            ->whereNotNull('t.shortfall_qty')
-            ->where('t.shortfall_qty', '>', 0)
-            ->select([
-                't.id', 't.truck_reg', 't.delivery_date',
-                't.qty_loaded', 't.qty_delivered',
-                't.shortfall_qty', 't.allowed_loss_qty', 't.excess_loss_qty',
-                'pr.name as product_name',
-                'd.name as depot_name',
-                'p.reference as purchase_ref',
-                'p.unit_price', 'p.currency',
-            ]);
-
-        if ($request->filled('depot')) {
-            $tlQuery->where('t.depot_id', (int) $request->depot);
-        }
-        if ($request->filled('from')) {
-            $tlQuery->whereDate('t.delivery_date', '>=', $request->from);
-        }
-        if ($request->filled('to')) {
-            $tlQuery->whereDate('t.delivery_date', '<=', $request->to);
-        }
-
-        $transitLosses      = $tlQuery->orderByDesc('t.delivery_date')->get();
-        $transitTotalLitres = $transitLosses->sum('shortfall_qty');
-        $transitWithin      = $transitLosses->sum('allowed_loss_qty');
-        $transitExcess      = $transitLosses->sum('excess_loss_qty');
-
-        return view('inventory-adjustments.index', compact(
-            'adjustments', 'depots', 'totalValue',
-            'transitLosses', 'transitTotalLitres', 'transitWithin', 'transitExcess'
-        ));
+        return view('inventory-adjustments.index', compact('adjustments', 'depots', 'totalValue'));
     }
 
     public function create(Request $request)
