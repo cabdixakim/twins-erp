@@ -468,6 +468,7 @@ class ImportNominationController extends Controller
             $msg .= " {$dutyMsg}";
         }
 
+        session()->forget('error');
         return back()->with('status', $msg);
     }
 

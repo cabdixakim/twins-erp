@@ -8,8 +8,14 @@ use Illuminate\Support\Collection;
 
 class AlertService
 {
+    private static array $cache = [];
+
     public static function getForCompany(int $companyId): array
     {
+        if (isset(self::$cache[$companyId])) {
+            return self::$cache[$companyId];
+        }
+
         $alerts = [];
 
         // ── Trucks in_transit for > 3 days ───────────────────────────────────
@@ -130,6 +136,7 @@ class AlertService
             return strcmp((string) ($a['age'] ?? ''), (string) ($b['age'] ?? ''));
         });
 
+        self::$cache[$companyId] = $alerts;
         return $alerts;
     }
 
