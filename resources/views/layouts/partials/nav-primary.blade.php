@@ -32,20 +32,6 @@
     </a>
     @endif
 
-    {{-- STOCK ADJUSTMENTS --}}
-    @if($can['inventory.view'])
-    <a href="{{ route('inventory-adjustments.index') }}"
-       class="tw-nav-item {{ ($onAdjustments ?? false) ? 'active' : '' }} sidebar-label-parent">
-        <span class="tw-nav-pip"></span>
-        <span class="tw-nav-icon">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-        </span>
-        <span class="tw-nav-label sidebar-label">Write Offs</span>
-    </a>
-    @endif
-
     {{-- CLEARANCES --}}
     @if($can['reports.export'])
     <a href="{{ route('clearances.index') }}"
@@ -255,5 +241,18 @@
         <span class="tw-nav-label sidebar-label">Documents</span>
     </a>
 
+    {{-- WRITE OFFS — bottom of nav, operational not primary --}}
+    @if($can['inventory.view'])
+    <a href="{{ route('inventory-adjustments.index') }}"
+       class="tw-nav-item {{ ($onAdjustments ?? false) ? 'active' : '' }} sidebar-label-parent">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label">Write Offs</span>
+    </a>
+    @endif
 
 </nav>
