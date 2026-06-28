@@ -16,7 +16,7 @@
 
 @extends('layouts.app')
 
-@section('title', 'Stock Losses')
+@section('title', 'Write Offs')
 @section('subtitle', 'Shrinkage, write-offs, meter variances and stock count corrections')
 
 @section('content')
