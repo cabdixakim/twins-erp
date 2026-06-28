@@ -1,6 +1,6 @@
 @php
-    $title    = 'Purchased vs Sold';
-    $subtitle = 'Monthly volume — litres purchased vs. sold and revenue trend.';
+    $title    = 'Volume Report';
+    $subtitle = 'How many litres you bought and sold each month — with revenue totals.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
     $surface2 = 'bg-[color:var(--tw-surface-2)]';

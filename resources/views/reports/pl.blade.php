@@ -1,6 +1,6 @@
 @php
-    $title    = 'P&L by Batch';
-    $subtitle = 'Gross margin analysis — purchase cost + landed costs vs. sales revenue per shipment.';
+    $title    = 'Profit by Shipment';
+    $subtitle = 'How much you made on each purchase — cost vs. what you sold it for.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
     $surface2 = 'bg-[color:var(--tw-surface-2)]';

@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'AP Aging')
-@section('subtitle', 'Outstanding payables to suppliers, transporters and depots — bucketed by age.')
+@section('title', 'Bills You Haven\'t Paid')
+@section('subtitle', 'Outstanding amounts owed to suppliers, depots, and transporters — grouped by how old they are.')
 
 @section('content')
 

@@ -1,6 +1,6 @@
 @php
-    $title    = 'AR Aging';
-    $subtitle = 'Outstanding client invoices by overdue bucket — identify collection priorities.';
+    $title    = 'Money Owed to You';
+    $subtitle = 'Clients who haven\'t paid yet — how much and how long they\'ve been overdue.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
     $surface2 = 'bg-[color:var(--tw-surface-2)]';
