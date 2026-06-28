@@ -37,9 +37,9 @@ class BankAccount extends Model
     {
         $posted = $this->transactions()
             ->whereNull('voided_at')
-            ->get()
-            ->sum(fn($t) => $t->signedAmount());
+            ->selectRaw("SUM(CASE WHEN type IN ('deposit','transfer_in') THEN amount ELSE -amount END) as signed_total")
+            ->value('signed_total');
 
-        return (float) $this->opening_balance + $posted;
+        return (float) $this->opening_balance + (float) $posted;
     }
 }
