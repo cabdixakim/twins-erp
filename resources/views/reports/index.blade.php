@@ -13,7 +13,7 @@
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-  {{-- Profit by Shipment --}}
+  {{-- Profit & Loss --}}
   <a href="{{ route('reports.pl') }}"
      class="group rounded-2xl border {{ $border }} {{ $surface }} p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 block">
     <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
@@ -22,11 +22,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
       </svg>
     </div>
-    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Profit by Shipment</h3>
-    <p class="text-xs {{ $muted }} leading-relaxed">See how much money you made (or lost) on each purchase — cost vs. what you sold it for.</p>
-    @if($summary['active_batches'] > 0)
-    <div class="mt-4 text-[10px] font-semibold text-emerald-400">{{ $summary['active_batches'] }} active shipments</div>
-    @endif
+    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Profit &amp; Loss</h3>
+    <p class="text-xs {{ $muted }} leading-relaxed">Revenue, cost of fuel sold, and all expenses for any date range — your company's bottom line.</p>
   </a>
 
   {{-- Money owed to you --}}

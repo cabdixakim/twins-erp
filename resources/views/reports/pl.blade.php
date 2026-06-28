@@ -1,6 +1,6 @@
 @php
-    $title    = 'Profit by Shipment';
-    $subtitle = 'How much you made on each purchase — cost vs. what you sold it for.';
+    $title    = 'Profit & Loss';
+    $subtitle = 'Revenue, cost of sales, and expenses for the selected period.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
     $surface2 = 'bg-[color:var(--tw-surface-2)]';
@@ -9,6 +9,12 @@
     $muted    = 'text-[color:var(--tw-muted)]';
     $btnPrimary = "inline-flex items-center gap-2 rounded-xl border border-emerald-500/50 bg-emerald-600 text-white hover:bg-emerald-500 transition font-semibold text-xs px-3 py-2";
     $btnGhost   = "inline-flex items-center gap-2 rounded-xl border $border bg-[color:var(--tw-btn)] $fg hover:bg-[color:var(--tw-btn-hover)] transition text-xs px-3 py-2";
+
+    $fmt = fn($n) => number_format(abs($n), 0);
+    $fmtSigned = function($n) use ($fg) {
+        if ($n >= 0) return '<span class="text-emerald-400 font-bold">'.number_format($n, 0).'</span>';
+        return '<span class="text-rose-400 font-bold">('.number_format(abs($n), 0).')</span>';
+    };
 @endphp
 
 @extends('layouts.app')
@@ -21,113 +27,227 @@
 <div class="flex items-center gap-2 text-xs {{ $muted }} mb-4">
     <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-    <span>P&amp;L by Batch</span>
+    <span>Profit &amp; Loss</span>
 </div>
 
-{{-- Filters --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-4">
-    <form method="GET" class="flex flex-wrap gap-2 items-end">
+{{-- Date filter --}}
+<div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-5">
+    <form method="GET" class="flex flex-wrap gap-3 items-end">
         <div>
             <label class="block text-[10px] uppercase tracking-wide {{ $muted }} mb-1">From</label>
-            <input type="date" name="from" value="{{ request('from') }}"
+            <input type="date" name="from" value="{{ $from }}"
                    class="rounded-xl border {{ $border }} {{ $bg }} {{ $fg }} text-xs px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
         </div>
         <div>
             <label class="block text-[10px] uppercase tracking-wide {{ $muted }} mb-1">To</label>
-            <input type="date" name="to" value="{{ request('to') }}"
+            <input type="date" name="to" value="{{ $to }}"
                    class="rounded-xl border {{ $border }} {{ $bg }} {{ $fg }} text-xs px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
         </div>
-        <div>
-            <label class="block text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Batch code</label>
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search batch…"
-                   class="rounded-xl border {{ $border }} {{ $bg }} {{ $fg }} text-xs px-3 py-1.5 w-40 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-        </div>
-        <button type="submit" class="{{ $btnPrimary }}">Filter</button>
-        @if(request()->hasAny(['from','to','search']))
-            <a href="{{ route('reports.pl') }}" class="{{ $btnGhost }}">Clear</a>
-        @endif
+        <button type="submit" class="{{ $btnPrimary }}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+            Filter
+        </button>
+        <span class="{{ $muted }} text-xs self-center">
+            {{ \Carbon\Carbon::parse($from)->format('d M Y') }} → {{ \Carbon\Carbon::parse($to)->format('d M Y') }}
+        </span>
     </form>
 </div>
 
-{{-- Summary totals --}}
-@if($batches->total() > 0)
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Revenue</div>
-        <div class="text-lg font-bold {{ $fg }}">{{ number_format($totals['revenue'], 0) }}</div>
-    </div>
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">COGS + Landed</div>
-        <div class="text-lg font-bold {{ $fg }}">{{ number_format($totals['cogs'] + $totals['landed'], 0) }}</div>
-    </div>
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4" style="{{ $totals['gross_margin'] >= 0 ? 'border-color:rgba(16,185,129,.3)' : 'border-color:rgba(239,68,68,.3)' }}">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Gross Margin</div>
-        <div class="text-lg font-bold {{ $totals['gross_margin'] >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
-            {{ number_format($totals['gross_margin'], 0) }}
-        </div>
-    </div>
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4" style="{{ ($totals['margin_pct'] ?? 0) >= 0 ? 'border-color:rgba(16,185,129,.3)' : 'border-color:rgba(239,68,68,.3)' }}">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Margin %</div>
-        <div class="text-lg font-bold {{ ($totals['margin_pct'] ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
-            {{ isset($totals['margin_pct']) ? $totals['margin_pct'] . '%' : '—' }}
-        </div>
-    </div>
-</div>
-@endif
+{{-- P&L Statement --}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-{{-- Table --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-    <table class="w-full text-xs">
-        <thead>
-            <tr class="border-b {{ $border }} {{ $surface2 }}">
-                <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Batch</th>
-                <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Product</th>
-                <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-24">Date</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-20">Qty sold</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-24">Revenue</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-24">COGS</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-24">Landed</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-24">Margin</th>
-                <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px] w-16">%</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-[color:var(--tw-border)]">
-            @forelse($batches as $batch)
-            @php
-                $marginColor = $batch->_gross_margin >= 0 ? 'text-emerald-400' : 'text-rose-400';
-                $pctColor    = ($batch->_margin_pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400';
-            @endphp
-            <tr class="hover:bg-[color:var(--tw-surface-2)] transition">
-                <td class="px-4 py-3">
-                    <div class="font-semibold {{ $fg }}">{{ $batch->code }}</div>
-                    @if($batch->supplier)
-                    <div class="text-[10px] {{ $muted }}">{{ $batch->supplier->name }}</div>
+    {{-- Statement column --}}
+    <div class="lg:col-span-2 space-y-3">
+
+        {{-- INCOME --}}
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Income</span>
+                <span class="text-[10px] {{ $muted }}">{{ number_format($qtySold, 0) }} L sold</span>
+            </div>
+            <div class="divide-y divide-[color:var(--tw-border)]">
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">Fuel Sales</span>
+                    <span class="text-sm font-semibold {{ $fg }}">{{ $fmt($revenue) }}</span>
+                </div>
+                <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
+                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Revenue</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($revenue) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- COST OF SALES --}}
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
+                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
+            </div>
+            <div class="divide-y divide-[color:var(--tw-border)]">
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">Cost of Fuel Sold</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt($cogs) }}</span>
+                </div>
+                <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
+                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($cogs) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- GROSS PROFIT --}}
+        <div class="rounded-2xl border overflow-hidden {{ $grossProfit >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
+            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfit >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Gross Profit</div>
+                    @if($grossMarginPct !== null)
+                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMarginPct }}% margin</div>
                     @endif
-                </td>
-                <td class="px-4 py-3 {{ $muted }}">{{ $batch->product?->name ?? '—' }}</td>
-                <td class="px-4 py-3 {{ $muted }}">{{ $batch->purchased_at?->format('d M Y') ?? '—' }}</td>
-                <td class="px-4 py-3 text-right {{ $fg }}">{{ number_format($batch->_qty_sold, 0) }} L</td>
-                <td class="px-4 py-3 text-right {{ $fg }}">{{ $batch->_revenue > 0 ? number_format($batch->_revenue, 0) : '—' }}</td>
-                <td class="px-4 py-3 text-right {{ $muted }}">{{ $batch->_cogs > 0 ? number_format($batch->_cogs, 0) : '—' }}</td>
-                <td class="px-4 py-3 text-right {{ $muted }}">{{ $batch->_landed > 0 ? number_format($batch->_landed, 0) : '—' }}</td>
-                <td class="px-4 py-3 text-right font-semibold {{ $marginColor }}">
-                    {{ $batch->_revenue > 0 ? number_format($batch->_gross_margin, 0) : '—' }}
-                </td>
-                <td class="px-4 py-3 text-right font-bold {{ $pctColor }}">
-                    {{ $batch->_margin_pct !== null ? $batch->_margin_pct . '%' : '—' }}
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="9" class="px-4 py-12 text-center {{ $muted }}">No batches found.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
+                </div>
+                <div class="text-xl font-bold">
+                    {!! $fmtSigned($grossProfit) !!}
+                </div>
+            </div>
+        </div>
 
-@if($batches->hasPages())
-    <div class="mt-4">{{ $batches->links() }}</div>
-@endif
+        {{-- OPERATING EXPENSES --}}
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
+                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Operating Expenses</span>
+            </div>
+            <div class="divide-y divide-[color:var(--tw-border)]">
+                {{-- Landed / shipment costs --}}
+                @if($landedLines->isNotEmpty())
+                    @foreach($landedLines as $line)
+                    <div class="flex items-center justify-between px-5 py-3">
+                        <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
+                        <span class="text-sm {{ $muted }}">{{ $fmt($line['amount']) }}</span>
+                    </div>
+                    @endforeach
+                @endif
+
+                {{-- Depot charges --}}
+                @if($depotCharges > 0)
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">Depot Charges</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt($depotCharges) }}</span>
+                </div>
+                @endif
+
+                {{-- Petty cash --}}
+                @if($pettyCash > 0)
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">Petty Cash Expenses</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt($pettyCash) }}</span>
+                </div>
+                @endif
+
+                {{-- Empty state --}}
+                @if($landedLines->isEmpty() && $depotCharges == 0 && $pettyCash == 0)
+                <div class="px-5 py-4 text-sm {{ $muted }} italic">No expenses recorded in this period.</div>
+                @endif
+
+                <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
+                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Expenses</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalExpenses) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- NET PROFIT --}}
+        <div class="rounded-2xl border overflow-hidden {{ $netProfit >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40' }}">
+            <div class="flex items-center justify-between px-5 py-5 {{ $netProfit >= 0 ? 'bg-emerald-500/8' : 'bg-rose-500/8' }}">
+                <div>
+                    <div class="text-sm font-bold uppercase tracking-widest {{ $muted }}">Net Profit</div>
+                    @if($netMarginPct !== null)
+                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $netMarginPct }}% of revenue</div>
+                    @endif
+                </div>
+                <div class="text-2xl font-bold">
+                    {!! $fmtSigned($netProfit) !!}
+                </div>
+            </div>
+        </div>
+
+    </div>{{-- end statement column --}}
+
+    {{-- Right sidebar: summary KPIs + by-product --}}
+    <div class="space-y-4">
+
+        {{-- Quick numbers --}}
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 space-y-4">
+            <div class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Summary</div>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs {{ $muted }}">Revenue</span>
+                    <span class="text-sm font-semibold {{ $fg }}">{{ $fmt($revenue) }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs {{ $muted }}">Cost of Sales</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($cogs) }}</span>
+                </div>
+                <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
+                    <span class="text-xs {{ $muted }}">Gross Profit</span>
+                    <span class="text-sm font-semibold {{ $grossProfit >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
+                        {!! $fmtSigned($grossProfit) !!}
+                        @if($grossMarginPct !== null)
+                        <span class="text-[10px] font-normal {{ $muted }} ml-1">{{ $grossMarginPct }}%</span>
+                        @endif
+                    </span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs {{ $muted }}">Expenses</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($totalExpenses) }}</span>
+                </div>
+                <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
+                    <span class="text-xs font-bold {{ $muted }}">Net Profit</span>
+                    <span class="text-base font-bold {{ $netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
+                        {!! $fmtSigned($netProfit) !!}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {{-- By product --}}
+        @if($byProduct->isNotEmpty())
+        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+            <div class="px-4 py-3 border-b {{ $border }} {{ $surface2 }}">
+                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">By Product</span>
+            </div>
+            <div class="divide-y divide-[color:var(--tw-border)]">
+                @foreach($byProduct as $row)
+                @php
+                    $rowMargin = (float)$row->margin;
+                    $rowMarginPct = (float)$row->revenue > 0
+                        ? round($rowMargin / (float)$row->revenue * 100, 1)
+                        : null;
+                @endphp
+                <div class="px-4 py-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold {{ $fg }}">{{ $row->product_name }}</span>
+                        <span class="text-xs {{ $rowMargin >= 0 ? 'text-emerald-400' : 'text-rose-400' }} font-semibold">
+                            {!! $fmtSigned($rowMargin) !!}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] {{ $muted }}">
+                        <span>{{ number_format((float)$row->qty, 0) }} L &middot; Rev {{ $fmt((float)$row->revenue) }}</span>
+                        @if($rowMarginPct !== null)
+                        <span>{{ $rowMarginPct }}%</span>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- Print button --}}
+        <button onclick="window.print()"
+                class="w-full {{ $btnGhost }} justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4H8v4a1 1 0 001 1z"/></svg>
+            Print Statement
+        </button>
+
+    </div>
+</div>
 
 @endsection

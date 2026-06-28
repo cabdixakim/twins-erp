@@ -750,7 +750,7 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
         Route::get('/', [\App\Http\Controllers\ReportController::class, 'index'])
             ->middleware('permission:reports.export')
             ->name('index');
-        Route::get('/pl', [\App\Http\Controllers\ReportController::class, 'plByBatch'])
+        Route::get('/pl', [\App\Http\Controllers\ReportController::class, 'profitAndLoss'])
             ->middleware('permission:reports.export')
             ->name('pl');
         Route::get('/ar-aging', [\App\Http\Controllers\ReportController::class, 'arAging'])

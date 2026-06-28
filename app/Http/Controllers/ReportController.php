@@ -34,86 +34,119 @@ class ReportController extends Controller
         return view('reports.index', compact('summary'));
     }
 
-    /** P&L / Margin by batch */
-    public function plByBatch(Request $request)
+    /** Company-wide Profit & Loss for a period */
+    public function profitAndLoss(Request $request)
     {
-        $cid    = $this->cid();
-        $from   = $request->input('from');
-        $to     = $request->input('to');
-        $search = $request->input('search');
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfMonth()->toDateString());
+        $to   = $request->input('to',   now()->toDateString());
 
-        $batchQ = Batch::where('company_id', $cid)
-            ->with(['product'])
-            ->withSum('batchCosts as landed_cost_total', 'amount')
-            ->orderByDesc('purchased_at');
+        // ── Revenue & COGS from posted sales ─────────────────────────────
+        $salesRow = DB::table('sales')
+            ->where('company_id', $cid)
+            ->where('status', 'posted')
+            ->whereDate('posted_at', '>=', $from)
+            ->whereDate('posted_at', '<=', $to)
+            ->selectRaw('
+                COALESCE(SUM(total), 0)       as revenue,
+                COALESCE(SUM(cogs_total), 0)  as cogs,
+                COALESCE(SUM(qty), 0)         as qty_sold
+            ')
+            ->first();
 
-        if ($from)   $batchQ->whereDate('purchased_at', '>=', $from);
-        if ($to)     $batchQ->whereDate('purchased_at', '<=', $to);
-        if ($search) $batchQ->where('code', 'like', "%{$search}%");
+        $revenue = (float) $salesRow->revenue;
+        $cogs    = (float) $salesRow->cogs;
+        $qtySold = (float) $salesRow->qty_sold;
 
-        $batches = $batchQ->paginate(30)->withQueryString();
+        $grossProfit    = $revenue - $cogs;
+        $grossMarginPct = $revenue > 0 ? round($grossProfit / $revenue * 100, 1) : null;
 
-        // For each batch, calculate revenue from sales via consumptions
-        $batchIds = $batches->pluck('id')->all();
+        // ── Revenue by product ───────────────────────────────────────────
+        $byProduct = DB::table('sales')
+            ->join('products', 'products.id', '=', 'sales.product_id')
+            ->where('sales.company_id', $cid)
+            ->where('sales.status', 'posted')
+            ->whereDate('sales.posted_at', '>=', $from)
+            ->whereDate('sales.posted_at', '<=', $to)
+            ->selectRaw('
+                products.name as product_name,
+                COALESCE(SUM(sales.qty), 0)        as qty,
+                COALESCE(SUM(sales.total), 0)      as revenue,
+                COALESCE(SUM(sales.cogs_total), 0) as cogs,
+                COALESCE(SUM(sales.gross_profit), 0) as margin
+            ')
+            ->groupBy('products.name')
+            ->orderByDesc('revenue')
+            ->get();
 
-        // Sales revenue per batch via inventory_consumptions
-        $revenueByBatch = DB::table('inventory_consumptions')
-            ->join('sales', function ($j) {
-                $j->on('sales.id', '=', 'inventory_consumptions.ref_id')
-                  ->where('inventory_consumptions.ref_type', 'sale');
-            })
-            ->whereIn('inventory_consumptions.batch_id', $batchIds)
-            ->where('inventory_consumptions.company_id', $cid)
-            ->selectRaw('inventory_consumptions.batch_id, SUM(inventory_consumptions.qty * sales.unit_price) as revenue, SUM(inventory_consumptions.qty) as qty_sold')
-            ->groupBy('inventory_consumptions.batch_id')
+        // ── Landed / shipment costs (batch_costs in period) ──────────────
+        $landedByCategory = DB::table('batch_costs')
+            ->join('batches', 'batches.id', '=', 'batch_costs.batch_id')
+            ->where('batches.company_id', $cid)
+            ->whereDate('batch_costs.entry_date', '>=', $from)
+            ->whereDate('batch_costs.entry_date', '<=', $to)
+            ->selectRaw('batch_costs.category, COALESCE(SUM(batch_costs.amount), 0) as total')
+            ->groupBy('batch_costs.category')
+            ->orderByDesc('total')
             ->get()
-            ->keyBy('batch_id');
+            ->keyBy('category');
 
-        // Enrich batches with P&L data
-        $batches->getCollection()->transform(function ($batch) use ($revenueByBatch) {
-            $rev      = $revenueByBatch[$batch->id] ?? null;
-            $revenue  = round((float)($rev?->revenue ?? 0), 2);
-            $qtySold  = round((float)($rev?->qty_sold ?? 0), 2);
-            $purchase = round((float)$batch->total_cost, 2);
-            $landed   = round((float)($batch->landed_cost_total ?? 0), 2);
-
-            // Prorate both purchase cost AND landed costs by the fraction of batch sold.
-            // e.g. if 50% of the batch was sold, only 50% of landed costs appear in COGS.
-            $ratio       = ($batch->qty_purchased > 0 && $qtySold > 0)
-                ? min(1.0, $qtySold / $batch->qty_purchased)
-                : 0;
-            $cogs        = round($purchase * $ratio, 2);
-            $landedCogs  = round($landed * $ratio, 2);
-
-            $totalCost   = $cogs + $landedCogs;
-            $grossMargin = round($revenue - $totalCost, 2);
-            $marginPct   = $revenue > 0 ? round($grossMargin / $revenue * 100, 1) : null;
-
-            $batch->_revenue      = $revenue;
-            $batch->_qty_sold     = $qtySold;
-            $batch->_purchase     = $purchase;
-            $batch->_landed       = $landedCogs;  // prorated share of landed costs
-            $batch->_landed_total = $landed;       // full landed costs (for reference)
-            $batch->_cogs         = $cogs;
-            $batch->_total_cost   = $totalCost;
-            $batch->_gross_margin = $grossMargin;
-            $batch->_margin_pct   = $marginPct;
-
-            return $batch;
-        });
-
-        // Summary totals
-        $totals = [
-            'revenue'      => $batches->sum('_revenue'),
-            'cogs'         => $batches->sum('_cogs'),
-            'landed'       => $batches->sum('_landed'),
-            'gross_margin' => $batches->sum('_gross_margin'),
+        $categoryLabels = [
+            'freight'       => 'Freight & Transport',
+            'duty'          => 'Customs & Duty',
+            'border_charge' => 'Border Charges',
+            'hospitality'   => 'Hospitality',
+            'storage'       => 'Storage',
+            'penalty'       => 'Penalties',
+            'other'         => 'Other Costs',
         ];
-        if ($totals['revenue'] > 0) {
-            $totals['margin_pct'] = round($totals['gross_margin'] / $totals['revenue'] * 100, 1);
+
+        $landedLines = collect($categoryLabels)->map(function ($label, $key) use ($landedByCategory) {
+            return [
+                'label'  => $label,
+                'amount' => (float) ($landedByCategory[$key]->total ?? 0),
+            ];
+        })->filter(fn($l) => $l['amount'] > 0)->values();
+
+        $totalLanded = $landedLines->sum('amount');
+
+        // ── Depot charges in period ──────────────────────────────────────
+        $depotCharges = 0.0;
+        if (DB::getSchemaBuilder()->hasTable('depot_ledger_entries')) {
+            $depotCharges = (float) DB::table('depot_ledger_entries')
+                ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
+                ->where('depots.company_id', $cid)
+                ->whereIn('depot_ledger_entries.type', ['storage_charge','throughput_charge','loading_fee','other_charge'])
+                ->whereDate('depot_ledger_entries.entry_date', '>=', $from)
+                ->whereDate('depot_ledger_entries.entry_date', '<=', $to)
+                ->sum('depot_ledger_entries.amount');
         }
 
-        return view('reports.pl', compact('batches', 'totals'));
+        // ── Petty cash expenses in period ────────────────────────────────
+        $pettyCash = 0.0;
+        if (DB::getSchemaBuilder()->hasTable('petty_cash_transactions')) {
+            $pettyCash = (float) DB::table('petty_cash_transactions')
+                ->where('company_id', $cid)
+                ->where('type', 'expense')
+                ->whereDate('transaction_date', '>=', $from)
+                ->whereDate('transaction_date', '<=', $to)
+                ->sum('amount');
+        }
+
+        $totalExpenses = $totalLanded + $depotCharges + $pettyCash;
+        $netProfit     = $grossProfit - $totalExpenses;
+        $netMarginPct  = $revenue > 0 ? round($netProfit / $revenue * 100, 1) : null;
+
+        return view('reports.pl', compact(
+            'from', 'to',
+            'revenue', 'cogs', 'qtySold',
+            'grossProfit', 'grossMarginPct',
+            'landedLines', 'totalLanded',
+            'depotCharges', 'pettyCash',
+            'totalExpenses',
+            'netProfit', 'netMarginPct',
+            'byProduct'
+        ));
     }
 
     /** AR Aging report — open invoices bucketed by overdue days */
