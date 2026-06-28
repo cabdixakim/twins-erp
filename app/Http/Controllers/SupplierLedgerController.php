@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Supplier;
 use App\Models\SupplierLedgerEntry;
 use App\Models\Purchase;
+use App\Services\CashPostingService;
 
 class SupplierLedgerController extends Controller
 {
@@ -87,10 +88,14 @@ class SupplierLedgerController extends Controller
             ->groupBy('currency')
             ->map(fn($rows) => $rows->sum(fn($r) => (float) $r->qty * (float) $r->unit_price));
 
+        ['bankAccounts' => $bankAccounts, 'pettyCashAccounts' => $pettyCashAccounts]
+            = CashPostingService::accountsForCompany($cid);
+
         return view('suppliers.show', compact(
             'supplier', 'entries', 'purchaseRefs',
             'invoicedTotal', 'paymentTotal', 'creditTotal', 'netPayable', 'currency',
-            'openPurchases', 'openCommitmentByCurrency'
+            'openPurchases', 'openCommitmentByCurrency',
+            'bankAccounts', 'pettyCashAccounts'
         ));
     }
 
@@ -100,24 +105,52 @@ class SupplierLedgerController extends Controller
         abort_if((int) $supplier->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'      => 'required|numeric|min:0.01',
-            'currency'    => 'nullable|string|max:8',
-            'entry_date'  => 'required|date',
-            'description' => 'nullable|string|max:500',
+            'amount'                => 'required|numeric|min:0.01',
+            'currency'              => 'nullable|string|max:8',
+            'entry_date'            => 'required|date',
+            'description'           => 'nullable|string|max:500',
+            'bank_account_id'       => 'nullable|integer|exists:bank_accounts,id',
+            'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
         $currency = $data['currency'] ?: ($supplier->default_currency ?: 'USD');
+        $bankId   = !empty($data['bank_account_id'])       ? (int) $data['bank_account_id']       : null;
+        $pcaId    = !empty($data['petty_cash_account_id']) ? (int) $data['petty_cash_account_id'] : null;
+        $desc     = $data['description'] ?: 'Payment to supplier — ' . $supplier->name;
 
-        SupplierLedgerEntry::create([
-            'company_id'  => $cid,
-            'supplier_id' => $supplier->id,
-            'type'        => 'payment',
-            'amount'      => -(float) $data['amount'],
-            'currency'    => $currency,
-            'description' => $data['description'] ?: 'Payment to supplier',
-            'entry_date'  => $data['entry_date'],
-            'created_by'  => auth()->id(),
-        ]);
+        DB::transaction(function () use ($cid, $supplier, $data, $currency, $bankId, $pcaId, $desc) {
+            $entry = SupplierLedgerEntry::create([
+                'company_id'            => $cid,
+                'supplier_id'           => $supplier->id,
+                'type'                  => 'payment',
+                'amount'                => -(float) $data['amount'],
+                'currency'              => $currency,
+                'description'           => $desc,
+                'entry_date'            => $data['entry_date'],
+                'bank_account_id'       => $bankId,
+                'petty_cash_account_id' => $pcaId,
+                'created_by'            => auth()->id(),
+            ]);
+
+            if ($bankId || $pcaId) {
+                $cash = CashPostingService::postPayment(
+                    companyId:           $cid,
+                    amount:              (float) $data['amount'],
+                    currency:            $currency,
+                    date:                $data['entry_date'],
+                    description:         $desc,
+                    refType:             SupplierLedgerEntry::class,
+                    refId:               $entry->id,
+                    bankAccountId:       $bankId,
+                    pettyCashAccountId:  $pcaId,
+                    createdBy:           auth()->id(),
+                );
+                $entry->update([
+                    'bank_transaction_id'       => $cash['bank_transaction_id'],
+                    'petty_cash_transaction_id' => $cash['petty_cash_transaction_id'],
+                ]);
+            }
+        });
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('suppliers.show', $supplier)

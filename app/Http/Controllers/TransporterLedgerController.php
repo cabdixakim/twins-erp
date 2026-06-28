@@ -8,9 +8,11 @@ use App\Models\Transporter;
 use App\Models\TransporterLedgerEntry;
 use App\Models\ImportTruck;
 use App\Models\ImportNomination;
+use App\Models\BankAccount;
 use App\Models\PettyCashAccount;
 use App\Models\PettyCashTransaction;
 use App\Models\Sale;
+use App\Services\CashPostingService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransporterLedgerController extends Controller
@@ -178,10 +180,15 @@ class TransporterLedgerController extends Controller
             ->orderBy('name')
             ->get();
 
+        $bankAccounts = BankAccount::where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return view('transporters.show', compact(
             'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
-            'netPayable', 'currency', 'pettyCashAccounts',
+            'netPayable', 'currency', 'pettyCashAccounts', 'bankAccounts',
             'trips', 'openSales'
         ));
     }
@@ -195,40 +202,45 @@ class TransporterLedgerController extends Controller
             'amount'                => 'required|numeric|min:0.01',
             'entry_date'            => 'required|date',
             'description'           => 'nullable|string|max:500',
+            'bank_account_id'       => 'nullable|integer|exists:bank_accounts,id',
             'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
         $currency = $transporter->default_currency ?: 'USD';
+        $bankId   = !empty($data['bank_account_id'])       ? (int) $data['bank_account_id']       : null;
+        $pcaId    = !empty($data['petty_cash_account_id']) ? (int) $data['petty_cash_account_id'] : null;
+        $desc     = $data['description'] ?: 'Payment to transporter — ' . $transporter->name;
 
-        DB::transaction(function () use ($cid, $transporter, $data, $currency) {
+        DB::transaction(function () use ($cid, $transporter, $data, $currency, $bankId, $pcaId, $desc) {
             $entry = TransporterLedgerEntry::create([
-                'company_id'     => $cid,
-                'transporter_id' => $transporter->id,
-                'type'           => 'payment',
-                'amount'         => -(float) $data['amount'],
-                'currency'       => $currency,
-                'description'    => $data['description'] ?: 'Payment to transporter',
-                'entry_date'     => $data['entry_date'],
-                'created_by'     => auth()->id(),
+                'company_id'            => $cid,
+                'transporter_id'        => $transporter->id,
+                'type'                  => 'payment',
+                'amount'                => -(float) $data['amount'],
+                'currency'              => $currency,
+                'description'           => $desc,
+                'entry_date'            => $data['entry_date'],
+                'bank_account_id'       => $bankId,
+                'petty_cash_account_id' => $pcaId,
+                'created_by'            => auth()->id(),
             ]);
 
-            if (!empty($data['petty_cash_account_id'])) {
-                $account = PettyCashAccount::where('company_id', $cid)
-                    ->where('id', (int) $data['petty_cash_account_id'])
-                    ->firstOrFail();
-
-                PettyCashTransaction::create([
-                    'company_id'       => $cid,
-                    'account_id'       => $account->id,
-                    'type'             => 'transporter_advance',
-                    'amount'           => -(float) $data['amount'],
-                    'currency'         => $currency,
-                    'description'      => 'Transporter payment — ' . $transporter->name
-                                         . ($data['description'] ? ' · ' . $data['description'] : ''),
-                    'transaction_date' => $data['entry_date'],
-                    'ref_type'         => TransporterLedgerEntry::class,
-                    'ref_id'           => $entry->id,
-                    'created_by'       => auth()->id(),
+            if ($bankId || $pcaId) {
+                $cash = CashPostingService::postPayment(
+                    companyId:           $cid,
+                    amount:              (float) $data['amount'],
+                    currency:            $currency,
+                    date:                $data['entry_date'],
+                    description:         $desc,
+                    refType:             TransporterLedgerEntry::class,
+                    refId:               $entry->id,
+                    bankAccountId:       $bankId,
+                    pettyCashAccountId:  $pcaId,
+                    createdBy:           auth()->id(),
+                );
+                $entry->update([
+                    'bank_transaction_id'       => $cash['bank_transaction_id'],
+                    'petty_cash_transaction_id' => $cash['petty_cash_transaction_id'],
                 ]);
             }
         });

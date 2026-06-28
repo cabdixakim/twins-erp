@@ -8,6 +8,7 @@ use App\Models\ClientLedgerEntry;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\CashPostingService;
 
 class ClientLedgerController extends Controller
 {
@@ -133,9 +134,13 @@ class ClientLedgerController extends Controller
             }
         }
 
+        ['bankAccounts' => $bankAccounts, 'pettyCashAccounts' => $pettyCashAccounts]
+            = CashPostingService::accountsForCompany($cid);
+
         return view('clients.show', compact(
             'client', 'entries', 'refLinks',
-            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netAR', 'currency'
+            'invoicedTotal', 'paymentTotal', 'creditTotal', 'netAR', 'currency',
+            'bankAccounts', 'pettyCashAccounts'
         ));
     }
 
@@ -145,23 +150,51 @@ class ClientLedgerController extends Controller
         abort_if((int) $client->company_id !== $cid, 403);
 
         $data = $request->validate([
-            'amount'      => 'required|numeric|min:0.01',
-            'entry_date'  => 'required|date',
-            'description' => 'nullable|string|max:500',
+            'amount'                => 'required|numeric|min:0.01',
+            'entry_date'            => 'required|date',
+            'description'           => 'nullable|string|max:500',
+            'bank_account_id'       => 'nullable|integer|exists:bank_accounts,id',
+            'petty_cash_account_id' => 'nullable|integer|exists:petty_cash_accounts,id',
         ]);
 
         $currency = $client->currency ?: 'USD';
+        $bankId   = !empty($data['bank_account_id'])       ? (int) $data['bank_account_id']       : null;
+        $pcaId    = !empty($data['petty_cash_account_id']) ? (int) $data['petty_cash_account_id'] : null;
+        $desc     = $data['description'] ?: 'Payment received from ' . $client->name;
 
-        ClientLedgerEntry::create([
-            'company_id'  => $cid,
-            'client_id'   => $client->id,
-            'type'        => 'payment',
-            'amount'      => -(float) $data['amount'],
-            'currency'    => $currency,
-            'description' => $data['description'] ?: 'Payment received from client',
-            'entry_date'  => $data['entry_date'],
-            'created_by'  => auth()->id(),
-        ]);
+        DB::transaction(function () use ($cid, $client, $data, $currency, $bankId, $pcaId, $desc) {
+            $entry = ClientLedgerEntry::create([
+                'company_id'            => $cid,
+                'client_id'             => $client->id,
+                'type'                  => 'payment',
+                'amount'                => -(float) $data['amount'],
+                'currency'              => $currency,
+                'description'           => $desc,
+                'entry_date'            => $data['entry_date'],
+                'bank_account_id'       => $bankId,
+                'petty_cash_account_id' => $pcaId,
+                'created_by'            => auth()->id(),
+            ]);
+
+            if ($bankId || $pcaId) {
+                $cash = CashPostingService::postReceipt(
+                    companyId:           $cid,
+                    amount:              (float) $data['amount'],
+                    currency:            $currency,
+                    date:                $data['entry_date'],
+                    description:         $desc,
+                    refType:             ClientLedgerEntry::class,
+                    refId:               $entry->id,
+                    bankAccountId:       $bankId,
+                    pettyCashAccountId:  $pcaId,
+                    createdBy:           auth()->id(),
+                );
+                $entry->update([
+                    'bank_transaction_id'       => $cash['bank_transaction_id'],
+                    'petty_cash_transaction_id' => $cash['petty_cash_transaction_id'],
+                ]);
+            }
+        });
 
         AuditLog::record(
             'paid',

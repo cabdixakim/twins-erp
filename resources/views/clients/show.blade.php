@@ -212,8 +212,10 @@
 </div>
 
 {{-- ── Payment modal ── --}}
-<div id="paymentModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+<div id="paymentModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+     onclick="if(event.target===this)document.getElementById('paymentModal').classList.add('hidden')">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden"
+         onclick="event.stopPropagation()">
         <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
             <div class="text-sm font-semibold {{ $fg }}">Record payment received</div>
             <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')"
@@ -243,6 +245,44 @@
                 <input type="text" name="description" placeholder="e.g. Wire transfer, Ref #789"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
+
+            {{-- Deposit into: bank or petty cash --}}
+            <div class="rounded-xl border {{ $border }} p-3 space-y-3" style="background:var(--tw-surface-2)">
+                <div class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">Deposit into <span class="font-normal normal-case opacity-60">(optional — links receipt to your accounts)</span></div>
+
+                @if(isset($bankAccounts) && $bankAccounts->isNotEmpty())
+                <div>
+                    <label class="text-xs font-semibold {{ $fg }} mb-1 block">Bank account</label>
+                    <select name="bank_account_id" id="cli-pay-bank"
+                            class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                            onchange="if(this.value)document.getElementById('cli-pay-pca').value=''">
+                        <option value="">— none —</option>
+                        @foreach($bankAccounts as $ba)
+                            <option value="{{ $ba->id }}">{{ $ba->name }} ({{ $ba->currency }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+
+                @if(isset($pettyCashAccounts) && $pettyCashAccounts->isNotEmpty())
+                <div>
+                    <label class="text-xs font-semibold {{ $fg }} mb-1 block">Petty cash</label>
+                    <select name="petty_cash_account_id" id="cli-pay-pca"
+                            class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                            onchange="if(this.value)document.getElementById('cli-pay-bank').value=''">
+                        <option value="">— none —</option>
+                        @foreach($pettyCashAccounts as $pca)
+                            <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+
+                @if((!isset($bankAccounts) || $bankAccounts->isEmpty()) && (!isset($pettyCashAccounts) || $pettyCashAccounts->isEmpty()))
+                    <p class="text-xs {{ $muted }}">No bank or petty cash accounts set up yet.</p>
+                @endif
+            </div>
+
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="document.getElementById('paymentModal').classList.add('hidden')"
                         class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">Cancel</button>

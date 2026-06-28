@@ -700,18 +700,39 @@
                        placeholder="e.g. Bank transfer ref #12345"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
-            @if($pettyCashAccounts->isNotEmpty())
-            <div>
-                <label class="block text-xs font-semibold {{ $fg }} mb-1">Pay from petty cash <span class="{{ $muted }}">(optional)</span></label>
-                <select name="petty_cash_account_id"
-                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-                    <option value="">— Cash out separately —</option>
-                    @foreach($pettyCashAccounts as $pca)
-                        <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
-                    @endforeach
-                </select>
+            {{-- Pay from: bank or petty cash --}}
+            <div class="rounded-xl border {{ $border }} p-3 space-y-3" style="background:var(--tw-surface-2)">
+                <div class="text-xs font-semibold {{ $muted }} uppercase tracking-wider">Pay from <span class="font-normal normal-case opacity-60">(optional)</span></div>
+                @if($bankAccounts->isNotEmpty())
+                <div>
+                    <label class="text-xs font-semibold {{ $fg }} mb-1 block">Bank account</label>
+                    <select name="bank_account_id" id="trp-pay-bank"
+                            class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                            onchange="if(this.value)document.getElementById('trp-pay-pca').value=''">
+                        <option value="">— none —</option>
+                        @foreach($bankAccounts as $ba)
+                            <option value="{{ $ba->id }}">{{ $ba->name }} ({{ $ba->currency }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+                @if($pettyCashAccounts->isNotEmpty())
+                <div>
+                    <label class="text-xs font-semibold {{ $fg }} mb-1 block">Petty cash</label>
+                    <select name="petty_cash_account_id" id="trp-pay-pca"
+                            class="w-full h-9 px-3 rounded-xl border {{ $border }} {{ $surface }} text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                            onchange="if(this.value)document.getElementById('trp-pay-bank').value=''">
+                        <option value="">— none —</option>
+                        @foreach($pettyCashAccounts as $pca)
+                            <option value="{{ $pca->id }}">{{ $pca->name }} ({{ $pca->currency }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+                @if($bankAccounts->isEmpty() && $pettyCashAccounts->isEmpty())
+                    <p class="text-xs {{ $muted }}">No bank or petty cash accounts set up yet.</p>
+                @endif
             </div>
-            @endif
             @if($errors->any())
                 <div class="text-xs text-rose-500 space-y-0.5">
                     @foreach($errors->all() as $err)<div>{{ $err }}</div>@endforeach
