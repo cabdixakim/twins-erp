@@ -9,10 +9,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('purchases', function (Blueprint $table) {
-            $table->enum('shipper_remainder_resolution', ['credit_note', 'carried_forward'])
-                  ->nullable()->after('action_note');
-            $table->decimal('shipper_remainder_qty', 15, 4)->nullable()->after('shipper_remainder_resolution');
-            $table->text('shipper_remainder_note')->nullable()->after('shipper_remainder_qty');
+            if (! Schema::hasColumn('purchases', 'shipper_remainder_resolution')) {
+                $table->enum('shipper_remainder_resolution', ['credit_note', 'carried_forward'])
+                      ->nullable()->after('action_note');
+            }
+            if (! Schema::hasColumn('purchases', 'shipper_remainder_qty')) {
+                $table->decimal('shipper_remainder_qty', 15, 4)->nullable()->after('shipper_remainder_resolution');
+            }
+            if (! Schema::hasColumn('purchases', 'shipper_remainder_note')) {
+                $table->text('shipper_remainder_note')->nullable()->after('shipper_remainder_qty');
+            }
         });
     }
 
