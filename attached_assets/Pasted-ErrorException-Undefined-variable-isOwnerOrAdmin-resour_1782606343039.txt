@@ -1,0 +1,81 @@
+ErrorException
+Undefined variable $isOwnerOrAdmin
+resources/views/inventory-adjustments/index.blade.php :54
+        <a href="{{ route('inventory-adjustments.index') }}"
+           class="h-9 px-3 rounded-xl border {{ $border }} {{ $fg }} text-sm flex items-center hover:opacity-70 transition">Clear</a>
+      @endif
+    </form>
+  </div>
+  @if($isOwnerOrAdmin || ($can['inventory.view'] ?? false))
+  <a href="{{ route('inventory-adjustments.create') }}"
+     class="h-9 px-4 rounded-xl border border-rose-600 bg-rose-500 text-white text-sm font-semibold flex items-center gap-2 hover:bg-rose-600 transition">
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    Record write-off
+  </a>
+  @endif
+</div>
+ 
+{{-- Summary card --}}
+ 
+Request
+GET /inventory-adjustments
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en;q=0.9
+cookie
+XSRF-TOKEN=eyJpdiI6Im5IUDFYRzhOQ3l4eml4cjBLUU9YZmc9PSIsInZhbHVlIjoiMHBIbUZTRHlFcWN1MlczMmdGRWFYR2FnWEpnSytuSlM0N2NhWEsycjk5MHgxTktpd2VmU002UDJYUXJrNUNvM0FyeEpzMWFQNkQyb0tGM2RTc2RyNUtZS1VqZ2lNMjE0c0k4SWVyb1R2eU5jV1I2RC8yUXRkblZ5cUY4TitoZHAiLCJtYWMiOiI5YmUyZjc5MDQ0MzMyZmFmNTJkODAyZGRiZWNiZmJkYzQ5YTU0NGU0NjA4YzJjZjY0MmRkYzcxMWI5ZDVlNzU0IiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6IjVheUdNQkxVU1ZZN1N6Y3Y3MzFZK0E9PSIsInZhbHVlIjoiQldEbUZzazIrbFZBci85Rm90ZFdXZ2hjNVMzYzdZZ08yVmRjbUMrN3M3MzMveGhIUVVZY2tUUk1OdC92YVRnbTNQQ2dNbVF0bnE2amVBTDZhcy9JaUwvakxaMVBNcmxPeGhNN2FWYlpBeWZUMG8xalVIUFlMN09PSTJHamNCb3QiLCJtYWMiOiJjZDczNzE2NzBlYjMyOGM3ZGVjNTY4MzczMDNhZDI5ODFiNWIwMWIxZDQ2OTAyZjc4NDRjNDNlMjAzYjY1MGFjIiwidGFnIjoiIn0%3D
+priority
+u=0, i
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/dashboard
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+x-forwarded-for
+217.171.84.50, 10.83.7.90, 10.56.4.217, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\InventoryAdjustmentController@index
+route name
+inventory-adjustments.index
+middleware
+web, auth, company.setup, user.active, active.company, permission:inventory.view
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql

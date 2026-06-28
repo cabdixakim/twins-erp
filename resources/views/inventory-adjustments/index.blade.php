@@ -51,7 +51,6 @@
       @endif
     </form>
   </div>
-  @if($isOwnerOrAdmin || ($can['inventory.view'] ?? false))
   <a href="{{ route('inventory-adjustments.create') }}"
      class="h-9 px-4 rounded-xl border border-rose-600 bg-rose-500 text-white text-sm font-semibold flex items-center gap-2 hover:bg-rose-600 transition">
     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,7 +58,6 @@
     </svg>
     Record write-off
   </a>
-  @endif
 </div>
 
 {{-- Summary card --}}
