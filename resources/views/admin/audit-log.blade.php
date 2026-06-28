@@ -236,7 +236,7 @@
                                 try {
                                     $recordUrl = match(class_basename($log->model_type)) {
                                         'Purchase'            => route('purchases.show', $log->model_id),
-                                        'ImportTruck'         => route('purchases.show', \App\Models\ImportTruck::find($log->model_id)?->nomination?->purchase_id ?? 0),
+                                        'ImportTruck'         => route('purchases.show', $truckPurchaseMap[$log->model_id] ?? 0),
                                         'Client'              => route('clients.show', $log->model_id),
                                         'Supplier'            => route('suppliers.show', $log->model_id),
                                         'Depot'               => route('depots.show', $log->model_id),

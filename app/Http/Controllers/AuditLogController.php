@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\ImportTruck;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -49,6 +50,18 @@ class AuditLogController extends Controller
 
         $logs = $q->paginate(50)->withQueryString();
 
+        // Pre-load ImportTruck purchase IDs so the view doesn't do N+1 find() calls
+        $truckIds = $logs->getCollection()
+            ->where('model_type', \App\Models\ImportTruck::class)
+            ->pluck('model_id')
+            ->unique();
+        $truckPurchaseMap = $truckIds->isNotEmpty()
+            ? ImportTruck::whereIn('id', $truckIds)
+                ->join('import_nominations as n', 'n.id', '=', 'import_trucks.nomination_id')
+                ->select('import_trucks.id', 'n.purchase_id')
+                ->pluck('purchase_id', 'import_trucks.id')
+            : collect();
+
         $events = AuditLog::where('company_id', $company->id)
             ->distinct()->orderBy('event')->pluck('event');
 
@@ -71,7 +84,7 @@ class AuditLogController extends Controller
             'warning'  => AuditLog::where('company_id', $company->id)->where('severity', 'warning')->count(),
         ];
 
-        return view('admin.audit-log', compact('logs', 'events', 'modules', 'users', 'stats'));
+        return view('admin.audit-log', compact('logs', 'events', 'modules', 'users', 'stats', 'truckPurchaseMap'));
     }
 
     private function exportCsv($query): StreamedResponse

@@ -6,6 +6,12 @@
 @php
   $nom  = $importNomination;   // shorthand
   $trucks = $nom ? $nom->trucks : collect();
+  // Shared lookup lists — fetched once, reused everywhere in this template
+  $_cid              = auth()->user()->active_company_id;
+  $_dutyVendorsList  = \App\Models\DutyVendor::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
+  $_suppliersList    = \App\Models\Supplier::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
+  $_depotsList       = \App\Models\Depot::where('company_id', $_cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
+  $_transportersList = \App\Models\Transporter::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
   $unitLabel   = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
   $rateLabel   = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/L';
   $rateDivisor = 1;   // Rate is always per unit (per L when unit=L, per M³ when unit=M3)
@@ -641,10 +647,10 @@
           @php
             $nomDutyType      = $nom?->default_duty_vendor_type ?? '';
             $nomDutyVendorId  = $nom?->default_duty_vendor_id ?? '';
-            $nomDutyVendors   = \App\Models\DutyVendor::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
-            $nomSuppliers     = \App\Models\Supplier::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
-            $nomDepots        = \App\Models\Depot::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
-            $nomTransporters  = \App\Models\Transporter::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get();
+            $nomDutyVendors   = $_dutyVendorsList;
+            $nomSuppliers     = $_suppliersList;
+            $nomDepots        = $_depotsList;
+            $nomTransporters  = $_transportersList;
           @endphp
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Default duty paid to</label>
@@ -1188,11 +1194,10 @@
               </label>
             </div>
             @php
-              $cid             = auth()->user()->active_company_id;
-              $dutyVendorsList = \App\Models\DutyVendor::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
-              $suppliersList   = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
-              $depotsList      = \App\Models\Depot::where('company_id', $cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
-              $transportersList= \App\Models\Transporter::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+              $dutyVendorsList  = $_dutyVendorsList;
+              $suppliersList    = $_suppliersList;
+              $depotsList       = $_depotsList;
+              $transportersList = $_transportersList;
               $truckDutyType   = $truck->duty_vendor_type ?? '';
             @endphp
             <div>

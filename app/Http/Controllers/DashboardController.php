@@ -11,8 +11,7 @@ use App\Models\DepotStock;
 use App\Models\Depot;
 use App\Models\SupplierLedgerEntry;
 use App\Models\DepotLedgerEntry;
-use App\Models\BankAccount;
-use App\Models\BankTransaction;
+
 
 class DashboardController extends Controller {
     public function index() {
@@ -150,7 +149,7 @@ class DashboardController extends Controller {
             ->where('company_id', $cid)
             ->where('type', 'receipt')
             ->where('ref_type', 'purchase')
-            ->whereDate('created_at', '>=', $from6m)
+            ->where('created_at', '>=', $from6m)
             ->selectRaw("TO_CHAR(created_at, 'Mon') as month_label, TO_CHAR(created_at, 'YYYY-MM') as month_key, SUM(qty) as qty")
             ->groupByRaw("TO_CHAR(created_at, 'Mon'), TO_CHAR(created_at, 'YYYY-MM')")
             ->orderBy('month_key')
@@ -161,7 +160,7 @@ class DashboardController extends Controller {
             ->where('company_id', $cid)
             ->where('type', 'issue')
             ->where('ref_type', 'sale')
-            ->whereDate('created_at', '>=', $from6m)
+            ->where('created_at', '>=', $from6m)
             ->selectRaw("TO_CHAR(created_at, 'Mon') as month_label, TO_CHAR(created_at, 'YYYY-MM') as month_key, SUM(qty) as qty")
             ->groupByRaw("TO_CHAR(created_at, 'Mon'), TO_CHAR(created_at, 'YYYY-MM')")
             ->orderBy('month_key')
@@ -181,22 +180,27 @@ class DashboardController extends Controller {
             $chartSold[]      = round((float)($soldByMonth[$key]->qty ?? 0), 0);
         }
 
-        // ── Bank balances ─────────────────────────────────────────
-        $bankAccounts = BankAccount::where('company_id', $cid)
-            ->where('is_active', true)
-            ->orderBy('name')
+        // ── Bank balances (single JOIN — no N+1) ──────────────────
+        $bankByCurrency  = collect();
+        $topBankAccounts = collect();
+        $bankData = DB::table('bank_accounts as ba')
+            ->leftJoin('bank_transactions as bt', function ($j) {
+                $j->on('bt.bank_account_id', '=', 'ba.id')
+                  ->whereNull('bt.voided_at');
+            })
+            ->where('ba.company_id', $cid)
+            ->where('ba.is_active', true)
+            ->selectRaw("
+                ba.id, ba.name, ba.currency, ba.opening_balance,
+                ba.opening_balance + COALESCE(SUM(
+                    CASE WHEN bt.type IN ('deposit','transfer_in') THEN bt.amount ELSE -bt.amount END
+                ), 0) AS balance
+            ")
+            ->groupBy('ba.id', 'ba.name', 'ba.currency', 'ba.opening_balance')
+            ->orderBy('ba.name')
             ->get();
 
-        $bankByCurrency = collect();
-        $topBankAccounts = collect();
-        if ($bankAccounts->isNotEmpty()) {
-            $bankData = $bankAccounts->map(fn($a) => (object)[
-                'id'       => $a->id,
-                'name'     => $a->name,
-                'balance'  => $a->currentBalance(),
-                'currency' => $a->currency,
-            ]);
-
+        if ($bankData->isNotEmpty()) {
             $bankByCurrency = $bankData
                 ->groupBy('currency')
                 ->map(fn($rows) => $rows->sum('balance'))
@@ -212,8 +216,7 @@ class DashboardController extends Controller {
         $revenueData = DB::table('sales')
             ->where('company_id', $cid)
             ->where('status', 'posted')
-            ->whereMonth('sale_date', now()->month)
-            ->whereYear('sale_date', now()->year)
+            ->whereBetween('sale_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
             ->selectRaw('
                 COALESCE(SUM(total), 0)        AS revenue_mtd,
                 COALESCE(SUM(gross_profit), 0) AS gross_profit_mtd,
