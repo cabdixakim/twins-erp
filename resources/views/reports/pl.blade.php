@@ -78,33 +78,47 @@
         </div>
 
         {{-- COST OF SALES --}}
+        @php
+            $totalCostOfSales = $cogs + $totalLanded;
+            $grossProfitAfterLanded = $revenue - $totalCostOfSales;
+            $grossMarginAfterLandedPct = $revenue > 0
+                ? round($grossProfitAfterLanded / $revenue * 100, 1)
+                : null;
+        @endphp
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
             <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
                 <div class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm {{ $fg }}">Cost of Fuel Sold</span>
+                    <span class="text-sm {{ $fg }}">Cost of Fuel Purchased</span>
                     <span class="text-sm {{ $muted }}">{{ $fmt($cogs) }}</span>
                 </div>
+                {{-- Landed costs are part of COGS --}}
+                @foreach($landedLines as $line)
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt($line['amount']) }}</span>
+                </div>
+                @endforeach
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($cogs) }}</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
                 </div>
             </div>
         </div>
 
         {{-- GROSS PROFIT --}}
-        <div class="rounded-2xl border overflow-hidden {{ $grossProfit >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
-            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfit >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
+        <div class="rounded-2xl border overflow-hidden {{ $grossProfitAfterLanded >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
+            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfitAfterLanded >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Gross Profit</div>
-                    @if($grossMarginPct !== null)
-                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMarginPct }}% margin</div>
+                    @if($grossMarginAfterLandedPct !== null)
+                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMarginAfterLandedPct }}% margin</div>
                     @endif
                 </div>
                 <div class="text-xl font-bold">
-                    {!! $fmtSigned($grossProfit) !!}
+                    {!! $fmtSigned($grossProfitAfterLanded) !!}
                 </div>
             </div>
         </div>
@@ -115,16 +129,6 @@
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Operating Expenses</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
-                {{-- Landed / shipment costs --}}
-                @if($landedLines->isNotEmpty())
-                    @foreach($landedLines as $line)
-                    <div class="flex items-center justify-between px-5 py-3">
-                        <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
-                        <span class="text-sm {{ $muted }}">{{ $fmt($line['amount']) }}</span>
-                    </div>
-                    @endforeach
-                @endif
-
                 {{-- Depot charges --}}
                 @if($depotCharges > 0)
                 <div class="flex items-center justify-between px-5 py-3">
@@ -142,20 +146,21 @@
                 @endif
 
                 {{-- Empty state --}}
-                @if($landedLines->isEmpty() && $depotCharges == 0 && $pettyCash == 0)
-                <div class="px-5 py-4 text-sm {{ $muted }} italic">No expenses recorded in this period.</div>
+                @if($depotCharges == 0 && $pettyCash == 0)
+                <div class="px-5 py-4 text-sm {{ $muted }} italic">No operating expenses recorded in this period.</div>
                 @endif
 
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
-                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Expenses</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalExpenses) }}</span>
+                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Operating Expenses</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($depotCharges + $pettyCash) }}</span>
                 </div>
             </div>
         </div>
 
         {{-- NET PROFIT --}}
-        <div class="rounded-2xl border overflow-hidden {{ $netProfit >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40' }}">
-            <div class="flex items-center justify-between px-5 py-5 {{ $netProfit >= 0 ? 'bg-emerald-500/8' : 'bg-rose-500/8' }}">
+        @php $netProfitView = $grossProfitAfterLanded - $depotCharges - $pettyCash; @endphp
+        <div class="rounded-2xl border overflow-hidden {{ $netProfitView >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40' }}">
+            <div class="flex items-center justify-between px-5 py-5 {{ $netProfitView >= 0 ? 'bg-emerald-500/8' : 'bg-rose-500/8' }}">
                 <div>
                     <div class="text-sm font-bold uppercase tracking-widest {{ $muted }}">Net Profit</div>
                     @if($netMarginPct !== null)
@@ -163,7 +168,7 @@
                     @endif
                 </div>
                 <div class="text-2xl font-bold">
-                    {!! $fmtSigned($netProfit) !!}
+                    {!! $fmtSigned($netProfitView) !!}
                 </div>
             </div>
         </div>
@@ -183,25 +188,25 @@
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Cost of Sales</span>
-                    <span class="text-sm {{ $fg }}">{{ $fmt($cogs) }}</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
                 </div>
                 <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Gross Profit</span>
-                    <span class="text-sm font-semibold {{ $grossProfit >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
-                        {!! $fmtSigned($grossProfit) !!}
-                        @if($grossMarginPct !== null)
-                        <span class="text-[10px] font-normal {{ $muted }} ml-1">{{ $grossMarginPct }}%</span>
+                    <span class="text-sm font-semibold">
+                        {!! $fmtSigned($grossProfitAfterLanded) !!}
+                        @if($grossMarginAfterLandedPct !== null)
+                        <span class="text-[10px] font-normal {{ $muted }} ml-1">{{ $grossMarginAfterLandedPct }}%</span>
                         @endif
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-xs {{ $muted }}">Expenses</span>
-                    <span class="text-sm {{ $fg }}">{{ $fmt($totalExpenses) }}</span>
+                    <span class="text-xs {{ $muted }}">Operating Expenses</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($depotCharges + $pettyCash) }}</span>
                 </div>
                 <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
                     <span class="text-xs font-bold {{ $muted }}">Net Profit</span>
-                    <span class="text-base font-bold {{ $netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
-                        {!! $fmtSigned($netProfit) !!}
+                    <span class="text-base font-bold">
+                        {!! $fmtSigned($netProfitView) !!}
                     </span>
                 </div>
             </div>
