@@ -1,0 +1,99 @@
+Internal Server Error
+
+RouteNotFoundException
+Route [inventory.close-period] not defined.
+resources/views/settings/inventory.blade.php :121
+                    <h2 class="text-base font-semibold {{ $fg }} mb-1">Close Period &amp; Start New</h2>
+                    <p class="text-xs {{ $muted }} mb-5">
+                        This will close <span class="font-semibold {{ $fg }}">{{ $openPeriod?->name }}</span> and
+                        open a fresh period. All future postings will use the new costing method.
+                    </p>
+                    <form method="POST" action="{{ route('inventory.close-period') }}">
+                        @csrf
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold {{ $muted }} mb-1">New Period Name</label>
+                                <input type="text" name="new_period_name"
+                                       value="Period {{ now()->format('M Y') }}"
+                                       class="w-full rounded-xl border {{ $border }} bg-transparent px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold {{ $muted }} mb-2">Costing Method for New Period</label>
+Request
+GET /settings/inventory
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6InR5T0tHTC9raWpBUFZDMklaS1UvZkE9PSIsInZhbHVlIjoiWnVFU1pCSU5ld2xybkFmeXBmMFdoM01nWk9XN2RvQnlBQTNvM0F4YjZ4ZllsaE12UE1tZVIvNlFLcGJTMUZaSjhSMFhzTmZxTUhJWG5TOVloYm81bzVuRDNsNTZyalVVM0tHK240bi9LMHBUdXlXMWJKNWhhanJFZjJsT2FmSUUiLCJtYWMiOiI2MmE0YTJiZTNmOTBkNzNhOTAyMWRmOWFlODQ0YmI4NDJmNDcyZDFlMzE3NmZkZDA0YWQ4MWQ3ODg3OWNhNDkzIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6IjV5OExUbHd0YVFsT1dFUlVEWE93VWc9PSIsInZhbHVlIjoiZUlTMW1sWm0yTmxoUXFHRGQwNHhkWG1Qci9BdFVxK0dCOXJQOUpFT3NzMHhnamg5Rk1BS0RSNzNRd1VEM0ZZOHhNSXZENUxNQWdibmdIbGlTMUNGZlhROU9nUWhyMkhJSm1XdXpoQm4zL0g2dVhZTWxTZWIzR0haZDYyQnhlSVUiLCJtYWMiOiJlYzM4N2M0M2FkZjg0N2UyNDY2ZjA0ZTJjODNlMjE3YTAwM2M5YjY3YzcwY2Y4NzcwZWEwMDQ5M2Y2MGJkMDdmIiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/settings
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.10.160, 10.56.6.24, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\Settings\InventorySettingsController@index
+route name
+settings.inventory.index
+middleware
+web, auth, company.setup, user.active, active.company, permission:settings.inventory
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql
+select * from "companies" where "companies"."id" = 1 limit 1
+pgsql
+select * from "inventory_periods" where "company_id" = 1 and "status" = 'open' limit 1
+pgsql
+select * from "inventory_periods" where "company_id" = 1 and "status" = 'closed' order by "closed_at" desc
+pgsql
+select exists(select * from "i

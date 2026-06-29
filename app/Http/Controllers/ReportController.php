@@ -79,27 +79,31 @@ class ReportController extends Controller
             ->orderByDesc('revenue')
             ->get();
 
-        // ── Landed / shipment costs — prorated by batch sell-through ratio ──
-        // Use (qty_purchased - qty_remaining) / qty_purchased per batch.
-        // This works for both weighted-average and specific-lot costing because
-        // it reads directly from the batch stock balance, not FIFO consumption rows
-        // (which aren't reliably written in weighted-average mode).
-        // No date filter on costs: landed costs are recognised as stock depletes.
+        // ── Landed / shipment costs — weighted-average pool approach ────────
+        // In WA costing all stock is one pool; landed costs are treated the same.
+        // Overall sell-through ratio = (total purchased - total remaining) / total purchased
+        // across ALL company batches. Apply that single ratio to total costs per category.
+        // No per-batch attribution, no FIFO — consistent with WA philosophy.
+        $poolRow = DB::selectOne("
+            SELECT COALESCE(SUM(qty_purchased), 0) AS total_purchased,
+                   COALESCE(SUM(qty_remaining),  0) AS total_remaining
+            FROM batches
+            WHERE company_id = ?
+        ", [$cid]);
+
+        $poolSellThrough = ($poolRow && $poolRow->total_purchased > 0)
+            ? min(1.0, ($poolRow->total_purchased - $poolRow->total_remaining) / $poolRow->total_purchased)
+            : 0.0;
+
         $landedByCategory = DB::select("
             SELECT bc.category,
-                   SUM(
-                       bc.amount
-                       * LEAST(1.0,
-                           (b.qty_purchased - b.qty_remaining)
-                           / NULLIF(b.qty_purchased, 0)
-                         )
-                   ) AS total
+                   SUM(bc.amount) * ? AS total
             FROM batch_costs bc
             JOIN batches b ON b.id = bc.batch_id
             WHERE b.company_id = ?
             GROUP BY bc.category
-            HAVING SUM(bc.amount * LEAST(1.0, (b.qty_purchased - b.qty_remaining) / NULLIF(b.qty_purchased,0))) > 0.01
-        ", [$cid]);
+            HAVING SUM(bc.amount) * ? > 0.01
+        ", [$poolSellThrough, $cid, $poolSellThrough]);
 
         $landedByCategory = collect($landedByCategory)->keyBy('category');
 

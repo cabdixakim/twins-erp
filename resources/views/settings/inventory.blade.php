@@ -118,7 +118,7 @@
                         This will close <span class="font-semibold {{ $fg }}">{{ $openPeriod?->name }}</span> and
                         open a fresh period. All future postings will use the new costing method.
                     </p>
-                    <form method="POST" action="{{ route('inventory.close-period') }}">
+                    <form method="POST" action="{{ route('settings.inventory.close-period') }}">
                         @csrf
                         <div class="space-y-4">
                             <div>
