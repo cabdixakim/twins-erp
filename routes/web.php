@@ -348,6 +348,16 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             ->middleware('permission:purchases.import-nominations')
             ->name('purchases.import-nomination.update');
 
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/advances',
+            [ImportNominationController::class, 'storeAdvance'])
+            ->middleware('permission:purchases.import-nominations')
+            ->name('purchases.import-nomination.advances.store');
+
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/advances/{advance}/void',
+            [ImportNominationController::class, 'voidAdvance'])
+            ->middleware('permission:purchases.import-nominations')
+            ->name('purchases.import-nomination.advances.void');
+
         Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks',
             [ImportNominationController::class, 'addTruck'])
             ->middleware('permission:purchases.import-nominations')

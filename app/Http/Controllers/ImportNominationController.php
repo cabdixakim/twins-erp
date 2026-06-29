@@ -8,6 +8,7 @@ use Illuminate\Validation\Rule;
 use App\Models\Purchase;
 use App\Models\ImportNomination;
 use App\Models\ImportTruck;
+use App\Models\NominationAdvance;
 use App\Models\TransporterLedgerEntry;
 use App\Http\Controllers\SupplierLedgerController;
 use App\Services\DepotChargeAutoPost;
@@ -46,12 +47,22 @@ class ImportNominationController extends Controller
 
         if ($purchase->importNomination) {
             $nom = $purchase->importNomination;
+
+            // Rate lock — once any truck has progressed beyond nominated, rate is frozen
+            if ((float) $data['rate_per_1000l'] !== (float) $nom->rate_per_1000l) {
+                $progressedTrucks = $nom->trucks()
+                    ->whereNotIn('status', ['nominated', 'loading_failed'])
+                    ->exists();
+                if ($progressedTrucks) {
+                    return back()
+                        ->withErrors(['rate_per_1000l' => 'Transport rate cannot be changed once trucks have started loading.'])
+                        ->withInput();
+                }
+            }
+
             // volume_unit is intentionally NOT updated — it's locked at creation time
             // so historical calculations remain correct if the global setting changes
-            $nom->update(array_merge($data, [
-                'advances' => $data['advances'] ?? 0,
-            ]));
-            $this->syncAdvanceEntry($cid, $nom, $data);
+            $nom->update($data);
             return back()->with('status', 'Nomination updated.');
         }
 
@@ -1410,6 +1421,94 @@ class ImportNominationController extends Controller
         );
 
         return back()->with('status', $msg ?? "Duty posted for {$truck->truck_reg}.");
+    }
+
+    // ── Record advance payment ────────────────────────────────────────────────
+
+    public function storeAdvance(Request $request, Purchase $purchase, ImportNomination $nomination)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+        abort_if(! $nomination->transporter_id, 422, 'Assign a transporter to the nomination before recording advances.');
+
+        $data = $request->validate([
+            'amount'       => 'required|numeric|min:0.01',
+            'currency'     => 'required|string|max:8',
+            'advance_date' => 'required|date',
+            'note'         => 'nullable|string|max:500',
+        ]);
+
+        $advance = NominationAdvance::create([
+            'company_id'     => $cid,
+            'nomination_id'  => $nomination->id,
+            'transporter_id' => $nomination->transporter_id,
+            'amount'         => $data['amount'],
+            'currency'       => $data['currency'],
+            'advance_date'   => $data['advance_date'],
+            'note'           => $data['note'] ?? null,
+            'created_by'     => auth()->id(),
+        ]);
+
+        // Post to transporter ledger
+        TransporterLedgerEntry::create([
+            'company_id'     => $cid,
+            'transporter_id' => $nomination->transporter_id,
+            'type'           => 'advance',
+            'amount'         => -(float) $data['amount'],
+            'currency'       => $data['currency'],
+            'description'    => 'Advance payment' . ($data['note'] ? ": {$data['note']}" : '') . " · {$purchase->reference}",
+            'entry_date'     => $data['advance_date'],
+            'ref_type'       => NominationAdvance::class,
+            'ref_id'         => $advance->id,
+            'created_by'     => auth()->id(),
+        ]);
+
+        \App\Models\AuditLog::record(
+            'created',
+            "Advance of {$data['currency']} {$data['amount']} recorded for {$purchase->reference} (nomination #{$nomination->id}).",
+            $advance, "Advance · {$purchase->reference}",
+            severity: 'info',
+            after: ['amount' => $data['amount'], 'currency' => $data['currency'], 'date' => $data['advance_date']],
+        );
+
+        return back()->with('status', "Advance of {$data['currency']} " . number_format($data['amount'], 2) . " recorded.");
+    }
+
+    // ── Void advance payment ──────────────────────────────────────────────────
+
+    public function voidAdvance(Request $request, Purchase $purchase, ImportNomination $nomination, NominationAdvance $advance)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $nomination->purchase_id !== $purchase->id, 403);
+        abort_if((int) $advance->nomination_id !== $nomination->id, 403);
+        abort_if($advance->isVoided(), 422, 'This advance has already been voided.');
+
+        // Only manager / accountant / admin / owner can void
+        $user = auth()->user();
+        $canVoid = $user->hasRole('owner') || $user->hasRole('admin')
+                || $user->hasRole('manager') || $user->hasRole('accountant');
+        abort_if(! $canVoid, 403, 'Only managers and above can void advance entries.');
+
+        $advance->update([
+            'voided_at' => now(),
+            'voided_by' => auth()->id(),
+        ]);
+
+        // Reverse the ledger entry
+        TransporterLedgerEntry::where('ref_type', NominationAdvance::class)
+            ->where('ref_id', $advance->id)
+            ->where('type', 'advance')
+            ->delete();
+
+        \App\Models\AuditLog::record(
+            'deleted',
+            "Advance of {$advance->currency} {$advance->amount} voided for {$purchase->reference}.",
+            $advance, "Advance · {$purchase->reference}",
+            severity: 'warning',
+            before: ['amount' => $advance->amount, 'currency' => $advance->currency, 'date' => $advance->advance_date],
+        );
+
+        return back()->with('status', 'Advance voided and removed from transporter ledger.');
     }
 
     /**

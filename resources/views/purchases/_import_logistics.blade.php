@@ -28,7 +28,19 @@
   // Financial — gross uses qty loaded (transporter is paid on loaded; shortfall handled separately)
   $grossPayable        = $nom ? ($qtyLoaded * (float)$nom->rate_per_1000l / $rateDivisor) : 0;
   $totalShortCharge    = $deliveredTrucks->sum('shortfall_charge');
-  $netPayable          = $grossPayable - (float)($nom->advances ?? 0) - $totalShortCharge;
+
+  // Advances — new multi-entry table takes precedence; fall back to legacy single field
+  $nominationAdvances  = $nom
+    ? \App\Models\NominationAdvance::where('nomination_id', $nom->id)->with('creator')->orderBy('advance_date')->get()
+    : collect();
+  $advancesFromTable   = $nominationAdvances->whereNull('voided_at')->sum('amount');
+  $legacyAdvance       = ($advancesFromTable == 0) ? (float)($nom->advances ?? 0) : 0;
+  $totalAdvances       = (float)$advancesFromTable + $legacyAdvance;
+  $netPayable          = $grossPayable - $totalAdvances - $totalShortCharge;
+
+  // Permissions
+  $canVoidAdvance      = auth()->user()->hasRole('owner') || auth()->user()->hasRole('admin')
+                      || auth()->user()->hasRole('manager') || auth()->user()->hasRole('accountant');
 
   // Default allowed loss pct (0.3% AGO, 0.5% PMS)
   $productCode = strtoupper((string)($purchase->product->code ?? ''));
@@ -61,9 +73,9 @@
           <span>Loss <strong class="{{ $fg }}">{{ number_format($nom->allowed_loss_pct, 2) }}%</strong></span>
           <span class="opacity-30">·</span>
           <span>Short chg <strong class="{{ $fg }}">{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}</strong>{{ $rateLabel }}</span>
-          @if((float)($nom->advances ?? 0) > 0)
+          @if($totalAdvances > 0)
             <span class="opacity-30">·</span>
-            <span>Advances <strong class="{{ $fg }}">{{ $nom->advances_currency }} {{ number_format($nom->advances, 2) }}</strong></span>
+            <span>Advances <strong class="{{ $fg }}">{{ $nom->currency }} {{ number_format($totalAdvances, 2) }}</strong></span>
           @endif
         </div>
       @endif
@@ -495,7 +507,7 @@
         </div>
         <div>
           <div class="text-[10px] {{ $muted }}">Advances</div>
-          <div class="font-semibold s-amber">− {{ $nom->advances_currency }} {{ number_format($nom->advances, 2) }}</div>
+          <div class="font-semibold s-amber">− {{ $nom->currency }} {{ number_format($totalAdvances, 2) }}</div>
         </div>
         <div>
           <div class="text-[10px] {{ $muted }}">Short charges</div>
@@ -516,8 +528,163 @@
 
 
 {{-- ================================================================
+     ADVANCES SECTION
+     ================================================================ --}}
+@if($nom)
+<div class="rounded-2xl border {{ $border }} {{ $surface }} mt-4">
+  <div class="flex items-center justify-between px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
+    <div>
+      <span class="text-sm font-semibold {{ $fg }}">Advance Payments</span>
+      @if($nominationAdvances->where('voided_at', null)->count() > 0)
+        <span class="ml-2 text-xs {{ $muted }}">{{ $nominationAdvances->where('voided_at', null)->count() }} recorded · {{ $nom->currency }} {{ number_format($totalAdvances, 2) }} total</span>
+      @endif
+    </div>
+    @if($nom->transporter_id)
+    <button type="button" onclick="openAdvanceModal()"
+            class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition inline-flex items-center gap-1.5">
+      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+      </svg>
+      Record advance
+    </button>
+    @endif
+  </div>
+
+  @if($nominationAdvances->isEmpty() && $legacyAdvance == 0)
+    <div class="px-5 py-6 text-center text-sm {{ $muted }}">No advances recorded yet.</div>
+  @else
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b {{ $border }} {{ $surface2 }}">
+          <th class="text-left px-5 py-2 text-[10px] font-semibold {{ $muted }} uppercase tracking-wider">Date</th>
+          <th class="text-left px-3 py-2 text-[10px] font-semibold {{ $muted }} uppercase tracking-wider">Amount</th>
+          <th class="text-left px-3 py-2 text-[10px] font-semibold {{ $muted }} uppercase tracking-wider hidden sm:table-cell">Note</th>
+          <th class="text-left px-3 py-2 text-[10px] font-semibold {{ $muted }} uppercase tracking-wider hidden md:table-cell">Recorded by</th>
+          <th class="text-right px-5 py-2 text-[10px] font-semibold {{ $muted }} uppercase tracking-wider"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{-- Legacy single advance (shown only if no new-style entries exist) --}}
+        @if($legacyAdvance > 0)
+        <tr class="border-b {{ $border }} last:border-0">
+          <td class="px-5 py-2.5 text-xs {{ $muted }}">—</td>
+          <td class="px-3 py-2.5">
+            <span class="font-semibold {{ $fg }}">{{ $nom->advances_currency }} {{ number_format($legacyAdvance, 2) }}</span>
+          </td>
+          <td class="px-3 py-2.5 text-xs {{ $muted }} hidden sm:table-cell">Legacy advance (pre-recorded)</td>
+          <td class="px-3 py-2.5 hidden md:table-cell"></td>
+          <td class="px-5 py-2.5 text-right"></td>
+        </tr>
+        @endif
+
+        {{-- New-style advances --}}
+        @foreach($nominationAdvances as $adv)
+        @php $isVoided = $adv->voided_at !== null; @endphp
+        <tr class="border-b {{ $border }} last:border-0 {{ $isVoided ? 'opacity-40' : '' }}">
+          <td class="px-5 py-2.5 text-xs {{ $fg }} whitespace-nowrap">
+            {{ $adv->advance_date->format('d M Y') }}
+          </td>
+          <td class="px-3 py-2.5 whitespace-nowrap">
+            <span class="font-semibold {{ $isVoided ? 'line-through ' . $muted : $fg }}">
+              {{ $adv->currency }} {{ number_format($adv->amount, 2) }}
+            </span>
+            @if($isVoided)
+              <span class="ml-1 text-[10px] s-rose px-1.5 py-0.5 rounded">Voided</span>
+            @endif
+          </td>
+          <td class="px-3 py-2.5 text-xs {{ $muted }} hidden sm:table-cell max-w-[200px] truncate">
+            {{ $adv->note ?: '—' }}
+          </td>
+          <td class="px-3 py-2.5 text-xs {{ $muted }} hidden md:table-cell">
+            {{ $adv->creator?->name ?? '—' }}
+          </td>
+          <td class="px-5 py-2.5 text-right">
+            @if(! $isVoided && $canVoidAdvance)
+            <form method="POST"
+                  action="{{ route('purchases.import-nomination.advances.void', [$purchase, $nom, $adv]) }}"
+                  onsubmit="return confirm('Void this advance of {{ $adv->currency }} {{ number_format($adv->amount,2) }}? This will remove it from the transporter ledger.')">
+              @csrf
+              <button type="submit"
+                      class="h-7 px-2.5 rounded-lg border text-[10px] font-semibold transition btn-soft-rose">
+                Void
+              </button>
+            </form>
+            @endif
+          </td>
+        </tr>
+        @endforeach
+      </tbody>
+    </table>
+  @endif
+</div>
+@endif
+
+{{-- ================================================================
      MODALS
      ================================================================ --}}
+
+{{-- ── Record Advance modal ── --}}
+@if($nom)
+<div id="advanceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+      <div class="text-base font-semibold {{ $fg }}">Record Advance Payment</div>
+      <button type="button" onclick="closeAdvanceModal()"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
+    </div>
+    <form method="POST"
+          action="{{ route('purchases.import-nomination.advances.store', [$purchase, $nom]) }}"
+          class="p-5 space-y-4">
+      @csrf
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
+          <input type="number" name="amount" step="0.01" min="0.01" required
+                 placeholder="0.00"
+                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
+          <select name="currency"
+                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
+            @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
+              <option value="{{ $cur }}" {{ $nom->currency === $cur ? 'selected' : '' }}>{{ $cur }}</option>
+            @endforeach
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold {{ $fg }} mb-1">Date paid</label>
+        <input type="date" name="advance_date" required
+               value="{{ now()->toDateString() }}"
+               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold {{ $fg }} mb-1">Note <span class="{{ $muted }} font-normal">(optional)</span></label>
+        <input type="text" name="note" maxlength="500"
+               placeholder="e.g. 50% upfront per contract"
+               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+      </div>
+      <div class="flex gap-3 pt-1">
+        <button type="button" onclick="closeAdvanceModal()"
+                class="flex-1 h-10 rounded-xl border {{ $border }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition"
+                style="background:var(--tw-accent)">
+          Record
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function openAdvanceModal()  { const m=document.getElementById('advanceModal'); m.classList.remove('hidden'); m.classList.add('flex'); document.body.style.overflow='hidden'; }
+function closeAdvanceModal() { const m=document.getElementById('advanceModal'); m.classList.add('hidden'); m.classList.remove('flex'); document.body.style.overflow=''; }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceModal(); });
+</script>
+@endif
 
 {{-- ── Nomination modal (create OR edit) ── --}}
 <div id="nominationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
@@ -629,25 +796,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          {{-- Advances --}}
-          <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Advances paid</label>
-            <input type="number" name="advances" step="0.01" min="0"
-                   value="{{ $nom ? $nom->advances : '0' }}"
-                   placeholder="0.00"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold {{ $fg }} mb-1">Advances currency</label>
-            <select name="advances_currency"
-                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
-              @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
-                <option value="{{ $cur }}" {{ ($nom ? $nom->advances_currency : 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
-              @endforeach
-            </select>
-          </div>
-        </div>
+        {{-- advances field removed — use the Advances section below the financial summary --}}
 
         {{-- Duty defaults --}}
         <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-4 space-y-3">
