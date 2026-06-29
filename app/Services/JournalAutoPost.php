@@ -9,8 +9,8 @@ use App\Models\JournalEntryLine;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Auto-posts double-entry journal entries for purchase receipts and sales.
- * Only fires when the company has accounting_enabled = true AND has a seeded CoA.
+ * Auto-posts double-entry journal entries for all operational transactions.
+ * Only fires when accounting_enabled = true AND a Chart of Accounts exists.
  */
 class JournalAutoPost
 {
@@ -26,18 +26,15 @@ class JournalAutoPost
         return new self($companyId);
     }
 
-    // ── Guard ────────────────────────────────────────────────────────────────
-
     public function isEnabled(): bool
     {
         $company = DB::table('companies')->where('id', $this->companyId)->first();
-        if (!$company || !$company->accounting_enabled) {
-            return false;
-        }
+        if (!$company || !$company->accounting_enabled) return false;
         return ChartOfAccount::where('company_id', $this->companyId)->exists();
     }
 
-    // ── Purchase receipt: DR Inventory / CR Accounts Payable ────────────────
+    // ── 1. Purchase receipt (local depot) ───────────────────────────────────
+    // DR Inventory / CR Payables-Suppliers
 
     public function postPurchaseReceipt(
         int    $purchaseId,
@@ -47,64 +44,66 @@ class JournalAutoPost
         string $description
     ): void {
         if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('purchase_receipt', $purchaseId)) return;
 
-        $alreadyPosted = JournalEntry::where('company_id', $this->companyId)
-            ->where('ref_type', 'purchase')
-            ->where('ref_id', $purchaseId)
-            ->where('status', 'posted')
-            ->exists();
-        if ($alreadyPosted) return;
-
-        $inventory = $this->findAccount(['asset', 'Inventory', 'inventory']);
-        $payable   = $this->findAccount(['liability', 'Accounts Payable', 'payable']);
-
+        $inventory = $this->account('asset', ['Inventory']);
+        $payable   = $this->account('liability', ['Payables – Suppliers', 'Accounts Payable']);
         if (!$inventory || !$payable) return;
 
-        $journal = Journal::where('company_id', $this->companyId)
-            ->where('type', 'purchase')
-            ->first()
-            ?? Journal::where('company_id', $this->companyId)->first();
-
-        if (!$journal) return;
-
-        DB::transaction(function () use (
-            $purchaseId, $reference, $amount, $currency,
-            $description, $inventory, $payable, $journal
-        ) {
-            $entry = JournalEntry::create([
-                'company_id'  => $this->companyId,
-                'journal_id'  => $journal->id,
-                'reference'   => $reference,
-                'description' => $description,
-                'entry_date'  => now()->toDateString(),
-                'status'      => 'posted',
-                'ref_type'    => 'purchase',
-                'ref_id'      => $purchaseId,
-                'posted_by'   => auth()->id(),
-                'posted_at'   => now(),
-            ]);
-
-            JournalEntryLine::create([
-                'company_id'  => $this->companyId,
-                'entry_id'    => $entry->id,
-                'account_id'  => $inventory->id,
-                'description' => $description,
-                'debit'       => $amount,
-                'credit'      => 0,
-            ]);
-
-            JournalEntryLine::create([
-                'company_id'  => $this->companyId,
-                'entry_id'    => $entry->id,
-                'account_id'  => $payable->id,
-                'description' => $description,
-                'debit'       => 0,
-                'credit'      => $amount,
-            ]);
-        });
+        $this->post('purchase', $purchaseId, 'purchase_receipt', $reference, $description, $currency, [
+            [$inventory->id, $amount, 0,       $description],
+            [$payable->id,   0,       $amount,  $description],
+        ]);
     }
 
-    // ── Sale post: DR Accounts Receivable / CR Revenue + DR COGS / CR Inventory ──
+    // ── 2. Cross-dock confirm ────────────────────────────────────────────────
+    // DR Inventory / CR Payables-Suppliers
+
+    public function postCrossDockConfirm(
+        int    $purchaseId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('purchase_receipt', $purchaseId)) return;
+
+        $inventory = $this->account('asset', ['Inventory']);
+        $payable   = $this->account('liability', ['Payables – Suppliers', 'Accounts Payable']);
+        if (!$inventory || !$payable) return;
+
+        $this->post('purchase', $purchaseId, 'purchase_receipt', $reference, $description, $currency, [
+            [$inventory->id, $amount, 0,      $description],
+            [$payable->id,   0,       $amount, $description],
+        ]);
+    }
+
+    // ── 3. Import truck delivery ─────────────────────────────────────────────
+    // DR Inventory / CR Payables-Suppliers
+
+    public function postImportDelivery(
+        int    $truckId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('import_truck', $truckId)) return;
+
+        $inventory = $this->account('asset', ['Inventory']);
+        $payable   = $this->account('liability', ['Payables – Suppliers', 'Accounts Payable']);
+        if (!$inventory || !$payable) return;
+
+        $this->post('import_truck', $truckId, 'import_truck', $reference, $description, $currency, [
+            [$inventory->id, $amount, 0,      $description],
+            [$payable->id,   0,       $amount, $description],
+        ]);
+    }
+
+    // ── 4. Sale post ─────────────────────────────────────────────────────────
+    // DR AR / CR Revenue  +  DR COGS / CR Inventory
 
     public function postSale(
         int    $saleId,
@@ -115,34 +114,22 @@ class JournalAutoPost
         string $description
     ): void {
         if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('sale', $saleId)) return;
 
-        $alreadyPosted = JournalEntry::where('company_id', $this->companyId)
-            ->where('ref_type', 'sale')
-            ->where('ref_id', $saleId)
-            ->where('status', 'posted')
-            ->exists();
-        if ($alreadyPosted) return;
-
-        $ar        = $this->findAccount(['asset', 'Accounts Receivable', 'receivable']);
-        $revenueAc = $this->findAccount(['revenue', 'Revenue', 'sales revenue']);
-        $cogsAc    = $this->findAccount(['expense', 'Cost of Goods Sold', 'cogs']);
-        $inventory = $this->findAccount(['asset', 'Inventory', 'inventory']);
-
+        $ar        = $this->account('asset',   ['Accounts Receivable', 'receivable']);
+        $revenueAc = $this->account('revenue', ['Revenue', 'Fuel Sales']);
+        $cogsAc    = $this->account('expense', ['Cost of Goods Sold', 'Fuel Purchase Cost', 'cogs']);
+        $inventory = $this->account('asset',   ['Inventory']);
         if (!$ar || !$revenueAc) return;
 
-        $journal = Journal::where('company_id', $this->companyId)
-            ->where('type', 'sale')
-            ->first()
-            ?? Journal::where('company_id', $this->companyId)->first();
-
+        $journal = $this->journal('sale');
         if (!$journal) return;
 
         DB::transaction(function () use (
             $saleId, $reference, $revenue, $cogs, $currency,
             $description, $ar, $revenueAc, $cogsAc, $inventory, $journal
         ) {
-            // Entry 1: Revenue recognition — DR AR / CR Revenue
-            $revenueEntry = JournalEntry::create([
+            $e1 = JournalEntry::create([
                 'company_id'  => $this->companyId,
                 'journal_id'  => $journal->id,
                 'reference'   => $reference,
@@ -154,28 +141,11 @@ class JournalAutoPost
                 'posted_by'   => auth()->id(),
                 'posted_at'   => now(),
             ]);
+            JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e1->id,'account_id'=>$ar->id,       'description'=>'Receivable','debit'=>$revenue,'credit'=>0]);
+            JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e1->id,'account_id'=>$revenueAc->id,'description'=>'Revenue',   'debit'=>0,       'credit'=>$revenue]);
 
-            JournalEntryLine::create([
-                'company_id'  => $this->companyId,
-                'entry_id'    => $revenueEntry->id,
-                'account_id'  => $ar->id,
-                'description' => 'Receivable — ' . $description,
-                'debit'       => $revenue,
-                'credit'      => 0,
-            ]);
-
-            JournalEntryLine::create([
-                'company_id'  => $this->companyId,
-                'entry_id'    => $revenueEntry->id,
-                'account_id'  => $revenueAc->id,
-                'description' => 'Revenue — ' . $description,
-                'debit'       => 0,
-                'credit'      => $revenue,
-            ]);
-
-            // Entry 2: COGS (if accounts exist and cogs > 0)
             if ($cogsAc && $inventory && $cogs > 0) {
-                $cogsEntry = JournalEntry::create([
+                $e2 = JournalEntry::create([
                     'company_id'  => $this->companyId,
                     'journal_id'  => $journal->id,
                     'reference'   => $reference . '-COGS',
@@ -187,48 +157,224 @@ class JournalAutoPost
                     'posted_by'   => auth()->id(),
                     'posted_at'   => now(),
                 ]);
+                JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$cogsAc->id,  'description'=>'COGS',              'debit'=>$cogs,'credit'=>0]);
+                JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$inventory->id,'description'=>'Inventory reduction','debit'=>0,    'credit'=>$cogs]);
+            }
+        });
+    }
 
+    // ── 5. Supplier payment ──────────────────────────────────────────────────
+    // DR Payables-Suppliers / CR Bank (or Petty Cash)
+
+    public function postSupplierPayment(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('supplier_payment', $ledgerEntryId)) return;
+
+        $payable = $this->account('liability', ['Payables – Suppliers', 'Accounts Payable']);
+        $bank    = $this->account('asset',     ['Main Bank', 'Bank', 'Petty Cash']);
+        if (!$payable || !$bank) return;
+
+        $this->post('supplier_payment', $ledgerEntryId, 'supplier_payment', $reference, $description, $currency, [
+            [$payable->id, $amount, 0,      $description],
+            [$bank->id,    0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 6. Transporter payment ───────────────────────────────────────────────
+    // DR Payables-Transporters / CR Bank
+
+    public function postTransporterPayment(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('transporter_payment', $ledgerEntryId)) return;
+
+        $payable = $this->account('liability', ['Payables – Transporters', 'Accounts Payable']);
+        $bank    = $this->account('asset',     ['Main Bank', 'Bank']);
+        if (!$payable || !$bank) return;
+
+        $this->post('transporter_payment', $ledgerEntryId, 'transporter_payment', $reference, $description, $currency, [
+            [$payable->id, $amount, 0,      $description],
+            [$bank->id,    0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 7. Depot charge ──────────────────────────────────────────────────────
+    // DR Depot Storage & Handling / CR Payables-Depots
+
+    public function postDepotCharge(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('depot_charge', $ledgerEntryId)) return;
+
+        $expense = $this->account('expense',   ['Depot Storage', 'Operating Expenses']);
+        $payable = $this->account('liability', ['Payables – Depots', 'Accounts Payable']);
+        if (!$expense || !$payable) return;
+
+        $this->post('depot_charge', $ledgerEntryId, 'depot_charge', $reference, $description, $currency, [
+            [$expense->id, $amount, 0,      $description],
+            [$payable->id, 0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 8. Depot payment ─────────────────────────────────────────────────────
+    // DR Payables-Depots / CR Bank
+
+    public function postDepotPayment(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('depot_payment', $ledgerEntryId)) return;
+
+        $payable = $this->account('liability', ['Payables – Depots', 'Accounts Payable']);
+        $bank    = $this->account('asset',     ['Main Bank', 'Bank']);
+        if (!$payable || !$bank) return;
+
+        $this->post('depot_payment', $ledgerEntryId, 'depot_payment', $reference, $description, $currency, [
+            [$payable->id, $amount, 0,      $description],
+            [$bank->id,    0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 9. Petty cash expense ────────────────────────────────────────────────
+    // DR Operating Expenses / CR Petty Cash
+
+    public function postPettyCashExpense(
+        int    $txId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('petty_cash_tx', $txId)) return;
+
+        $expense   = $this->account('expense', ['Operating Expenses', 'Transport']);
+        $pettyCash = $this->account('asset',   ['Petty Cash']);
+        if (!$expense || !$pettyCash) return;
+
+        $this->post('petty_cash_tx', $txId, 'petty_cash_tx', $reference, $description, $currency, [
+            [$expense->id,   $amount, 0,      $description],
+            [$pettyCash->id, 0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 10. Petty cash top-up ────────────────────────────────────────────────
+    // DR Petty Cash / CR Bank
+
+    public function postPettyCashTopUp(
+        int    $txId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('petty_cash_topup', $txId)) return;
+
+        $pettyCash = $this->account('asset', ['Petty Cash']);
+        $bank      = $this->account('asset', ['Main Bank', 'Bank']);
+        if (!$pettyCash || !$bank) return;
+
+        $this->post('petty_cash_topup', $txId, 'petty_cash_topup', $reference, $description, $currency, [
+            [$pettyCash->id, $amount, 0,      $description],
+            [$bank->id,      0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function alreadyPosted(string $refType, int $refId): bool
+    {
+        return JournalEntry::where('company_id', $this->companyId)
+            ->where('ref_type', $refType)
+            ->where('ref_id', $refId)
+            ->where('status', 'posted')
+            ->exists();
+    }
+
+    private function post(
+        string $refType,
+        int    $refId,
+        string $uniqueRefType,
+        string $reference,
+        string $description,
+        string $currency,
+        array  $lines,
+        ?string $date = null
+    ): void {
+        $journal = $this->journal('general');
+        if (!$journal) return;
+
+        DB::transaction(function () use (
+            $refType, $refId, $uniqueRefType, $reference,
+            $description, $currency, $lines, $date, $journal
+        ) {
+            $entry = JournalEntry::create([
+                'company_id'  => $this->companyId,
+                'journal_id'  => $journal->id,
+                'reference'   => $reference,
+                'description' => $description,
+                'entry_date'  => $date ?? now()->toDateString(),
+                'status'      => 'posted',
+                'ref_type'    => $uniqueRefType,
+                'ref_id'      => $refId,
+                'posted_by'   => auth()->id(),
+                'posted_at'   => now(),
+            ]);
+
+            foreach ($lines as [$accountId, $debit, $credit, $desc]) {
                 JournalEntryLine::create([
                     'company_id'  => $this->companyId,
-                    'entry_id'    => $cogsEntry->id,
-                    'account_id'  => $cogsAc->id,
-                    'description' => 'COGS — ' . $description,
-                    'debit'       => $cogs,
-                    'credit'      => 0,
-                ]);
-
-                JournalEntryLine::create([
-                    'company_id'  => $this->companyId,
-                    'entry_id'    => $cogsEntry->id,
-                    'account_id'  => $inventory->id,
-                    'description' => 'Inventory reduction — ' . $description,
-                    'debit'       => 0,
-                    'credit'      => $cogs,
+                    'entry_id'    => $entry->id,
+                    'account_id'  => $accountId,
+                    'description' => $desc,
+                    'debit'       => $debit,
+                    'credit'      => $credit,
                 ]);
             }
         });
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    /**
-     * Find the best matching account by type + name keywords.
-     * $hints = [type_keyword, name_keyword1, name_keyword2]
-     */
-    private function findAccount(array $hints): ?ChartOfAccount
+    private function journal(string $type): ?Journal
     {
-        $typeHint = $hints[0] ?? null;
-        $names    = array_slice($hints, 1);
+        return Journal::where('company_id', $this->companyId)->where('type', $type)->first()
+            ?? Journal::where('company_id', $this->companyId)->first();
+    }
 
+    private function account(string $type, array $nameHints): ?ChartOfAccount
+    {
         $q = ChartOfAccount::where('company_id', $this->companyId)
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->where('type', 'like', '%' . $type . '%');
 
-        if ($typeHint) {
-            $q->where('type', 'like', '%' . $typeHint . '%');
-        }
-
-        foreach ($names as $name) {
-            $match = (clone $q)->where('name', 'ilike', '%' . $name . '%')->first();
+        foreach ($nameHints as $hint) {
+            $match = (clone $q)->where('name', 'ilike', '%' . $hint . '%')->first();
             if ($match) return $match;
         }
 
