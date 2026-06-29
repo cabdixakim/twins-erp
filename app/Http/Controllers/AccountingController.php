@@ -299,15 +299,15 @@ class AccountingController extends Controller
 
         $totalCogs = $cogsRows->sum('cogs');
 
-        // Landed costs — per-litre attribution via inventory_consumptions.
-        // cost-per-litre = batch_cost / qty_purchased; recognised qty = litres
-        // consumed from that batch in the period. Works identically for both
-        // weighted_average and specific_lot — consumptions always track the batch.
+        // Landed costs — cost-per-litre × qty consumed in period.
+        // Denominator = qty_received (updated per truck delivery by InventoryLedger::receipt).
+        // For imports this equals total litres physically delivered, giving the true
+        // average rate (e.g. $0.22/L). Falls back to qty_purchased for local/cross-dock.
         $rawLanded = DB::select("
             SELECT bc.category,
                    SUM(
                        COALESCE(bc.amount_base, bc.amount)
-                       / NULLIF(b.qty_purchased, 0)
+                       / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
                        * ic_agg.qty_consumed
                    ) AS total
             FROM batch_costs bc
@@ -323,7 +323,7 @@ class AccountingController extends Controller
             GROUP BY bc.category
             HAVING SUM(
                 COALESCE(bc.amount_base, bc.amount)
-                / NULLIF(b.qty_purchased, 0)
+                / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
                 * ic_agg.qty_consumed
             ) > 0.01
         ", [$cid, $cid, $from, $to]);

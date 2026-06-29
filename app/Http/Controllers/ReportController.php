@@ -81,17 +81,18 @@ class ReportController extends Controller
             ->get();
 
         // ── Landed / shipment costs ──────────────────────────────────────────
-        // Per-litre attribution: for each batch, cost-per-litre = batch_cost / qty_purchased.
-        // Recognised in this period = cost-per-litre × litres actually consumed in period.
-        // Uses inventory_consumptions (the FIFO ledger) as the source of qty — this
-        // automatically respects both weighted_average and specific_lot costing because
-        // consumptions always record which batch each litre came from.
-        // amount_base is the cost already converted to the company base currency.
+        // Cost-per-litre = batch_cost / qty_received.
+        // qty_received is updated by InventoryLedger::receipt() on every truck delivery,
+        // so for imports it equals the sum of all delivered truck quantities — giving the
+        // true average freight/duty rate per litre (e.g. $0.22/L). For local/cross-dock
+        // batches qty_received = qty_purchased since the whole lot arrives at once.
+        // Falls back to qty_purchased if qty_received is somehow zero.
+        // Recognised in period = cost-per-litre × litres consumed (from FIFO ledger).
         $rawLanded = DB::select("
             SELECT bc.category,
                    SUM(
                        COALESCE(bc.amount_base, bc.amount)
-                       / NULLIF(b.qty_purchased, 0)
+                       / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
                        * ic_agg.qty_consumed
                    ) AS total
             FROM batch_costs bc
@@ -107,7 +108,7 @@ class ReportController extends Controller
             GROUP BY bc.category
             HAVING SUM(
                 COALESCE(bc.amount_base, bc.amount)
-                / NULLIF(b.qty_purchased, 0)
+                / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
                 * ic_agg.qty_consumed
             ) > 0.01
         ", [$cid, $cid, $from, $to]);
