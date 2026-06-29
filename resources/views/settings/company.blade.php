@@ -417,72 +417,103 @@
                 <div class="text-[11px] {{ $muted }} mb-4">Enable or disable optional platform features for this company.</div>
 
                 <style>
-                  .mod-toggle-track { width:2.5rem; height:1.5rem; border-radius:9999px; border:1px solid var(--tw-border-color,#e2e8f0); background:var(--tw-surface,#fff); position:relative; transition:background .2s,border-color .2s; flex-shrink:0; cursor:pointer; }
-                  .mod-toggle-track.on { background:#10b981; border-color:#10b981; }
-                  .mod-toggle-thumb { position:absolute; top:.2rem; left:.2rem; width:1.1rem; height:1.1rem; border-radius:9999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s; }
-                  .mod-toggle-track.on .mod-toggle-thumb { transform:translateX(1rem); }
+                  .mod-toggle-track{width:2.5rem;height:1.5rem;border-radius:9999px;border:1px solid var(--tw-border-color,#e2e8f0);background:var(--tw-surface,#fff);position:relative;transition:background .2s,border-color .2s;flex-shrink:0;cursor:pointer;}
+                  .mod-toggle-track.on{background:#10b981;border-color:#10b981;}
+                  .mod-toggle-thumb{position:absolute;top:.2rem;left:.2rem;width:1.1rem;height:1.1rem;border-radius:9999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s;}
+                  .mod-toggle-track.on .mod-toggle-thumb{transform:translateX(1rem);}
                 </style>
-                <div class="space-y-4">
+                <div class="space-y-5">
+
                     {{-- Accounting --}}
                     @php $acctOn = (bool) old('accounting_enabled', $company->accounting_enabled); @endphp
-                    <div class="flex items-start gap-3">
-                        <input type="hidden" name="accounting_enabled" value="0">
-                        <input type="checkbox" id="chk_accounting" name="accounting_enabled" value="1"
-                               class="hidden"
-                               {{ $acctOn ? 'checked' : '' }}
-                               data-saved="{{ $acctOn ? '1' : '0' }}"
-                               data-warn="Disable double-entry accounting? Auto-posting will stop — future purchases and sales won't create journal entries. Existing entries are kept but your Trial Balance will go stale.">
-                        <div class="mod-toggle-track mt-0.5 {{ $acctOn ? 'on' : '' }}"
-                             onclick="toggleMod('chk_accounting', this)">
-                            <div class="mod-toggle-thumb"></div>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <div class="text-sm font-semibold {{ $fg }}">Double-entry accounting</div>
-                                @if($acctOn)
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>
-                                @endif
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="hidden" name="accounting_enabled" value="0">
+                            <input type="checkbox" id="chk_accounting" name="accounting_enabled" value="1"
+                                   class="hidden"
+                                   {{ $acctOn ? 'checked' : '' }}
+                                   data-saved="{{ $acctOn ? '1' : '0' }}">
+                            <div id="mod_track_accounting" class="mod-toggle-track mt-0.5 {{ $acctOn ? 'on' : '' }}"
+                                 onclick="toggleMod('chk_accounting', this, 'warn_accounting')">
+                                <div class="mod-toggle-thumb"></div>
                             </div>
-                            <div class="text-[11px] {{ $muted }} mt-0.5">Enables Chart of Accounts, Journals, and Trial Balance. Journal entries auto-post on every purchase receive and sale.</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm font-semibold {{ $fg }}">Double-entry accounting</div>
+                                    @if($acctOn)<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>@endif
+                                </div>
+                                <div class="text-[11px] {{ $muted }} mt-0.5">Enables Chart of Accounts, Journals, and Trial Balance. Journal entries auto-post on every purchase receive and sale.</div>
+                            </div>
+                        </div>
+                        <div id="warn_accounting" style="display:none;margin-top:.5rem;padding:.6rem .75rem;border-radius:.6rem;background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.4);">
+                            <p style="font-size:12px;color:#92400e;margin:0 0 .4rem;">⚠ <strong>Auto-posting will stop.</strong> Future purchases &amp; sales won't create journal entries. Existing entries stay but your Trial Balance goes stale.</p>
+                            <div style="display:flex;gap:.4rem;">
+                                <button type="button" onclick="cancelToggle('chk_accounting','warn_accounting')"
+                                    style="font-size:11px;padding:.2rem .6rem;border-radius:.4rem;border:1px solid #d97706;background:#fff;color:#92400e;cursor:pointer;">Keep enabled</button>
+                                <button type="button" onclick="confirmToggle('chk_accounting','mod_track_accounting','warn_accounting')"
+                                    style="font-size:11px;padding:.2rem .6rem;border-radius:.4rem;border:none;background:#dc2626;color:#fff;cursor:pointer;">Yes, disable</button>
+                            </div>
                         </div>
                     </div>
 
                     {{-- Inventory periods --}}
                     @php $perOn = (bool) old('inventory_periods_enabled', $company->inventory_periods_enabled); @endphp
-                    <div class="flex items-start gap-3">
-                        <input type="hidden" name="inventory_periods_enabled" value="0">
-                        <input type="checkbox" id="chk_periods" name="inventory_periods_enabled" value="1"
-                               class="hidden"
-                               {{ $perOn ? 'checked' : '' }}
-                               data-saved="{{ $perOn ? '1' : '0' }}"
-                               data-warn="Disable inventory periods? The period gate will be removed — stock can be posted freely with no period control. Costing accuracy and audit trails will be affected.">
-                        <div class="mod-toggle-track mt-0.5 {{ $perOn ? 'on' : '' }}"
-                             onclick="toggleMod('chk_periods', this)">
-                            <div class="mod-toggle-thumb"></div>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <div class="text-sm font-semibold {{ $fg }}">Inventory periods</div>
-                                @if($perOn)
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>
-                                @endif
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="hidden" name="inventory_periods_enabled" value="0">
+                            <input type="checkbox" id="chk_periods" name="inventory_periods_enabled" value="1"
+                                   class="hidden"
+                                   {{ $perOn ? 'checked' : '' }}
+                                   data-saved="{{ $perOn ? '1' : '0' }}">
+                            <div id="mod_track_periods" class="mod-toggle-track mt-0.5 {{ $perOn ? 'on' : '' }}"
+                                 onclick="toggleMod('chk_periods', this, 'warn_periods')">
+                                <div class="mod-toggle-thumb"></div>
                             </div>
-                            <div class="text-[11px] {{ $muted }} mt-0.5">Locks stock postings within accounting periods. Prevents backdating and enforces period-close discipline.</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm font-semibold {{ $fg }}">Inventory periods</div>
+                                    @if($perOn)<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>@endif
+                                </div>
+                                <div class="text-[11px] {{ $muted }} mt-0.5">Locks stock postings within accounting periods. Prevents backdating and enforces period-close discipline.</div>
+                            </div>
+                        </div>
+                        <div id="warn_periods" style="display:none;margin-top:.5rem;padding:.6rem .75rem;border-radius:.6rem;background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.4);">
+                            <p style="font-size:12px;color:#92400e;margin:0 0 .4rem;">⚠ <strong>Period gate will be removed.</strong> Stock can be posted freely with no period control — costing accuracy and audit trails will be affected.</p>
+                            <div style="display:flex;gap:.4rem;">
+                                <button type="button" onclick="cancelToggle('chk_periods','warn_periods')"
+                                    style="font-size:11px;padding:.2rem .6rem;border-radius:.4rem;border:1px solid #d97706;background:#fff;color:#92400e;cursor:pointer;">Keep enabled</button>
+                                <button type="button" onclick="confirmToggle('chk_periods','mod_track_periods','warn_periods')"
+                                    style="font-size:11px;padding:.2rem .6rem;border-radius:.4rem;border:none;background:#dc2626;color:#fff;cursor:pointer;">Yes, disable</button>
+                            </div>
                         </div>
                     </div>
+
                 </div>
                 <script>
-                function toggleMod(cbId, track) {
+                function toggleMod(cbId, track, warnId) {
                     const cb      = document.getElementById(cbId);
+                    const warn    = document.getElementById(warnId);
                     const savedOn = cb.dataset.saved === '1';
                     const turningOff = cb.checked;
 
                     if (savedOn && turningOff) {
-                        if (!window.confirm(cb.dataset.warn)) return;
+                        warn.style.display = 'block';
+                        return;
                     }
-
+                    warn.style.display = 'none';
                     cb.checked = !cb.checked;
                     track.classList.toggle('on', cb.checked);
+                }
+                function cancelToggle(cbId, warnId) {
+                    document.getElementById(warnId).style.display = 'none';
+                }
+                function confirmToggle(cbId, trackId, warnId) {
+                    const cb    = document.getElementById(cbId);
+                    const track = document.getElementById(trackId);
+                    const warn  = document.getElementById(warnId);
+                    cb.checked  = false;
+                    track.classList.remove('on');
+                    warn.style.display = 'none';
                 }
                 </script>
             </div>
