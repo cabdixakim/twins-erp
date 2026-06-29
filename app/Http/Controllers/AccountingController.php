@@ -299,33 +299,34 @@ class AccountingController extends Controller
 
         $totalCogs = $cogsRows->sum('cogs');
 
-        // Landed costs — prorated by sell-through ratio (same method as Reports P&L)
-        $costingMethod = \App\Models\Company::find($cid)?->costing_method ?? 'weighted_average';
-        if ($costingMethod === 'weighted_average') {
-            $poolRow     = DB::selectOne("
-                SELECT COALESCE(SUM(qty_purchased),0) AS total_purchased,
-                       COALESCE(SUM(qty_remaining), 0) AS total_remaining
-                FROM batches WHERE company_id = ?
-            ", [$cid]);
-            $sellThrough = ($poolRow && $poolRow->total_purchased > 0)
-                ? min(1.0, ($poolRow->total_purchased - $poolRow->total_remaining) / $poolRow->total_purchased)
-                : 0.0;
-            $rawLanded = DB::select("
-                SELECT bc.category, SUM(bc.amount) * ? AS total
-                FROM batch_costs bc JOIN batches b ON b.id = bc.batch_id
-                WHERE b.company_id = ?
-                GROUP BY bc.category HAVING SUM(bc.amount) * ? > 0.01
-            ", [$sellThrough, $cid, $sellThrough]);
-        } else {
-            $rawLanded = DB::select("
-                SELECT bc.category,
-                       SUM(bc.amount * LEAST(1.0,(b.qty_purchased - b.qty_remaining)/NULLIF(b.qty_purchased,0))) AS total
-                FROM batch_costs bc JOIN batches b ON b.id = bc.batch_id
-                WHERE b.company_id = ?
-                GROUP BY bc.category
-                HAVING SUM(bc.amount * LEAST(1.0,(b.qty_purchased - b.qty_remaining)/NULLIF(b.qty_purchased,0))) > 0.01
-            ", [$cid]);
-        }
+        // Landed costs — per-litre attribution via inventory_consumptions.
+        // cost-per-litre = batch_cost / qty_purchased; recognised qty = litres
+        // consumed from that batch in the period. Works identically for both
+        // weighted_average and specific_lot — consumptions always track the batch.
+        $rawLanded = DB::select("
+            SELECT bc.category,
+                   SUM(
+                       COALESCE(bc.amount_base, bc.amount)
+                       / NULLIF(b.qty_purchased, 0)
+                       * ic_agg.qty_consumed
+                   ) AS total
+            FROM batch_costs bc
+            JOIN batches b ON b.id = bc.batch_id AND b.company_id = ?
+            JOIN (
+                SELECT batch_id, SUM(qty) AS qty_consumed
+                FROM inventory_consumptions
+                WHERE company_id = ?
+                  AND DATE(created_at) BETWEEN ? AND ?
+                GROUP BY batch_id
+            ) ic_agg ON ic_agg.batch_id = b.id
+            WHERE bc.amount > 0
+            GROUP BY bc.category
+            HAVING SUM(
+                COALESCE(bc.amount_base, bc.amount)
+                / NULLIF(b.qty_purchased, 0)
+                * ic_agg.qty_consumed
+            ) > 0.01
+        ", [$cid, $cid, $from, $to]);
         $landedCosts = collect($rawLanded)->map(fn($r) => (object)[
             'category' => $r->category,
             'total'    => (float) $r->total,
