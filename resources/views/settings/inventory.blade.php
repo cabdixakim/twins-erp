@@ -103,10 +103,64 @@
                 </svg>
             </div>
 
-            <button disabled class="{{ $btnGhost }} px-4 py-2 text-sm opacity-40 cursor-not-allowed">
-                Start New Inventory Period
+            <button type="button"
+                    onclick="document.getElementById('newPeriodModal').classList.remove('hidden')"
+                    class="{{ $btnPrimary }} px-4 py-2 text-sm">
+                Close Period &amp; Start New
             </button>
-            <p class="text-xs {{ $muted }} mt-2">Coming soon — period wizard in progress.</p>
+            <p class="text-xs {{ $muted }} mt-2">Closing the current period locks all existing movements. A new period starts immediately.</p>
+
+            {{-- New Period Modal --}}
+            <div id="newPeriodModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div class="rounded-2xl border {{ $border }} {{ $surface }} p-6 w-full max-w-md shadow-2xl">
+                    <h2 class="text-base font-semibold {{ $fg }} mb-1">Close Period &amp; Start New</h2>
+                    <p class="text-xs {{ $muted }} mb-5">
+                        This will close <span class="font-semibold {{ $fg }}">{{ $openPeriod?->name }}</span> and
+                        open a fresh period. All future postings will use the new costing method.
+                    </p>
+                    <form method="POST" action="{{ route('inventory.close-period') }}">
+                        @csrf
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold {{ $muted }} mb-1">New Period Name</label>
+                                <input type="text" name="new_period_name"
+                                       value="Period {{ now()->format('M Y') }}"
+                                       class="w-full rounded-xl border {{ $border }} bg-transparent px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                                       required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold {{ $muted }} mb-2">Costing Method for New Period</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-start gap-3 p-3 rounded-xl border {{ $border }} cursor-pointer hover:bg-[color:var(--tw-surface-2)] transition">
+                                        <input type="radio" name="new_costing_method" value="weighted_average" class="mt-0.5 accent-emerald-500" checked>
+                                        <div>
+                                            <div class="text-sm font-semibold {{ $fg }}">Weighted Average</div>
+                                            <div class="text-xs {{ $muted }} mt-0.5">Running average cost across all stock. Recommended for most fuel operations.</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-3 rounded-xl border {{ $border }} cursor-pointer hover:bg-[color:var(--tw-surface-2)] transition">
+                                        <input type="radio" name="new_costing_method" value="specific_lot" class="mt-0.5 accent-emerald-500">
+                                        <div>
+                                            <div class="text-sm font-semibold {{ $fg }}">Specific Lot</div>
+                                            <div class="text-xs {{ $muted }} mt-0.5">Cost tied to exact batch. Requires selecting a batch on each sale.</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button type="button"
+                                    onclick="document.getElementById('newPeriodModal').classList.add('hidden')"
+                                    class="{{ $btnGhost }} flex-1 px-4 py-2 text-sm">
+                                Cancel
+                            </button>
+                            <button type="submit" class="flex-1 px-4 py-2 text-sm rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold transition">
+                                Close &amp; Start New Period
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         @endif
     </div>
 

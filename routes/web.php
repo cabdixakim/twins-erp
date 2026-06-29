@@ -200,6 +200,9 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             Route::patch('/inventory/costing', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'updateCosting'])
                 ->middleware('permission:settings.inventory')
                 ->name('inventory.update-costing');
+            Route::post('/inventory/close-period', [\App\Http\Controllers\Settings\InventorySettingsController::class, 'closePeriod'])
+                ->middleware('permission:settings.inventory')
+                ->name('inventory.close-period');
 
             // Duty vendors (customs authorities)
             Route::get('/duty-vendors', [\App\Http\Controllers\Settings\DutyVendorController::class, 'index'])

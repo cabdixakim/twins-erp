@@ -79,34 +79,27 @@ class ReportController extends Controller
             ->orderByDesc('revenue')
             ->get();
 
-        // ── Landed / shipment costs — prorated by qty sold in period ────────
-        // Only recognise the fraction of each batch's landed cost that corresponds
-        // to the fuel actually sold in this period (matching principle).
-        // e.g. if a batch is 30% sold in the period, show 30% of its freight.
+        // ── Landed / shipment costs — prorated by batch sell-through ratio ──
+        // Use (qty_purchased - qty_remaining) / qty_purchased per batch.
+        // This works for both weighted-average and specific-lot costing because
+        // it reads directly from the batch stock balance, not FIFO consumption rows
+        // (which aren't reliably written in weighted-average mode).
+        // No date filter on costs: landed costs are recognised as stock depletes.
         $landedByCategory = DB::select("
             SELECT bc.category,
                    SUM(
                        bc.amount
-                       * COALESCE(ps.qty_sold_in_period, 0)
-                       / NULLIF(b.qty_purchased, 0)
+                       * LEAST(1.0,
+                           (b.qty_purchased - b.qty_remaining)
+                           / NULLIF(b.qty_purchased, 0)
+                         )
                    ) AS total
             FROM batch_costs bc
             JOIN batches b ON b.id = bc.batch_id
-            LEFT JOIN (
-                SELECT ic.batch_id, SUM(ic.qty) AS qty_sold_in_period
-                FROM inventory_consumptions ic
-                JOIN sales s ON s.id = ic.ref_id
-                WHERE ic.ref_type = 'sale'
-                  AND s.company_id = ?
-                  AND s.status    = 'posted'
-                  AND DATE(s.posted_at) >= ?
-                  AND DATE(s.posted_at) <= ?
-                GROUP BY ic.batch_id
-            ) ps ON ps.batch_id = bc.batch_id
             WHERE b.company_id = ?
             GROUP BY bc.category
-            HAVING SUM(bc.amount * COALESCE(ps.qty_sold_in_period,0) / NULLIF(b.qty_purchased,0)) > 0.01
-        ", [$cid, $from, $to, $cid]);
+            HAVING SUM(bc.amount * LEAST(1.0, (b.qty_purchased - b.qty_remaining) / NULLIF(b.qty_purchased,0))) > 0.01
+        ", [$cid]);
 
         $landedByCategory = collect($landedByCategory)->keyBy('category');
 

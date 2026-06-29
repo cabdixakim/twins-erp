@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\InventoryPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class InventorySettingsController extends Controller
 {
@@ -42,5 +43,43 @@ class InventorySettingsController extends Controller
         $company->update(['costing_method' => $request->costing_method]);
 
         return back()->with('status', 'Costing method updated successfully.');
+    }
+
+    public function closePeriod(Request $request)
+    {
+        $company = Company::findOrFail(auth()->user()->active_company_id);
+
+        $request->validate([
+            'new_costing_method' => ['required', 'in:weighted_average,specific_lot'],
+            'new_period_name'    => ['required', 'string', 'max:100'],
+        ]);
+
+        $openPeriod = InventoryPeriod::where('company_id', $company->id)
+            ->where('status', 'open')
+            ->first();
+
+        if (!$openPeriod) {
+            return back()->withErrors(['period' => 'No open period found.']);
+        }
+
+        $openPeriod->update([
+            'status'    => 'closed',
+            'ends_at'   => Carbon::now(),
+            'closed_at' => Carbon::now(),
+            'closed_by' => auth()->id(),
+        ]);
+
+        InventoryPeriod::create([
+            'company_id'     => $company->id,
+            'name'           => $request->new_period_name,
+            'costing_method' => $request->new_costing_method,
+            'starts_at'      => Carbon::now(),
+            'status'         => 'open',
+            'created_by'     => auth()->id(),
+        ]);
+
+        $company->update(['costing_method' => $request->new_costing_method]);
+
+        return back()->with('status', 'Period closed. New period started with ' . ($request->new_costing_method === 'weighted_average' ? 'Weighted Average' : 'Specific Lot') . ' costing.');
     }
 }
