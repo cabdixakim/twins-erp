@@ -18,14 +18,14 @@
 @section('content')
 
 {{-- Breadcrumb --}}
-<div class="flex items-center gap-2 text-xs {{ $muted }} mb-4">
+<div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
     <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-    <span>AR Aging</span>
+    <span>Money Owed to You</span>
 </div>
 
 {{-- Filters --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-4">
+<div class="no-print rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-4">
     <form method="GET" class="flex flex-wrap gap-2 items-end">
         <div>
             <label class="block text-[10px] uppercase tracking-wide {{ $muted }} mb-1">As of date</label>
@@ -155,6 +155,15 @@
         </tfoot>
         @endif
     </table>
+</div>
+
+{{-- Print / actions bar --}}
+<div class="no-print flex justify-end mt-4">
+    <button onclick="window.print()"
+            class="{{ $btnGhost }}">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4H8v4a1 1 0 001 1z"/></svg>
+        Print
+    </button>
 </div>
 
 @endsection

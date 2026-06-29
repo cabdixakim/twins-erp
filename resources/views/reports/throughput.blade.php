@@ -23,14 +23,14 @@
 @section('content')
 
 {{-- Breadcrumb --}}
-<div class="flex items-center gap-2 text-xs {{ $muted }} mb-4">
+<div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
     <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-    <span>Purchased vs Sold</span>
+    <span>Volume Report</span>
 </div>
 
 {{-- Period selector --}}
-<div class="flex items-center gap-2 mb-4">
+<div class="no-print flex items-center gap-2 mb-4">
     <form method="GET" class="flex gap-2 items-center">
         <span class="text-xs {{ $muted }}">Show last</span>
         @foreach([3,6,12,24] as $m)
@@ -76,7 +76,7 @@
 </div>
 
 {{-- Chart --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-5 mb-4">
+<div class="no-print rounded-2xl border {{ $border }} {{ $surface }} p-5 mb-4">
     <div class="text-xs font-semibold {{ $fg }} mb-4">Volume — Litres Purchased vs Sold</div>
     <div style="height:280px; position:relative">
         <canvas id="throughputChart"></canvas>
@@ -84,7 +84,7 @@
 </div>
 
 {{-- Revenue chart --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-5 mb-4">
+<div class="no-print rounded-2xl border {{ $border }} {{ $surface }} p-5 mb-4">
     <div class="text-xs font-semibold {{ $fg }} mb-4">Revenue Trend</div>
     <div style="height:200px; position:relative">
         <canvas id="revenueChart"></canvas>
@@ -125,6 +125,15 @@
             @endforeach
         </tbody>
     </table>
+</div>
+
+{{-- Print button --}}
+<div class="no-print flex justify-end mt-4">
+    <button onclick="window.print()"
+            class="{{ $btnGhost }}">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4H8v4a1 1 0 001 1z"/></svg>
+        Print
+    </button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

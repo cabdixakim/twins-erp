@@ -35,6 +35,64 @@
 
     <style>
         .sidebar { transition: width 0.22s ease-in-out, transform 0.2s ease-out; }
+
+        /* ── Print styles ─────────────────────────────────────────────── */
+        @media print {
+            /* Hide all chrome */
+            #desktopSidebar,
+            #mobileSidebarOverlay,
+            #mobileSidebar,
+            #appTopbar,
+            #twinsTooltip,
+            .no-print { display: none !important; }
+
+            /* Reset layout — full page width */
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: #fff !important;
+                color: #111 !important;
+            }
+            body { display: block !important; }
+            .flex-1.min-w-0.flex.flex-col { display: block !important; width: 100% !important; }
+            main {
+                overflow: visible !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+
+            /* Show print-only header */
+            .print-header { display: block !important; }
+
+            /* Clean up cards and surfaces */
+            [class*="rounded"] { border-radius: 4px !important; }
+            [class*="shadow"] { box-shadow: none !important; }
+            * { background: transparent !important; color: #111 !important; }
+
+            /* Keep emerald/rose colours on profit/loss numbers */
+            .text-emerald-400, .text-emerald-500, .text-emerald-600 { color: #059669 !important; }
+            .text-rose-400, .text-rose-500 { color: #dc2626 !important; }
+
+            /* Borders in print */
+            [class*="border"] { border-color: #d1d5db !important; }
+
+            /* Tables */
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { padding: 6px 10px !important; font-size: 11px !important; }
+            thead { background: #f3f4f6 !important; }
+            tr { page-break-inside: avoid; }
+
+            /* Page breaks */
+            .page-break-before { page-break-before: always; }
+            .page-break-after  { page-break-after: always; }
+
+            /* Typography */
+            body { font-size: 12px; font-family: -apple-system, Arial, sans-serif; }
+            h1, h2, h3 { color: #111 !important; }
+
+            /* Grid: make single column for narrow items, keep two-column for P&L */
+            .print-two-col { display: grid !important; grid-template-columns: 2fr 1fr !important; gap: 1.5rem !important; }
+        }
     </style>
 
     {{-- App bundles --}}
@@ -117,12 +175,29 @@
 ))
 
 <div class="flex-1 min-w-0 flex flex-col">
-    @include('layouts.partials.topbar', compact(
-        'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
-    ))
+    <div id="appTopbar">
+        @include('layouts.partials.topbar', compact(
+            'user','userRole','company','canManageUsers','onDashboard','onDepotStock','onPurchases','onSettingsRoute'
+        ))
+    </div>
 
     {{-- Optional: make main surface theme-aware without forcing dark --}}
     <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-transparent">
+        {{-- Print-only header: hidden on screen, shown at top of every printed page --}}
+        <div class="print-header" style="display:none; margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid #111;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div>
+                    <div style="font-size:18px; font-weight:700; color:#111;">{{ auth()->user()?->activeCompany?->name ?? config('app.name') }}</div>
+                    <div style="font-size:13px; font-weight:600; color:#333; margin-top:2px;">@yield('title')</div>
+                    @hasSection('subtitle')
+                    <div style="font-size:11px; color:#666; margin-top:2px;">@yield('subtitle')</div>
+                    @endif
+                </div>
+                <div style="text-align:right; font-size:10px; color:#666;">
+                    <div>Printed {{ now()->format('d M Y, H:i') }}</div>
+                </div>
+            </div>
+        </div>
         @yield('content')
     </main>
 </div>

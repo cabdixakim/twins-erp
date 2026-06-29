@@ -10,7 +10,7 @@
 @endphp
 
 {{-- Filters --}}
-<form method="GET" class="flex flex-wrap items-end gap-3 mb-6">
+<form method="GET" class="no-print flex flex-wrap items-end gap-3 mb-6">
     <div>
         <label class="block text-[11px] font-semibold mb-1" style="color:var(--tw-muted)">As of date</label>
         <input type="date" name="as_of" value="{{ $asOf }}"
@@ -19,6 +19,10 @@
     </div>
     <button type="submit" class="tw-btn-primary text-xs px-4 py-2 rounded-xl">Apply</button>
     <a href="{{ route('reports.index') }}" class="text-xs" style="color:var(--tw-muted)">← Reports</a>
+    <button type="button" onclick="window.print()" class="tw-btn-ghost text-xs px-4 py-2 rounded-xl ml-auto flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4H8v4a1 1 0 001 1z"/></svg>
+        Print
+    </button>
 </form>
 
 {{-- Grand totals strip --}}

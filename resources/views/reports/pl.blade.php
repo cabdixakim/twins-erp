@@ -24,14 +24,14 @@
 @section('content')
 
 {{-- Breadcrumb --}}
-<div class="flex items-center gap-2 text-xs {{ $muted }} mb-4">
+<div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
     <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
     <span>Profit &amp; Loss</span>
 </div>
 
 {{-- Date filter --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-5">
+<div class="no-print rounded-2xl border {{ $border }} {{ $surface }} p-3 mb-5">
     <form method="GET" class="flex flex-wrap gap-3 items-end">
         <div>
             <label class="block text-[10px] uppercase tracking-wide {{ $muted }} mb-1">From</label>
@@ -54,7 +54,7 @@
 </div>
 
 {{-- P&L Statement --}}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 print-two-col">
 
     {{-- Statement column --}}
     <div class="lg:col-span-2 space-y-3">
