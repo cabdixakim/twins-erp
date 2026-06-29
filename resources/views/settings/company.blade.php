@@ -491,18 +491,19 @@
                 </div>
                 <script>
                 function toggleMod(cbId, track, warnId) {
-                    const cb      = document.getElementById(cbId);
-                    const warn    = document.getElementById(warnId);
-                    const savedOn = cb.dataset.saved === '1';
-                    const turningOff = cb.checked;
+                    const cb         = document.getElementById(cbId);
+                    const warn       = document.getElementById(warnId);
+                    const currentlyOn = cb.checked;
 
-                    if (savedOn && turningOff) {
+                    if (currentlyOn) {
+                        // turning OFF an active toggle → show confirmation strip
                         warn.style.display = 'block';
                         return;
                     }
+                    // turning ON → no warning needed
                     warn.style.display = 'none';
-                    cb.checked = !cb.checked;
-                    track.classList.toggle('on', cb.checked);
+                    cb.checked = true;
+                    track.classList.add('on');
                 }
                 function cancelToggle(cbId, warnId) {
                     document.getElementById(warnId).style.display = 'none';
