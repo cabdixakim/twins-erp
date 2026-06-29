@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Profit & Loss')
-@section('subtitle', 'Revenue, COGS and net profit derived from operational data.')
+@section('subtitle', 'Operational data + manual journal adjustments.')
 
 @section('content')
 
@@ -28,9 +28,8 @@
     <div class="rounded-2xl border overflow-hidden" style="border-color:var(--tw-border)">
         <div class="px-5 py-4 flex items-center justify-between" style="background:var(--tw-surface-2)">
             <h3 class="text-sm font-bold" style="color:var(--tw-fg)">Revenue</h3>
-            <span class="text-sm font-bold text-emerald-400">{{ number_format($totalRevenue,2) }}</span>
+            <span class="text-sm font-bold text-emerald-400">{{ number_format($totalRevenue + $totalJournalRevenue, 2) }}</span>
         </div>
-        @if($revenueRows->isNotEmpty())
         <table class="w-full text-sm" style="background:var(--tw-surface)">
             <tbody class="divide-y" style="divide-color:var(--tw-border)">
                 @foreach($revenueRows as $row)
@@ -40,18 +39,28 @@
                     <td class="px-5 py-2.5 text-right font-semibold tabular-nums" style="color:var(--tw-fg)">{{ number_format($row->revenue,2) }}</td>
                 </tr>
                 @endforeach
+                @foreach($journalRevenue as $row)
+                <tr>
+                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">
+                        {{ $row->account_name }}
+                        <span class="ml-1 text-[10px] px-1 rounded" style="background:rgba(99,102,241,.12);color:#6366f1">journal adj.</span>
+                    </td>
+                    <td class="px-5 py-2.5"></td>
+                    <td class="px-5 py-2.5 text-right font-semibold tabular-nums {{ $row->net >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">{{ number_format($row->net,2) }}</td>
+                </tr>
+                @endforeach
+                @if($revenueRows->isEmpty() && $journalRevenue->isEmpty())
+                <tr><td colspan="3" class="px-5 py-4 text-sm" style="color:var(--tw-muted)">No posted sales or revenue journal entries in this period.</td></tr>
+                @endif
             </tbody>
         </table>
-        @else
-        <p class="px-5 py-4 text-sm" style="color:var(--tw-muted)">No posted sales in this period.</p>
-        @endif
     </div>
 
     {{-- COGS --}}
     <div class="rounded-2xl border overflow-hidden" style="border-color:var(--tw-border)">
         <div class="px-5 py-4 flex items-center justify-between" style="background:var(--tw-surface-2)">
             <h3 class="text-sm font-bold" style="color:var(--tw-fg)">Cost of Goods Sold</h3>
-            <span class="text-sm font-bold text-rose-400">{{ number_format($totalCogs + $totalLanded,2) }}</span>
+            <span class="text-sm font-bold text-rose-400">({{ number_format($totalCogs + $totalLanded,2) }})</span>
         </div>
         <table class="w-full text-sm" style="background:var(--tw-surface)">
             <tbody class="divide-y" style="divide-color:var(--tw-border)">
@@ -119,6 +128,36 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Journal Adjustments (manual entries only, ref_type IS NULL) --}}
+    @if($journalExpenses->isNotEmpty() || $totalJournalRevenue != 0)
+    <div class="rounded-2xl border overflow-hidden" style="border-color:var(--tw-border)">
+        <div class="px-5 py-4 flex items-center justify-between" style="background:var(--tw-surface-2)">
+            <div>
+                <h3 class="text-sm font-bold" style="color:var(--tw-fg)">Journal Adjustments</h3>
+                <div class="text-[11px] mt-0.5" style="color:var(--tw-muted)">Manually-posted journal entries (depreciation, accruals, salaries, etc.)</div>
+            </div>
+            <span class="text-sm font-bold {{ ($totalJournalRevenue - $totalJournalExpenses) >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
+                {{ number_format($totalJournalRevenue - $totalJournalExpenses, 2) }}
+            </span>
+        </div>
+        <table class="w-full text-sm" style="background:var(--tw-surface)">
+            <tbody class="divide-y" style="divide-color:var(--tw-border)">
+                @foreach($journalExpenses as $row)
+                <tr>
+                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">
+                        <span class="text-[10px] font-mono mr-2" style="color:var(--tw-muted)">{{ $row->code }}</span>{{ $row->account_name }}
+                    </td>
+                    <td class="px-5 py-2.5 text-right font-semibold tabular-nums" style="color:var(--tw-fg)">({{ number_format($row->net,2) }})</td>
+                </tr>
+                @endforeach
+                @if($journalExpenses->isEmpty())
+                <tr><td colspan="2" class="px-5 py-4 text-sm" style="color:var(--tw-muted)">No manual expense journal entries in this period.</td></tr>
+                @endif
+            </tbody>
+        </table>
+    </div>
+    @endif
 
     {{-- Net Profit --}}
     <div class="rounded-2xl border px-5 py-5 flex items-center justify-between" style="background:var(--tw-surface);border-color:var(--tw-border)">

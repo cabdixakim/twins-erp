@@ -263,16 +263,62 @@ class AccountingController extends Controller
             ->whereBetween(DB::raw('DATE(depot_ledger_entries.created_at)'), [$from, $to])
             ->sum('depot_ledger_entries.amount');
 
+        // Manual journal adjustments (ref_type IS NULL = manually posted, not auto-generated)
+        // Revenue accounts: net credit position = additional revenue
+        $journalRevenue = DB::table('journal_entry_lines')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+            ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
+            ->where('journal_entry_lines.company_id', $cid)
+            ->where('journal_entries.status', 'posted')
+            ->whereNull('journal_entries.ref_type')
+            ->where('chart_of_accounts.type', 'revenue')
+            ->whereBetween('journal_entries.entry_date', [$from, $to])
+            ->selectRaw('
+                chart_of_accounts.code,
+                chart_of_accounts.name as account_name,
+                SUM(journal_entry_lines.credit - journal_entry_lines.debit) as net
+            ')
+            ->groupBy('chart_of_accounts.code', 'chart_of_accounts.name')
+            ->having(DB::raw('SUM(journal_entry_lines.credit - journal_entry_lines.debit)'), '!=', 0)
+            ->orderBy('chart_of_accounts.code')
+            ->get();
+
+        // Expense accounts: net debit position = additional expense
+        $journalExpenses = DB::table('journal_entry_lines')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+            ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
+            ->where('journal_entry_lines.company_id', $cid)
+            ->where('journal_entries.status', 'posted')
+            ->whereNull('journal_entries.ref_type')
+            ->where('chart_of_accounts.type', 'expense')
+            ->whereBetween('journal_entries.entry_date', [$from, $to])
+            ->selectRaw('
+                chart_of_accounts.code,
+                chart_of_accounts.name as account_name,
+                SUM(journal_entry_lines.debit - journal_entry_lines.credit) as net
+            ')
+            ->groupBy('chart_of_accounts.code', 'chart_of_accounts.name')
+            ->having(DB::raw('SUM(journal_entry_lines.debit - journal_entry_lines.credit)'), '!=', 0)
+            ->orderBy('chart_of_accounts.code')
+            ->get();
+
+        $totalJournalRevenue  = (float) $journalRevenue->sum('net');
+        $totalJournalExpenses = (float) $journalExpenses->sum('net');
+
         $grossProfit  = $totalRevenue - $totalCogs - $totalLanded;
         $totalOpex    = $totalPettyCash + $transporterCharges + $depotCharges;
-        $netProfit    = $grossProfit - $totalOpex;
+        $netProfit    = $grossProfit - $totalOpex + $totalJournalRevenue - $totalJournalExpenses;
         $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
-        $netMargin    = $totalRevenue > 0 ? round($netProfit / $totalRevenue * 100, 1) : null;
+        $netMargin    = ($totalRevenue + $totalJournalRevenue) > 0
+                        ? round($netProfit / ($totalRevenue + $totalJournalRevenue) * 100, 1)
+                        : null;
 
         return view('accounting.pl', compact(
             'revenueRows', 'cogsRows', 'landedCosts', 'pettyCashExpenses',
             'totalRevenue', 'totalCogs', 'totalLanded', 'totalPettyCash',
             'transporterCharges', 'depotCharges',
+            'journalRevenue', 'journalExpenses',
+            'totalJournalRevenue', 'totalJournalExpenses',
             'grossProfit', 'totalOpex', 'netProfit',
             'grossMargin', 'netMargin',
             'from', 'to'
