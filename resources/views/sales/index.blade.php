@@ -318,8 +318,10 @@
   'depots'    => $depots,
   'products'  => $products,
   'transporters' => $transporters,
-  'clients'   => $clients ?? collect(),
-  'selected'  => $selected,
+  'clients'      => $clients ?? collect(),
+  'selected'     => $selected,
+  'costingMethod'=> $costingMethod ?? 'weighted_average',
+  'batches'      => $batches ?? collect(),
 ])
 
 @push('scripts')

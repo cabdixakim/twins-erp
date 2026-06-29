@@ -616,7 +616,7 @@
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Category</label>
-          <select name="category" required
+          <select name="category" id="addCostCategory" onchange="toggleDutyVendorRow()" required
                   class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
             <option value="freight">Freight</option>
             <option value="duty">Duty / Tax</option>
@@ -696,6 +696,18 @@
                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
 
+      {{-- Duty vendor — shown when category = duty; auto-posts to duty ledger --}}
+      <div id="dutyVendorRow" class="hidden">
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Customs authority <span class="font-normal text-[color:var(--tw-muted)]">(auto-posts to their ledger)</span></label>
+        <select name="duty_vendor_id"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+          <option value="">— select authority (optional) —</option>
+          @foreach(\App\Models\DutyVendor::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get() as $dv)
+            <option value="{{ $dv->id }}">{{ $dv->name }}</option>
+          @endforeach
+        </select>
+      </div>
+
       <div class="flex items-center gap-3 pt-2">
         <button type="button" onclick="document.getElementById('addCostModal').classList.add('hidden')"
                 class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
@@ -715,6 +727,10 @@ function updatePaidByFields() {
   document.getElementById('paidByDepotRow').classList.toggle('hidden', v !== 'depot');
   document.getElementById('paidByTransporterRow').classList.toggle('hidden', v !== 'transporter');
   document.getElementById('paidByOtherRow').classList.toggle('hidden', v !== 'other');
+}
+function toggleDutyVendorRow() {
+  const cat = document.getElementById('addCostCategory')?.value;
+  document.getElementById('dutyVendorRow')?.classList.toggle('hidden', cat !== 'duty');
 }
 </script>
 @endif

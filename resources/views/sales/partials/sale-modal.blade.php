@@ -86,6 +86,26 @@
               @error('sale_date') <div class="{{ $errText }}">{{ $message }}</div> @enderror
             </div>
 
+            {{-- Batch picker: only visible in specific_lot mode --}}
+            @if(($costingMethod ?? 'weighted_average') === 'specific_lot')
+            <div class="sm:col-span-2">
+              <label class="text-xs font-semibold {{ $muted }}">Batch <span class="text-rose-400">*</span> <span class="font-normal {{ $muted }}">(Specific Lot mode — select which shipment this sale draws from)</span></label>
+              <select id="f_batch_id" name="batch_id" class="{{ $fieldBase }} @error('batch_id') {{ $fieldErr }} @enderror">
+                <option value="">— select batch —</option>
+                @foreach($batches ?? [] as $b)
+                  <option value="{{ $b->id }}"
+                          data-product="{{ $b->product_id }}"
+                          data-depot="{{ $b->depot_id }}"
+                          @selected(old('batch_id') == $b->id)>
+                    {{ $b->code }}
+                  </option>
+                @endforeach
+              </select>
+              <p class="mt-1 text-[11px] {{ $muted }}">Only batches with remaining stock are listed. Choose depot &amp; product first to filter.</p>
+              @error('batch_id') <div class="{{ $errText }}">{{ $message }}</div> @enderror
+            </div>
+            @endif
+
             <div>
               <label class="text-xs font-semibold {{ $muted }}">Currency</label>
               <input id="f_currency" name="currency" value="{{ old('currency', 'USD') }}"

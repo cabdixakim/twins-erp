@@ -92,9 +92,21 @@ class SalesController extends Controller
             'open'       => (bool) $request->boolean('open_sale'),
             'depot_id'   => (int) $request->query('from_depot', 0),
             'product_id' => (int) $request->query('from_product', 0),
-            ];
+        ];
 
-        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill'));
+        $company       = Company::find($cid);
+        $costingMethod = $company?->costing_method ?? 'weighted_average';
+
+        // For specific_lot: pass active batches so the sale form can show a picker
+        $batches = $costingMethod === 'specific_lot'
+            ? Batch::where('company_id', $cid)
+                ->where('status', 'active')
+                ->whereColumn('qty_remaining', '>', DB::raw('0'))
+                ->orderBy('code')
+                ->get(['id', 'code', 'product_id', 'depot_id'])
+            : collect();
+
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill', 'costingMethod', 'batches'));
     }
 
     public function exportCsv()
@@ -147,6 +159,7 @@ class SalesController extends Controller
             'unit_price'     => 'required|numeric|min:0',
             'currency'       => 'required|string|max:8',
             'reference'      => 'nullable|string|max:64',
+            'batch_id'       => 'nullable|integer',
 
             'delivery_mode'    => 'required|in:ex_depot,delivered',
             'transporter_id'   => 'nullable|integer',
@@ -248,6 +261,7 @@ class SalesController extends Controller
                 'product_id'    => (int) $data['product_id'],
                 'client_id'     => $data['client_id'] ? (int) $data['client_id'] : null,
                 'client_name'   => $data['client_name'] ?? null,
+                'batch_id'      => !empty($data['batch_id']) ? (int) $data['batch_id'] : null,
 
                 'sequence_no'   => $nextSeq,
                 'reference'     => $reference,

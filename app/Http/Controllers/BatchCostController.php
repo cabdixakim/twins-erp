@@ -30,6 +30,7 @@ class BatchCostController extends Controller
             'paid_by_id_depot'      => 'nullable|integer',
             'paid_by_id_transporter'=> 'nullable|integer',
             'paid_by_name'          => 'nullable|string|max:200',
+            'duty_vendor_id'        => 'nullable|integer',
         ]);
 
         $exchangeRate = (float) ($data['exchange_rate'] ?? 1);
@@ -144,6 +145,41 @@ class BatchCostController extends Controller
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
+        }
+
+        // ── Duty → duty ledger auto-posting ──────────────────────────────────
+        // When category is 'duty' and a customs authority is selected,
+        // create a duty_charge entry so the payable appears on their ledger.
+        if ($data['category'] === 'duty' && !empty($data['duty_vendor_id'])) {
+            $dutyVendorId = (int) $data['duty_vendor_id'];
+            $dutyVendorOk = DB::table('duty_vendors')
+                ->where('id', $dutyVendorId)
+                ->where('company_id', $cid)
+                ->exists();
+            if ($dutyVendorOk) {
+                $alreadyPosted = DB::table('duty_ledger_entries')
+                    ->where('ref_type', Purchase::class)
+                    ->where('ref_id', $purchase->id)
+                    ->where('duty_vendor_id', $dutyVendorId)
+                    ->where('type', 'duty_charge')
+                    ->exists();
+                if (!$alreadyPosted) {
+                    DB::table('duty_ledger_entries')->insert([
+                        'company_id'     => $cid,
+                        'duty_vendor_id' => $dutyVendorId,
+                        'type'           => 'duty_charge',
+                        'amount'         => $amountBase,
+                        'currency'       => $data['currency'],
+                        'description'    => $data['description'] . " — PO {$purchase->reference}",
+                        'entry_date'     => $data['entry_date'],
+                        'ref_type'       => Purchase::class,
+                        'ref_id'         => $purchase->id,
+                        'created_by'     => auth()->id(),
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ]);
+                }
+            }
         }
 
         InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);

@@ -207,12 +207,13 @@ class ImportNominationController extends Controller
                     ->where('nomination_id', $nomination->id)
                     ->ignore($truck->id),
             ],
-            'driver_name'     => 'nullable|string|max:150',
-            'driver_passport' => 'nullable|string|max:60',
-            'driver_license'  => 'nullable|string|max:60',
-            'driver_phone'    => 'nullable|string|max:30',
-            'capacity'        => 'required|numeric|min:1',
-            'notes'           => 'nullable|string|max:1000',
+            'driver_name'                => 'nullable|string|max:150',
+            'driver_passport'            => 'nullable|string|max:60',
+            'driver_license'             => 'nullable|string|max:60',
+            'driver_phone'               => 'nullable|string|max:30',
+            'capacity'                   => 'required|numeric|min:1',
+            'notes'                      => 'nullable|string|max:1000',
+            'short_charge_rate_override' => 'nullable|numeric|min:0',
         ], [
             'truck_reg.unique'   => "Truck registration ':input' is already used by another truck in this nomination.",
             'trailer_reg.unique' => "Trailer registration ':input' is already used by another truck in this nomination.",
@@ -225,7 +226,13 @@ class ImportNominationController extends Controller
                 ->with('edit_error_truck_id', $truck->id);
         }
 
-        $truck->update($validator->validated());
+        $validated = $validator->validated();
+        // Store null explicitly when the field is cleared (empty string → null)
+        $validated['short_charge_rate_override'] = $validated['short_charge_rate_override'] !== '' && $validated['short_charge_rate_override'] !== null
+            ? (float) $validated['short_charge_rate_override']
+            : null;
+
+        $truck->update($validated);
 
         return back()->with('status', 'Truck updated.');
     }
@@ -506,7 +513,8 @@ class ImportNominationController extends Controller
         $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
         $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
         $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
-        $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
+        $effectiveShortRate = (float) ($truck->short_charge_rate_override ?? $nomination->short_charge_rate);
+        $shortfallCharge = round($excessLossQty * ($effectiveShortRate / $rateDivisor), 2);
 
         $truck->update(array_merge($data, [
             'status'           => 'delivered',
@@ -720,7 +728,8 @@ class ImportNominationController extends Controller
         $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
         $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
         $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
-        $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
+        $effectiveShortRate = (float) ($truck->short_charge_rate_override ?? $nomination->short_charge_rate);
+        $shortfallCharge = round($excessLossQty * ($effectiveShortRate / $rateDivisor), 2);
 
         $truck->update([
             'status'           => 'delivered',
@@ -890,7 +899,8 @@ class ImportNominationController extends Controller
             $shortfallQty    = max(0, $qtyLoaded - $qtyDelivered);
             $allowedLossQty  = round($qtyLoaded * $lossPct, 3);
             $excessLossQty   = max(0, round($shortfallQty - $allowedLossQty, 3));
-            $shortfallCharge = round($excessLossQty * ((float) $nomination->short_charge_rate / $rateDivisor), 2);
+            $effectiveShortRate = (float) ($truck->short_charge_rate_override ?? $nomination->short_charge_rate);
+        $shortfallCharge = round($excessLossQty * ($effectiveShortRate / $rateDivisor), 2);
 
             $truck->update([
                 'status'           => 'delivered',

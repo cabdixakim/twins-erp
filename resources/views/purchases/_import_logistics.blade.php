@@ -905,6 +905,17 @@
             <input type="text" name="notes" value="{{ $truck->notes }}" maxlength="1000"
                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
+          <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
+            <label class="block text-xs font-semibold {{ $fg }} mb-0.5">Short-charge rate override <span class="{{ $muted }} font-normal">(optional)</span></label>
+            <p class="text-[11px] {{ $muted }} mb-2">Leave blank to use the nomination rate ({{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} / 1000 L). Set a value here to override for this truck only.</p>
+            <div class="flex items-center gap-2">
+              <span class="text-xs {{ $muted }} whitespace-nowrap">{{ $nom->short_charge_currency }} /1000 L</span>
+              <input type="number" name="short_charge_rate_override" step="0.01" min="0"
+                     value="{{ $truck->short_charge_rate_override }}"
+                     placeholder="e.g. {{ $nom->short_charge_rate }}"
+                     class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            </div>
+          </div>
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('editTruckModal-{{ $truck->id }}')"
