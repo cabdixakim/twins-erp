@@ -79,17 +79,36 @@ class ReportController extends Controller
             ->orderByDesc('revenue')
             ->get();
 
-        // ── Landed / shipment costs (batch_costs in period) ──────────────
-        $landedByCategory = DB::table('batch_costs')
-            ->join('batches', 'batches.id', '=', 'batch_costs.batch_id')
-            ->where('batches.company_id', $cid)
-            ->whereDate('batch_costs.entry_date', '>=', $from)
-            ->whereDate('batch_costs.entry_date', '<=', $to)
-            ->selectRaw('batch_costs.category, COALESCE(SUM(batch_costs.amount), 0) as total')
-            ->groupBy('batch_costs.category')
-            ->orderByDesc('total')
-            ->get()
-            ->keyBy('category');
+        // ── Landed / shipment costs — prorated by qty sold in period ────────
+        // Only recognise the fraction of each batch's landed cost that corresponds
+        // to the fuel actually sold in this period (matching principle).
+        // e.g. if a batch is 30% sold in the period, show 30% of its freight.
+        $landedByCategory = DB::select("
+            SELECT bc.category,
+                   SUM(
+                       bc.amount
+                       * COALESCE(ps.qty_sold_in_period, 0)
+                       / NULLIF(b.qty_purchased, 0)
+                   ) AS total
+            FROM batch_costs bc
+            JOIN batches b ON b.id = bc.batch_id
+            LEFT JOIN (
+                SELECT ic.batch_id, SUM(ic.qty) AS qty_sold_in_period
+                FROM inventory_consumptions ic
+                JOIN sales s ON s.id = ic.ref_id
+                WHERE ic.ref_type = 'sale'
+                  AND s.company_id = ?
+                  AND s.status    = 'posted'
+                  AND DATE(s.posted_at) >= ?
+                  AND DATE(s.posted_at) <= ?
+                GROUP BY ic.batch_id
+            ) ps ON ps.batch_id = bc.batch_id
+            WHERE b.company_id = ?
+            GROUP BY bc.category
+            HAVING SUM(bc.amount * COALESCE(ps.qty_sold_in_period,0) / NULLIF(b.qty_purchased,0)) > 0.01
+        ", [$cid, $from, $to, $cid]);
+
+        $landedByCategory = collect($landedByCategory)->keyBy('category');
 
         $categoryLabels = [
             'freight'       => 'Freight & Transport',
