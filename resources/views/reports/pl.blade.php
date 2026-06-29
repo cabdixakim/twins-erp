@@ -129,6 +129,14 @@
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Operating Expenses</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
+                {{-- Transporter freight --}}
+                @if($transporterCharges > 0)
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="text-sm {{ $fg }}">Transport & Freight</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt($transporterCharges) }}</span>
+                </div>
+                @endif
+
                 {{-- Depot charges --}}
                 @if($depotCharges > 0)
                 <div class="flex items-center justify-between px-5 py-3">
@@ -141,24 +149,24 @@
                 @if($pettyCash > 0)
                 <div class="flex items-center justify-between px-5 py-3">
                     <span class="text-sm {{ $fg }}">Petty Cash Expenses</span>
-                    <span class="text-sm {{ $muted }}">{{ $fmt($pettyCash) }}</span>
+                    <span class="text-sm {{ $muted }}">{{ $fmt(abs($pettyCash)) }}</span>
                 </div>
                 @endif
 
                 {{-- Empty state --}}
-                @if($depotCharges == 0 && $pettyCash == 0)
+                @if($transporterCharges == 0 && $depotCharges == 0 && $pettyCash == 0)
                 <div class="px-5 py-4 text-sm {{ $muted }} italic">No operating expenses recorded in this period.</div>
                 @endif
 
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Operating Expenses</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($depotCharges + $pettyCash) }}</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalExpenses - $totalLanded) }}</span>
                 </div>
             </div>
         </div>
 
         {{-- NET PROFIT --}}
-        @php $netProfitView = $grossProfitAfterLanded - $depotCharges - $pettyCash; @endphp
+        @php $netProfitView = $netProfit; @endphp
         <div class="rounded-2xl border overflow-hidden {{ $netProfitView >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40' }}">
             <div class="flex items-center justify-between px-5 py-5 {{ $netProfitView >= 0 ? 'bg-emerald-500/8' : 'bg-rose-500/8' }}">
                 <div>
@@ -201,7 +209,7 @@
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Operating Expenses</span>
-                    <span class="text-sm {{ $fg }}">{{ $fmt($depotCharges + $pettyCash) }}</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($transporterCharges + $depotCharges + $pettyCash) }}</span>
                 </div>
                 <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
                     <span class="text-xs font-bold {{ $muted }}">Net Profit</span>

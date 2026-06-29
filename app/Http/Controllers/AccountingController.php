@@ -270,12 +270,13 @@ class AccountingController extends Controller
         // ── Operational mode ─────────────────────────────────────────────────
         $useGL = false;
 
-        // Revenue from posted sales
+        // Revenue from posted sales — use posted_at (same as Reports P&L)
         $revenueRows = DB::table('sales')
             ->join('products', 'products.id', '=', 'sales.product_id')
             ->where('sales.company_id', $cid)
             ->where('sales.status', 'posted')
-            ->whereBetween(DB::raw('DATE(sales.created_at)'), [$from, $to])
+            ->whereDate('sales.posted_at', '>=', $from)
+            ->whereDate('sales.posted_at', '<=', $to)
             ->selectRaw('products.name as product_name, SUM(sales.total) as revenue, SUM(sales.qty) as qty')
             ->groupBy('products.name')
             ->orderByDesc('revenue')
@@ -283,57 +284,84 @@ class AccountingController extends Controller
 
         $totalRevenue = $revenueRows->sum('revenue');
 
-        // COGS from inventory consumptions
-        $cogsRows = DB::table('inventory_consumptions')
-            ->join('products', 'products.id', '=', 'inventory_consumptions.product_id')
-            ->where('inventory_consumptions.company_id', $cid)
-            ->whereBetween(DB::raw('DATE(inventory_consumptions.created_at)'), [$from, $to])
-            ->selectRaw('products.name as product_name, SUM(inventory_consumptions.qty * inventory_consumptions.unit_cost) as cogs, SUM(inventory_consumptions.qty) as qty')
+        // COGS — use cogs_total stored on sales at posting time (same source as Reports P&L)
+        // inventory_consumptions.unit_cost may be sparse; cogs_total is always correct.
+        $cogsRows = DB::table('sales')
+            ->join('products', 'products.id', '=', 'sales.product_id')
+            ->where('sales.company_id', $cid)
+            ->where('sales.status', 'posted')
+            ->whereDate('sales.posted_at', '>=', $from)
+            ->whereDate('sales.posted_at', '<=', $to)
+            ->selectRaw('products.name as product_name, SUM(sales.cogs_total) as cogs, SUM(sales.qty) as qty')
             ->groupBy('products.name')
             ->orderByDesc('cogs')
             ->get();
 
         $totalCogs = $cogsRows->sum('cogs');
 
-        // Landed costs (batch_costs — freight, duty, etc.)
-        $landedCosts = DB::table('batch_costs')
-            ->join('batches', 'batches.id', '=', 'batch_costs.batch_id')
-            ->where('batches.company_id', $cid)
-            ->whereBetween(DB::raw('DATE(batch_costs.created_at)'), [$from, $to])
-            ->selectRaw("batch_costs.category, SUM(batch_costs.amount) as total")
-            ->groupBy('batch_costs.category')
-            ->orderByDesc('total')
-            ->get();
-
+        // Landed costs — prorated by sell-through ratio (same method as Reports P&L)
+        $costingMethod = \App\Models\Company::find($cid)?->costing_method ?? 'weighted_average';
+        if ($costingMethod === 'weighted_average') {
+            $poolRow     = DB::selectOne("
+                SELECT COALESCE(SUM(qty_purchased),0) AS total_purchased,
+                       COALESCE(SUM(qty_remaining), 0) AS total_remaining
+                FROM batches WHERE company_id = ?
+            ", [$cid]);
+            $sellThrough = ($poolRow && $poolRow->total_purchased > 0)
+                ? min(1.0, ($poolRow->total_purchased - $poolRow->total_remaining) / $poolRow->total_purchased)
+                : 0.0;
+            $rawLanded = DB::select("
+                SELECT bc.category, SUM(bc.amount) * ? AS total
+                FROM batch_costs bc JOIN batches b ON b.id = bc.batch_id
+                WHERE b.company_id = ?
+                GROUP BY bc.category HAVING SUM(bc.amount) * ? > 0.01
+            ", [$sellThrough, $cid, $sellThrough]);
+        } else {
+            $rawLanded = DB::select("
+                SELECT bc.category,
+                       SUM(bc.amount * LEAST(1.0,(b.qty_purchased - b.qty_remaining)/NULLIF(b.qty_purchased,0))) AS total
+                FROM batch_costs bc JOIN batches b ON b.id = bc.batch_id
+                WHERE b.company_id = ?
+                GROUP BY bc.category
+                HAVING SUM(bc.amount * LEAST(1.0,(b.qty_purchased - b.qty_remaining)/NULLIF(b.qty_purchased,0))) > 0.01
+            ", [$cid]);
+        }
+        $landedCosts = collect($rawLanded)->map(fn($r) => (object)[
+            'category' => $r->category,
+            'total'    => (float) $r->total,
+        ]);
         $totalLanded = $landedCosts->sum('total');
 
-        // Operating expenses from petty cash (expense type only)
+        // Operating expenses from petty cash — use transaction_date (same as Reports P&L)
         $pettyCashExpenses = DB::table('petty_cash_transactions')
             ->join('petty_cash_accounts', 'petty_cash_accounts.id', '=', 'petty_cash_transactions.account_id')
             ->where('petty_cash_accounts.company_id', $cid)
             ->where('petty_cash_transactions.type', 'expense')
-            ->whereBetween(DB::raw('DATE(petty_cash_transactions.created_at)'), [$from, $to])
-            ->selectRaw("petty_cash_transactions.category, SUM(petty_cash_transactions.amount) as total")
+            ->whereDate('petty_cash_transactions.transaction_date', '>=', $from)
+            ->whereDate('petty_cash_transactions.transaction_date', '<=', $to)
+            ->selectRaw("petty_cash_transactions.category, SUM(ABS(petty_cash_transactions.amount)) as total")
             ->groupBy('petty_cash_transactions.category')
             ->orderByDesc('total')
             ->get();
 
         $totalPettyCash = $pettyCashExpenses->sum('total');
 
-        // Transporter freight charges from ledger
+        // Transporter freight charges — use entry_date
         $transporterCharges = DB::table('transporter_ledger_entries')
             ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
             ->where('transporters.company_id', $cid)
             ->where('transporter_ledger_entries.type', 'freight_charge')
-            ->whereBetween(DB::raw('DATE(transporter_ledger_entries.created_at)'), [$from, $to])
+            ->whereDate('transporter_ledger_entries.entry_date', '>=', $from)
+            ->whereDate('transporter_ledger_entries.entry_date', '<=', $to)
             ->sum('transporter_ledger_entries.amount');
 
-        // Depot charges from ledger
+        // Depot charges — use entry_date
         $depotCharges = DB::table('depot_ledger_entries')
             ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
             ->where('depots.company_id', $cid)
             ->whereIn('depot_ledger_entries.type', ['storage_charge','handling_fee','loading_fee','other_charge'])
-            ->whereBetween(DB::raw('DATE(depot_ledger_entries.created_at)'), [$from, $to])
+            ->whereDate('depot_ledger_entries.entry_date', '>=', $from)
+            ->whereDate('depot_ledger_entries.entry_date', '<=', $to)
             ->sum('depot_ledger_entries.amount');
 
         // Manual journal adjustments only (ref_type IS NULL = hand-posted, not auto-generated)

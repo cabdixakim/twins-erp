@@ -39,7 +39,7 @@ class ReportController extends Controller
     public function profitAndLoss(Request $request)
     {
         $cid  = $this->cid();
-        $from = $request->input('from', now()->startOfMonth()->toDateString());
+        $from = $request->input('from', now()->startOfYear()->toDateString());
         $to   = $request->input('to',   now()->toDateString());
 
         // ── Revenue & COGS from posted sales ─────────────────────────────
@@ -167,15 +167,27 @@ class ReportController extends Controller
         // ── Petty cash expenses in period ────────────────────────────────
         $pettyCash = 0.0;
         if (DB::getSchemaBuilder()->hasTable('petty_cash_transactions')) {
-            $pettyCash = (float) DB::table('petty_cash_transactions')
+            $pettyCash = abs((float) DB::table('petty_cash_transactions')
                 ->where('company_id', $cid)
                 ->where('type', 'expense')
                 ->whereDate('transaction_date', '>=', $from)
                 ->whereDate('transaction_date', '<=', $to)
-                ->sum('amount');
+                ->sum('amount'));
         }
 
-        $totalExpenses = $totalLanded + $depotCharges + $pettyCash;
+        // ── Transporter freight charges in period ────────────────────────
+        $transporterCharges = 0.0;
+        if (DB::getSchemaBuilder()->hasTable('transporter_ledger_entries')) {
+            $transporterCharges = (float) DB::table('transporter_ledger_entries')
+                ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
+                ->where('transporters.company_id', $cid)
+                ->where('transporter_ledger_entries.type', 'freight_charge')
+                ->whereDate('transporter_ledger_entries.entry_date', '>=', $from)
+                ->whereDate('transporter_ledger_entries.entry_date', '<=', $to)
+                ->sum('transporter_ledger_entries.amount');
+        }
+
+        $totalExpenses = $totalLanded + $depotCharges + $pettyCash + $transporterCharges;
         $netProfit     = $grossProfit - $totalExpenses;
         $netMarginPct  = $revenue > 0 ? round($netProfit / $revenue * 100, 1) : null;
 
@@ -184,7 +196,7 @@ class ReportController extends Controller
             'revenue', 'cogs', 'qtySold',
             'grossProfit', 'grossMarginPct',
             'landedLines', 'totalLanded',
-            'depotCharges', 'pettyCash',
+            'depotCharges', 'pettyCash', 'transporterCharges',
             'totalExpenses',
             'netProfit', 'netMarginPct',
             'byProduct'
