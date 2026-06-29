@@ -241,27 +241,6 @@
         <span class="tw-nav-label sidebar-label">Documents</span>
     </a>
 
-    {{-- ALERTS — always visible --}}
-    @php $__alertCount = auth()->check() ? \App\Services\AlertService::countForCompany(auth()->user()->active_company_id) : 0; @endphp
-    <a href="{{ route('alerts.index') }}"
-       class="tw-nav-item {{ ($onAlerts ?? false) ? 'active' : '' }} sidebar-label-parent">
-        <span class="tw-nav-pip"></span>
-        <span class="tw-nav-icon relative">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 01-3.46 0"/>
-            </svg>
-            @if($__alertCount > 0)
-            <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white font-bold pointer-events-none" style="font-size:8px;background:#ef4444;line-height:1">{{ min($__alertCount,9) }}</span>
-            @endif
-        </span>
-        <span class="tw-nav-label sidebar-label flex items-center gap-1.5">
-            Alerts
-            @if($__alertCount > 0)
-            <span class="inline-flex items-center justify-center rounded-full font-bold text-white" style="min-width:16px;height:16px;font-size:9px;padding:0 3px;background:#ef4444;line-height:1">{{ min($__alertCount,9) }}</span>
-            @endif
-        </span>
-    </a>
 
     {{-- WRITE OFFS — bottom of nav, operational not primary --}}
     @if($can['inventory.view'])
