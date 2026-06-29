@@ -38,6 +38,11 @@
   $totalAdvances       = (float)$advancesFromTable + $legacyAdvance;
   $netPayable          = $grossPayable - $totalAdvances - $totalShortCharge;
 
+  // Rate lock state — true if any truck has progressed past nominated/loading_failed
+  $hasProgressedTrucks = $nom ? $nom->trucks()
+      ->whereNotIn('status', ['nominated', 'loading_failed'])
+      ->exists() : false;
+
   // Permissions
   $canVoidAdvance      = auth()->user()->hasRole('owner') || auth()->user()->hasRole('admin')
                       || auth()->user()->hasRole('manager') || auth()->user()->hasRole('accountant');
@@ -747,13 +752,25 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           {{-- Transport rate --}}
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Transport rate <span class="{{ $muted }}">{{ $rateLabel }}</span></label>
-            <input type="number" name="rate_per_1000l" step="0.01" min="0" required
+            <input type="number" name="rate_per_1000l" id="rateInput" step="0.01" min="0" required
                    value="{{ $nom ? $nom->rate_per_1000l : '' }}"
+                   data-original="{{ $nom ? $nom->rate_per_1000l : '' }}"
                    placeholder="0.00"
                    class="w-full h-10 rounded-xl border {{ $errors->has('rate_per_1000l') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @error('rate_per_1000l')
               <p class="mt-1.5 text-xs text-rose-500 font-medium">⚠ {{ $message }}</p>
             @enderror
+            @if($hasProgressedTrucks)
+            <div id="rateLockWarn" class="hidden mt-2 rounded-xl border border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/40 px-3 py-2.5 flex items-start gap-2">
+              <svg class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              </svg>
+              <div>
+                <p class="text-xs font-semibold text-rose-700 dark:text-rose-300">Rate is locked — trucks already loading</p>
+                <p class="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">Saving this will be blocked. <button type="button" id="rateRevertBtn" class="underline font-semibold">Revert to original</button></p>
+              </div>
+            </div>
+            @endif
           </div>
         </div>
 
@@ -2258,6 +2275,33 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   // Auto-reopen nomination modal if a rate_per_1000l error was returned
   @if($errors->has('rate_per_1000l'))
   openTruckModal('nominationModal');
+  @endif
+
+  // Rate lock live warning — show danger banner as soon as value differs from original
+  @if($hasProgressedTrucks)
+  (function () {
+    const rateInput   = document.getElementById('rateInput');
+    const warnBox     = document.getElementById('rateLockWarn');
+    const revertBtn   = document.getElementById('rateRevertBtn');
+    if (!rateInput || !warnBox) return;
+
+    const original = rateInput.dataset.original;
+
+    function check() {
+      const changed = parseFloat(rateInput.value) !== parseFloat(original);
+      warnBox.classList.toggle('hidden', !changed);
+      rateInput.classList.toggle('border-rose-400', changed);
+    }
+
+    rateInput.addEventListener('input', check);
+
+    if (revertBtn) {
+      revertBtn.addEventListener('click', function () {
+        rateInput.value = original;
+        check();
+      });
+    }
+  })();
   @endif
 
   // Add truck button
