@@ -184,10 +184,10 @@
                   ? 'border-[color:var(--tw-accent)] text-[color:var(--tw-accent)]'
                   : 'border-transparent ' . $muted . ' hover:text-[color:var(--tw-fg)]' }}">
         Trips
-        @if(count($trips) > 0)
+        @if(count($trips) + count($importTrips) > 0)
             <span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold
                 {{ $activeTab === 'trips' ? 'bg-[color:var(--tw-accent)]/15 text-[color:var(--tw-accent)]' : 'bg-[color:var(--tw-surface-2)] ' . $muted }}">
-                {{ count($trips) }}
+                {{ count($trips) + count($importTrips) }}
             </span>
         @endif
     </a>
@@ -207,17 +207,98 @@
 {{-- ══ TRIPS TAB ══ --}}
 @if($activeTab === 'trips')
 
-@if(count($trips) === 0)
+@if(count($trips) === 0 && count($importTrips) === 0)
     <div class="rounded-2xl border {{ $border }} {{ $surface }} px-5 py-14 text-center">
         <div class="text-sm font-semibold {{ $fg }} mb-1">No trips yet</div>
         <div class="text-xs {{ $muted }} max-w-xs mx-auto">
-            Trips appear here when a sale is posted with this transporter. You can also give a
+            Trips appear here when a sale is posted or an import truck is delivered with this transporter. You can also give a
             <button type="button" onclick="openAdvanceModal()"
                     class="text-amber-600 dark:text-amber-300 underline underline-offset-2">general advance</button>
             before any trip is created.
         </div>
     </div>
 @else
+    {{-- ── Import truck trips (international transporter) ────────────── --}}
+    @if(count($importTrips) > 0)
+    <div class="space-y-3 @if(count($trips) > 0) mb-5 @endif">
+        @if(count($trips) > 0)
+        <div class="text-[10px] uppercase tracking-widest font-semibold {{ $muted }} px-1 mb-1">Import shipments</div>
+        @endif
+        @foreach($importTrips as $truckId => $itrip)
+            @php
+                $itruck    = $itrip['truck'];
+                $ifreight  = $itrip['freight'];
+                $ishort    = $itrip['short_charge'];
+                $inet      = $itrip['net'];
+                $ipurchase = $itrip['purchase'];
+            @endphp
+            <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
+                <div class="flex items-start justify-between px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex-wrap gap-2">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-bold {{ $fg }}">
+                                {{ $itruck?->truck_reg ?? 'Truck #'.$truckId }}
+                            </span>
+                            @if($itruck?->trailer_reg)
+                                <span class="text-[10px] {{ $muted }} font-mono">+ {{ $itruck->trailer_reg }}</span>
+                            @endif
+                            @if($ipurchase)
+                                <a href="{{ route('purchases.show', $ipurchase->id) }}"
+                                   class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition">
+                                    {{ $ipurchase->reference }}
+                                </a>
+                            @endif
+                            @if($itruck?->delivery_date)
+                                <span class="text-[10px] {{ $muted }}">
+                                    Delivered {{ \Carbon\Carbon::parse($itruck->delivery_date)->format('d M Y') }}
+                                </span>
+                            @endif
+                        </div>
+                        <div class="text-[11px] {{ $muted }} mt-0.5 flex items-center gap-2 flex-wrap">
+                            @if($itruck?->qty_loaded)
+                                <span>{{ number_format($itruck->qty_loaded, 0) }}L loaded</span>
+                            @endif
+                            @if($itruck?->qty_delivered)
+                                <span>→ {{ number_format($itruck->qty_delivered, 0) }}L delivered</span>
+                            @endif
+                            @if($itruck?->driver_name)
+                                <span>· {{ $itruck->driver_name }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-right flex-wrap">
+                        <div class="text-xs">
+                            <div class="{{ $muted }} text-[10px]">Freight</div>
+                            <div class="font-bold {{ $fg }}">{{ $sym($currency) }}{{ number_format($ifreight, 2) }}</div>
+                        </div>
+                        @if(abs($ishort) > 0.005)
+                        <div class="text-xs">
+                            <div class="{{ $muted }} text-[10px]">Short charge</div>
+                            <div class="font-bold text-rose-500">− {{ $sym($currency) }}{{ number_format(abs($ishort), 2) }}</div>
+                        </div>
+                        @endif
+                        <div class="text-xs border-l {{ $border }} pl-3">
+                            <div class="{{ $muted }} text-[10px]">Net owed</div>
+                            @if(abs($inet) < 0.005)
+                                <div class="font-bold text-emerald-500">Settled</div>
+                            @elseif($inet > 0)
+                                <div class="font-bold text-amber-600 dark:text-amber-400">{{ $sym($currency) }}{{ number_format($inet, 2) }}</div>
+                            @else
+                                <div class="font-bold text-emerald-500">Overpaid {{ $sym($currency) }}{{ number_format(abs($inet), 2) }}</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+    @endif
+
+    {{-- ── Local sale trips ─────────────────────────────────────────── --}}
+    @if(count($trips) > 0)
+    @if(count($importTrips) > 0)
+    <div class="text-[10px] uppercase tracking-widest font-semibold {{ $muted }} px-1 mb-1">Local deliveries</div>
+    @endif
     <div class="space-y-3">
         @foreach($trips as $saleId => $trip)
             @php
@@ -320,7 +401,8 @@
             </div>
         @endforeach
     </div>
-@endif
+    @endif {{-- /count($trips) > 0 --}}
+@endif {{-- /trips or importTrips exist --}}
 
 {{-- General advances (not linked to a trip) --}}
 @php

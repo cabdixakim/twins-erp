@@ -120,6 +120,43 @@ class TransporterLedgerController extends Controller
             ($b['sale']?->sale_date ?? now()) <=> ($a['sale']?->sale_date ?? now())
         );
 
+        // Build per-truck trips for import (international) transporters
+        $tripImportTruckIds = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->where('type', 'freight_charge')
+            ->whereNotNull('ref_id')
+            ->where('ref_type', ImportTruck::class)
+            ->pluck('ref_id')
+            ->unique();
+
+        $tripImportTrucks = ImportTruck::whereIn('id', $tripImportTruckIds)
+            ->with(['nomination.purchase'])
+            ->get()
+            ->keyBy('id');
+
+        $importTruckEntries = TransporterLedgerEntry::where('company_id', $cid)
+            ->where('transporter_id', $transporter->id)
+            ->where('ref_type', ImportTruck::class)
+            ->whereIn('ref_id', $tripImportTruckIds)
+            ->get();
+
+        $importTrips = [];
+        foreach ($tripImportTruckIds as $truckId) {
+            $truck       = $tripImportTrucks[$truckId] ?? null;
+            $freight     = (float) $importTruckEntries->where('type', 'freight_charge')->where('ref_id', $truckId)->sum('amount');
+            $shortCharge = (float) $importTruckEntries->where('type', 'short_charge')->where('ref_id', $truckId)->sum('amount');
+            $importTrips[$truckId] = [
+                'truck'        => $truck,
+                'freight'      => $freight,
+                'short_charge' => $shortCharge,
+                'net'          => $freight + $shortCharge,
+                'purchase'     => $truck?->nomination?->purchase,
+            ];
+        }
+        uasort($importTrips, fn($a, $b) =>
+            ($b['truck']?->delivery_date ?? now()) <=> ($a['truck']?->delivery_date ?? now())
+        );
+
         // Build clickable reference links for ledger tab
         $allEntries = $entries->getCollection();
 
@@ -189,7 +226,7 @@ class TransporterLedgerController extends Controller
             'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
             'netPayable', 'currency', 'pettyCashAccounts', 'bankAccounts',
-            'trips', 'openSales'
+            'trips', 'importTrips', 'openSales'
         ));
     }
 
