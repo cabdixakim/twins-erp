@@ -411,6 +411,59 @@
                 </div>
             </div>
 
+            {{-- Module toggles --}}
+            <div class="rounded-2xl border {{ $border }} {{ $surface2 }} p-4">
+                <div class="text-sm font-semibold {{ $fg }} mb-1">Modules</div>
+                <div class="text-[11px] {{ $muted }} mb-4">Enable or disable optional platform features for this company.</div>
+
+                <style>
+                  .mod-toggle-track { width:2.5rem; height:1.5rem; border-radius:9999px; border:1px solid var(--tw-border-color,#e2e8f0); background:var(--tw-surface,#fff); position:relative; transition:background .2s,border-color .2s; flex-shrink:0; cursor:pointer; }
+                  .mod-toggle-track.on { background:#10b981; border-color:#10b981; }
+                  .mod-toggle-thumb { position:absolute; top:.2rem; left:.2rem; width:1.1rem; height:1.1rem; border-radius:9999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s; }
+                  .mod-toggle-track.on .mod-toggle-thumb { transform:translateX(1rem); }
+                </style>
+                <div class="space-y-3">
+                    {{-- Accounting --}}
+                    <div class="flex items-start gap-3">
+                        <input type="hidden" name="accounting_enabled" value="0">
+                        <input type="checkbox" id="chk_accounting" name="accounting_enabled" value="1"
+                               class="hidden"
+                               {{ old('accounting_enabled', $company->accounting_enabled) ? 'checked' : '' }}>
+                        <div class="mod-toggle-track mt-0.5 {{ old('accounting_enabled', $company->accounting_enabled) ? 'on' : '' }}"
+                             onclick="toggleMod('chk_accounting',this)">
+                            <div class="mod-toggle-thumb"></div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold {{ $fg }}">Double-entry accounting</div>
+                            <div class="text-[11px] {{ $muted }} mt-0.5">Enables Chart of Accounts, Journals, and Trial Balance. Set up your account tree before enabling to avoid unmatched entries.</div>
+                        </div>
+                    </div>
+
+                    {{-- Inventory periods --}}
+                    <div class="flex items-start gap-3">
+                        <input type="hidden" name="inventory_periods_enabled" value="0">
+                        <input type="checkbox" id="chk_periods" name="inventory_periods_enabled" value="1"
+                               class="hidden"
+                               {{ old('inventory_periods_enabled', $company->inventory_periods_enabled) ? 'checked' : '' }}>
+                        <div class="mod-toggle-track mt-0.5 {{ old('inventory_periods_enabled', $company->inventory_periods_enabled) ? 'on' : '' }}"
+                             onclick="toggleMod('chk_periods',this)">
+                            <div class="mod-toggle-thumb"></div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold {{ $fg }}">Inventory periods</div>
+                            <div class="text-[11px] {{ $muted }} mt-0.5">Locks stock postings within accounting periods. Managed from Settings → Inventory.</div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                function toggleMod(cbId, track) {
+                    const cb = document.getElementById(cbId);
+                    cb.checked = !cb.checked;
+                    track.classList.toggle('on', cb.checked);
+                }
+                </script>
+            </div>
+
             <div class="flex justify-end pt-2">
                 <button type="submit"
                         class="{{ $btnPrimary }} px-4 py-2 text-sm">

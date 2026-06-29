@@ -50,6 +50,10 @@ class CompanySettingsController extends Controller
             'id_nat' => ['nullable', 'string', 'max:100'],
             'nif'    => ['nullable', 'string', 'max:100'],
 
+            // Modules
+            'accounting_enabled'        => ['nullable', 'boolean'],
+            'inventory_periods_enabled' => ['nullable', 'boolean'],
+
             // Invoice defaults
             'invoice_prefix'       => ['nullable', 'string', 'max:20'],
             'invoice_payment_days' => ['nullable', 'integer', 'min:0', 'max:365'],
