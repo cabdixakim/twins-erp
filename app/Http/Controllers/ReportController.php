@@ -454,4 +454,293 @@ class ReportController extends Controller
 
         return view('reports.throughput', compact('series', 'totals', 'months'));
     }
+
+    /* ------------------------------------------------------------------ */
+    /*  CSV Exports                                                          */
+    /* ------------------------------------------------------------------ */
+
+    public function exportPl(Request $request)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfYear()->toDateString());
+        $to   = $request->input('to', today()->toDateString());
+
+        $revenue = (float) DB::table('sales')
+            ->where('company_id', $cid)->where('status', 'posted')
+            ->whereDate('posted_at', '>=', $from)->whereDate('posted_at', '<=', $to)
+            ->sum('total');
+
+        $revenueByProduct = DB::table('sales')
+            ->join('products', 'products.id', '=', 'sales.product_id')
+            ->where('sales.company_id', $cid)->where('sales.status', 'posted')
+            ->whereDate('sales.posted_at', '>=', $from)->whereDate('sales.posted_at', '<=', $to)
+            ->selectRaw('products.name as product_name, SUM(sales.total) as revenue, SUM(sales.qty) as qty, SUM(sales.cogs_total) as cogs')
+            ->groupBy('products.name')->orderByDesc('revenue')->get();
+
+        $cogs = $revenueByProduct->sum('cogs');
+
+        $landedRows = DB::select("
+            SELECT bc.category, SUM(
+                COALESCE(bc.amount_base,bc.amount)
+                / COALESCE(NULLIF(b.qty_received,0),NULLIF(b.qty_purchased,0))
+                * ic_agg.qty_consumed
+            ) AS total
+            FROM batch_costs bc
+            JOIN batches b ON b.id=bc.batch_id AND b.company_id=?
+            JOIN (
+                SELECT batch_id, SUM(qty) AS qty_consumed
+                FROM inventory_consumptions
+                WHERE company_id=? AND DATE(created_at) BETWEEN ? AND ?
+                GROUP BY batch_id
+            ) ic_agg ON ic_agg.batch_id=b.id
+            WHERE bc.amount>0 GROUP BY bc.category
+        ", [$cid, $cid, $from, $to]);
+        $totalLanded = collect($landedRows)->sum('total');
+
+        $grossProfit = $revenue - $cogs - $totalLanded;
+
+        $transporterCharges = (float) DB::table('transporter_ledger_entries')
+            ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id', $cid)
+            ->where('transporter_ledger_entries.type', 'freight_charge')
+            ->where(function ($q) {
+                $q->whereNull('transporter_ledger_entries.ref_type')
+                  ->orWhere('transporter_ledger_entries.ref_type', '!=', \App\Models\ImportTruck::class);
+            })
+            ->whereDate('transporter_ledger_entries.entry_date', '>=', $from)
+            ->whereDate('transporter_ledger_entries.entry_date', '<=', $to)
+            ->sum('transporter_ledger_entries.amount');
+
+        $depotCharges = (float) DB::table('depot_ledger_entries')
+            ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
+            ->where('depots.company_id', $cid)
+            ->whereDate('depot_ledger_entries.entry_date', '>=', $from)
+            ->whereDate('depot_ledger_entries.entry_date', '<=', $to)
+            ->whereIn('depot_ledger_entries.type', ['storage_charge', 'handling_fee', 'loading_fee', 'other_charge'])
+            ->sum('depot_ledger_entries.amount');
+
+        $pettyCash = (float) DB::table('petty_cash_transactions')
+            ->join('petty_cash_accounts', 'petty_cash_accounts.id', '=', 'petty_cash_transactions.account_id')
+            ->where('petty_cash_accounts.company_id', $cid)
+            ->where('petty_cash_transactions.type', 'expense')
+            ->whereDate('petty_cash_transactions.transaction_date', '>=', $from)
+            ->whereDate('petty_cash_transactions.transaction_date', '<=', $to)
+            ->sum(DB::raw('ABS(petty_cash_transactions.amount)'));
+
+        $totalOpex = $transporterCharges + $depotCharges + $pettyCash;
+        $netProfit = $grossProfit - $totalOpex;
+        $filename  = "pl-report-{$from}-to-{$to}.csv";
+
+        return response()->streamDownload(function () use (
+            $revenueByProduct, $revenue, $cogs, $landedRows, $totalLanded,
+            $grossProfit, $transporterCharges, $depotCharges, $pettyCash,
+            $totalOpex, $netProfit, $from, $to
+        ) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ["Profit & Loss: {$from} to {$to}"]);
+            fputcsv($out, []);
+            fputcsv($out, ['Section', 'Product / Line', 'Qty (L)', 'Revenue', 'COGS']);
+            foreach ($revenueByProduct as $row) {
+                fputcsv($out, ['Revenue', $row->product_name,
+                    number_format((float)$row->qty, 0, '.', ''),
+                    number_format((float)$row->revenue, 2, '.', ''),
+                    number_format((float)$row->cogs, 2, '.', ''),
+                ]);
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['Cost of Sales', 'Cost of Fuel (COGS)', '', '', number_format($cogs, 2, '.', '')]);
+            foreach ($landedRows as $l) {
+                fputcsv($out, ['Cost of Sales', ucfirst(str_replace('_', ' ', $l->category)), '', '', number_format((float)$l->total, 2, '.', '')]);
+            }
+            fputcsv($out, ['', 'GROSS PROFIT', '', '', number_format($grossProfit, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Operating Expenses', 'Transport & Freight', '', '', number_format($transporterCharges, 2, '.', '')]);
+            fputcsv($out, ['Operating Expenses', 'Depot Charges', '', '', number_format($depotCharges, 2, '.', '')]);
+            fputcsv($out, ['Operating Expenses', 'Petty Cash Expenses', '', '', number_format($pettyCash, 2, '.', '')]);
+            fputcsv($out, ['', 'Total Operating Expenses', '', '', number_format($totalOpex, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['', 'NET PROFIT', '', '', number_format($netProfit, 2, '.', '')]);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportArAging(Request $request)
+    {
+        $cid      = $this->cid();
+        $asOf     = $request->input('as_of', today()->toDateString());
+        $clientId = $request->input('client_id');
+        $asOfDate = \Carbon\Carbon::parse($asOf);
+
+        $q = \App\Models\Invoice::where('company_id', $cid)
+            ->whereNotIn('status', ['void','paid'])->with('client')->orderByDesc('due_date');
+        if ($clientId) $q->where('client_id', $clientId);
+
+        $rows = $q->get()->map(function ($inv) use ($asOfDate) {
+            $days = $inv->due_date ? (int)$inv->due_date->diffInDays($asOfDate, false) : 0;
+            $inv->days_overdue = $days;
+            $inv->bucket = match(true) {
+                $days <= 0  => 'Current',
+                $days <= 30 => '1-30 days',
+                $days <= 60 => '31-60 days',
+                $days <= 90 => '61-90 days',
+                default     => '90+ days',
+            };
+            $inv->balance_due = max(0, (float)$inv->total - (float)$inv->paid_amount);
+            return $inv;
+        });
+
+        $filename = "ar-aging-{$asOf}.csv";
+
+        return response()->streamDownload(function () use ($rows, $asOf) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ["AR Aging as of {$asOf}"]);
+            fputcsv($out, []);
+            fputcsv($out, ['Client', 'Invoice Ref', 'Invoice Date', 'Due Date', 'Days Overdue', 'Bucket', 'Balance Due', 'Currency']);
+            foreach ($rows as $inv) {
+                fputcsv($out, [
+                    $inv->client?->name ?? 'N/A',
+                    $inv->reference ?? '',
+                    $inv->created_at?->format('Y-m-d') ?? '',
+                    $inv->due_date?->format('Y-m-d') ?? '',
+                    $inv->days_overdue,
+                    $inv->bucket,
+                    number_format($inv->balance_due, 2, '.', ''),
+                    $inv->currency ?? 'USD',
+                ]);
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['', '', '', '', '', 'TOTAL', number_format($rows->sum('balance_due'), 2, '.', ''), '']);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportApAging(Request $request)
+    {
+        $cid  = $this->cid();
+        $asOf = $request->input('as_of', today()->toDateString());
+        $asOfDate = \Carbon\Carbon::parse($asOf);
+
+        $supplierRows = DB::table('supplier_ledger_entries')
+            ->join('suppliers', 'suppliers.id', '=', 'supplier_ledger_entries.supplier_id')
+            ->where('suppliers.company_id', $cid)
+            ->whereDate('supplier_ledger_entries.entry_date', '<=', $asOf)
+            ->selectRaw("suppliers.name as name, SUM(supplier_ledger_entries.amount) as balance,
+                MIN(CASE WHEN supplier_ledger_entries.type='purchase_invoice' THEN supplier_ledger_entries.entry_date ELSE NULL END) as oldest")
+            ->groupBy('suppliers.name')
+            ->having(DB::raw('SUM(supplier_ledger_entries.amount)'), '>', 0)
+            ->get();
+
+        $transporterRows = DB::table('transporter_ledger_entries')
+            ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id', $cid)
+            ->whereDate('transporter_ledger_entries.entry_date', '<=', $asOf)
+            ->selectRaw("transporters.name as name,
+                SUM(CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END) as balance,
+                MIN(CASE WHEN transporter_ledger_entries.type='freight_charge' THEN transporter_ledger_entries.entry_date ELSE NULL END) as oldest")
+            ->groupBy('transporters.name')
+            ->having(DB::raw("SUM(CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END)"), '>', 0)
+            ->get();
+
+        $depotRows = DB::table('depot_ledger_entries')
+            ->join('depots', 'depots.id', '=', 'depot_ledger_entries.depot_id')
+            ->where('depots.company_id', $cid)->where('depots.is_system', false)
+            ->whereDate('depot_ledger_entries.created_at', '<=', $asOf)
+            ->selectRaw("depots.name as name,
+                SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END) as balance,
+                MIN(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.created_at ELSE NULL END) as oldest")
+            ->groupBy('depots.name')
+            ->having(DB::raw("SUM(CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END)"), '>', 0)
+            ->get();
+
+        $bucket = function ($oldest) use ($asOfDate) {
+            if (! $oldest) return 'Current';
+            $days = (int)\Carbon\Carbon::parse($oldest)->diffInDays($asOfDate);
+            return match(true) {
+                $days <= 30 => 'Current',
+                $days <= 60 => '31-60 days',
+                $days <= 90 => '61-90 days',
+                default     => '90+ days',
+            };
+        };
+
+        $filename = "ap-aging-{$asOf}.csv";
+
+        return response()->streamDownload(function () use ($supplierRows, $transporterRows, $depotRows, $bucket) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Payable Type', 'Name', 'Balance Due', 'Age Bucket']);
+            foreach ($supplierRows as $r) {
+                fputcsv($out, ['Supplier', $r->name, number_format((float)$r->balance,2,'.',''). $bucket($r->oldest)]);
+                fputcsv($out, ['Supplier', $r->name, number_format((float)$r->balance, 2, '.', ''), $bucket($r->oldest)]);
+            }
+            foreach ($transporterRows as $r) {
+                fputcsv($out, ['Transporter', $r->name, number_format((float)$r->balance, 2, '.', ''), $bucket($r->oldest)]);
+            }
+            foreach ($depotRows as $r) {
+                fputcsv($out, ['Depot', $r->name, number_format((float)$r->balance, 2, '.', ''), $bucket($r->oldest)]);
+            }
+            fputcsv($out, []);
+            $grand = collect($supplierRows)->sum('balance') + collect($transporterRows)->sum('balance') + collect($depotRows)->sum('balance');
+            fputcsv($out, ['', 'TOTAL', number_format((float)$grand, 2, '.', ''), '']);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportThroughput(Request $request)
+    {
+        $cid    = $this->cid();
+        $months = (int)($request->input('months', 6));
+        $months = max(3, min($months, 24));
+        $from   = now()->startOfMonth()->subMonths($months - 1);
+
+        $purchasedRaw = DB::table('inventory_movements')
+            ->where('company_id', $cid)->where('type', 'receipt')->where('ref_type', 'purchase')
+            ->whereDate('created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(created_at,'YYYY-MM') as month, SUM(qty) as qty, COUNT(DISTINCT ref_id) as count")
+            ->groupByRaw("TO_CHAR(created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
+
+        $salesRaw = DB::table('inventory_movements')
+            ->where('company_id', $cid)->where('type', 'issue')->where('ref_type', 'sale')
+            ->whereDate('created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(created_at,'YYYY-MM') as month, SUM(qty) as qty, COUNT(DISTINCT ref_id) as count")
+            ->groupByRaw("TO_CHAR(created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
+
+        $revenueRaw = DB::table('sales')
+            ->where('company_id', $cid)->where('status', 'posted')->whereDate('created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(created_at,'YYYY-MM') as month, SUM(total) as revenue")
+            ->groupByRaw("TO_CHAR(created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
+
+        $series = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $key   = now()->startOfMonth()->subMonths($i)->format('Y-m');
+            $label = now()->startOfMonth()->subMonths($i)->format('M Y');
+            $series[] = [
+                'month'   => $label,
+                'purchased_qty' => round((float)($purchasedRaw[$key]->qty ?? 0)),
+                'sold_qty'      => round((float)($salesRaw[$key]->qty ?? 0)),
+                'revenue'       => round((float)($revenueRaw[$key]->revenue ?? 0), 2),
+            ];
+        }
+
+        $filename = "throughput-last-{$months}-months.csv";
+
+        return response()->streamDownload(function () use ($series) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Month', 'Purchased (L)', 'Sold (L)', 'Revenue']);
+            foreach ($series as $row) {
+                fputcsv($out, [
+                    $row['month'],
+                    number_format($row['purchased_qty'], 0, '.', ''),
+                    number_format($row['sold_qty'], 0, '.', ''),
+                    number_format($row['revenue'], 2, '.', ''),
+                ]);
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['TOTALS',
+                number_format(array_sum(array_column($series,'purchased_qty')), 0, '.', ''),
+                number_format(array_sum(array_column($series,'sold_qty')), 0, '.', ''),
+                number_format(array_sum(array_column($series,'revenue')), 2, '.', ''),
+            ]);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
 }

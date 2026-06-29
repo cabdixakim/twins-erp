@@ -13,6 +13,11 @@
     </div>
     <button type="submit" class="tw-btn-primary text-xs px-4 py-2 rounded-xl">Apply</button>
     <a href="{{ route('accounting.index') }}" class="text-xs" style="color:var(--tw-muted)">← Accounting</a>
+    <a href="{{ route('accounting.balance-sheet.export', request()->query()) }}"
+       class="tw-btn-ghost text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 ml-auto">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Export CSV
+    </a>
 </form>
 
 <div class="space-y-6">

@@ -780,6 +780,18 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
         Route::get('/throughput', [\App\Http\Controllers\ReportController::class, 'throughput'])
             ->middleware('permission:reports.export')
             ->name('throughput');
+        Route::get('/pl/export', [\App\Http\Controllers\ReportController::class, 'exportPl'])
+            ->middleware('permission:reports.export')
+            ->name('pl.export');
+        Route::get('/ar-aging/export', [\App\Http\Controllers\ReportController::class, 'exportArAging'])
+            ->middleware('permission:reports.export')
+            ->name('ar-aging.export');
+        Route::get('/ap-aging/export', [\App\Http\Controllers\ReportController::class, 'exportApAging'])
+            ->middleware('permission:reports.export')
+            ->name('ap-aging.export');
+        Route::get('/throughput/export', [\App\Http\Controllers\ReportController::class, 'exportThroughput'])
+            ->middleware('permission:reports.export')
+            ->name('throughput.export');
     });
 
 /*
@@ -824,6 +836,18 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
         Route::get('/trial-balance', [\App\Http\Controllers\AccountingController::class, 'trialBalance'])
             ->middleware('permission:reports.export')
             ->name('trial-balance');
+        Route::get('/journals/export', [\App\Http\Controllers\AccountingController::class, 'exportGl'])
+            ->middleware('permission:reports.export')
+            ->name('journals.export');
+        Route::get('/trial-balance/export', [\App\Http\Controllers\AccountingController::class, 'exportTrialBalance'])
+            ->middleware('permission:reports.export')
+            ->name('trial-balance.export');
+        Route::get('/balance-sheet/export', [\App\Http\Controllers\AccountingController::class, 'exportBalanceSheet'])
+            ->middleware('permission:reports.export')
+            ->name('balance-sheet.export');
+        Route::get('/pl/export', [\App\Http\Controllers\AccountingController::class, 'exportPl'])
+            ->middleware('permission:reports.export')
+            ->name('pl.export');
     });
 
 /*

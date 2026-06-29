@@ -46,7 +46,7 @@
             <a href="{{ route('reports.ar-aging') }}" class="{{ $btnGhost }}">Reset</a>
         @endif
         <div class="ml-auto flex items-end">
-            <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" class="{{ $btnGhost }}">
+            <a href="{{ route('reports.ar-aging.export', request()->query()) }}" class="{{ $btnGhost }}">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Export CSV
             </a>

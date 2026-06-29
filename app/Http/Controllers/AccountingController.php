@@ -642,6 +642,319 @@ class AccountingController extends Controller
     /*  Standard chart of accounts template                                 */
     /* ------------------------------------------------------------------ */
 
+    /* ------------------------------------------------------------------ */
+    /*  CSV Exports                                                          */
+    /* ------------------------------------------------------------------ */
+
+    public function exportGl(Request $request)
+    {
+        $cid    = $this->cid();
+        $from   = $request->input('from');
+        $to     = $request->input('to');
+        $status = $request->input('status', '');
+
+        $q = JournalEntry::where('company_id', $cid)
+            ->with(['journal', 'lines.account'])
+            ->orderBy('entry_date')
+            ->orderBy('id');
+
+        if ($status) $q->where('status', $status);
+        if ($from)   $q->whereDate('entry_date', '>=', $from);
+        if ($to)     $q->whereDate('entry_date', '<=', $to);
+
+        $entries  = $q->get();
+        $label    = ($from && $to) ? "{$from}-to-{$to}" : date('Y-m-d');
+        $filename = "general-ledger-{$label}.csv";
+
+        return response()->streamDownload(function () use ($entries) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Reference', 'Journal', 'Description', 'Status', 'Account Code', 'Account Name', 'Debit', 'Credit']);
+            foreach ($entries as $entry) {
+                foreach ($entry->lines as $line) {
+                    fputcsv($out, [
+                        $entry->entry_date->format('Y-m-d'),
+                        $entry->reference,
+                        $entry->journal?->name ?? '',
+                        $line->description ?: $entry->description,
+                        $entry->status,
+                        $line->account?->code ?? '',
+                        $line->account?->name ?? '',
+                        number_format((float)$line->debit,  2, '.', ''),
+                        number_format((float)$line->credit, 2, '.', ''),
+                    ]);
+                }
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportTrialBalance(Request $request)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfYear()->toDateString());
+        $to   = $request->input('to', today()->toDateString());
+
+        $lines = DB::table('journal_entry_lines')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+            ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
+            ->where('journal_entry_lines.company_id', $cid)
+            ->where('journal_entries.status', 'posted')
+            ->whereBetween('journal_entries.entry_date', [$from, $to])
+            ->selectRaw('chart_of_accounts.code, chart_of_accounts.name, chart_of_accounts.type,
+                SUM(journal_entry_lines.debit) as total_debit, SUM(journal_entry_lines.credit) as total_credit')
+            ->groupBy('chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.type')
+            ->orderBy('chart_of_accounts.code')
+            ->get();
+
+        $filename = "trial-balance-{$from}-to-{$to}.csv";
+
+        return response()->streamDownload(function () use ($lines, $from, $to) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ["Trial Balance: {$from} to {$to}"]);
+            fputcsv($out, []);
+            fputcsv($out, ['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
+            foreach ($lines as $line) {
+                fputcsv($out, [
+                    $line->code,
+                    $line->name,
+                    $line->type,
+                    number_format((float)$line->total_debit,  2, '.', ''),
+                    number_format((float)$line->total_credit, 2, '.', ''),
+                ]);
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['', 'TOTALS', '',
+                number_format($lines->sum('total_debit'),  2, '.', ''),
+                number_format($lines->sum('total_credit'), 2, '.', ''),
+            ]);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportBalanceSheet(Request $request)
+    {
+        $cid  = $this->cid();
+        $asOf = $request->input('as_of', today()->toDateString());
+
+        $bankAccounts = DB::table('bank_accounts')->where('company_id', $cid)->where('is_active', true)->get();
+        $bankRows  = [];
+        $bankTotal = 0;
+        foreach ($bankAccounts as $bank) {
+            $movements = DB::table('bank_transactions')
+                ->where('bank_account_id', $bank->id)->whereNull('voided_at')
+                ->whereDate('entry_date', '<=', $asOf)
+                ->selectRaw("SUM(CASE WHEN type IN ('deposit','transfer_in') THEN amount ELSE -amount END) as net")
+                ->value('net');
+            $balance = (float)$bank->opening_balance + (float)($movements ?? 0);
+            $bankRows[] = ['name' => $bank->name, 'balance' => $balance];
+            $bankTotal  += $balance;
+        }
+
+        $pettyCashTotal = (float)(DB::select("
+            SELECT COALESCE(SUM(CASE WHEN pct.type='top_up' THEN pct.amount ELSE -pct.amount END),0) as bal
+            FROM petty_cash_transactions pct
+            JOIN petty_cash_accounts pca ON pca.id=pct.account_id
+            WHERE pca.company_id=? AND pca.is_active=true
+        ", [$cid])[0]->bal ?? 0);
+
+        $inventoryValue = (float)DB::table('depot_stocks')
+            ->join('depots','depots.id','=','depot_stocks.depot_id')
+            ->where('depot_stocks.company_id', $cid)->where('depots.is_system', false)->where('depots.is_active', true)
+            ->sum(DB::raw('depot_stocks.qty_on_hand * depot_stocks.unit_cost'));
+
+        $arTotal = (float)DB::table('invoices')
+            ->where('company_id', $cid)->whereNotIn('status',['void','paid'])
+            ->whereDate('created_at','<=',$asOf)
+            ->sum(DB::raw('total - COALESCE(paid_amount,0)'));
+
+        $totalAssets = $bankTotal + $pettyCashTotal + $inventoryValue + $arTotal;
+
+        $supplierPayables = (float)DB::table('supplier_ledger_entries')
+            ->join('suppliers','suppliers.id','=','supplier_ledger_entries.supplier_id')
+            ->where('suppliers.company_id',$cid)->whereDate('supplier_ledger_entries.entry_date','<=',$asOf)
+            ->sum('supplier_ledger_entries.amount');
+
+        $transporterPayables = (float)DB::table('transporter_ledger_entries')
+            ->join('transporters','transporters.id','=','transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id',$cid)->whereDate('transporter_ledger_entries.entry_date','<=',$asOf)
+            ->sum(DB::raw("CASE WHEN transporter_ledger_entries.type IN ('freight_charge','advance') THEN transporter_ledger_entries.amount ELSE -transporter_ledger_entries.amount END"));
+
+        $depotPayables = (float)DB::table('depot_ledger_entries')
+            ->join('depots','depots.id','=','depot_ledger_entries.depot_id')
+            ->where('depots.company_id',$cid)->whereDate('depot_ledger_entries.entry_date','<=',$asOf)
+            ->sum(DB::raw("CASE WHEN depot_ledger_entries.type IN ('storage_charge','handling_fee','loading_fee','other_charge') THEN depot_ledger_entries.amount ELSE -depot_ledger_entries.amount END"));
+
+        $totalLiabilities = max(0,$supplierPayables) + max(0,$transporterPayables) + max(0,$depotPayables);
+        $equity           = $totalAssets - $totalLiabilities;
+        $filename         = "balance-sheet-{$asOf}.csv";
+
+        return response()->streamDownload(function () use (
+            $bankRows,$bankTotal,$pettyCashTotal,$inventoryValue,$arTotal,$totalAssets,
+            $supplierPayables,$transporterPayables,$depotPayables,$totalLiabilities,$equity,$asOf
+        ) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ["Balance Sheet as of {$asOf}"]);
+            fputcsv($out, []);
+            fputcsv($out, ['ASSETS', '']);
+            foreach ($bankRows as $b) {
+                fputcsv($out, ['  ' . $b['name'], number_format($b['balance'], 2, '.', '')]);
+            }
+            fputcsv($out, ['  Petty Cash', number_format($pettyCashTotal, 2, '.', '')]);
+            fputcsv($out, ['  Inventory (stock value)', number_format($inventoryValue, 2, '.', '')]);
+            fputcsv($out, ['  Accounts Receivable', number_format($arTotal, 2, '.', '')]);
+            fputcsv($out, ['Total Assets', number_format($totalAssets, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['LIABILITIES', '']);
+            fputcsv($out, ['  Supplier Payables', number_format(max(0,$supplierPayables), 2, '.', '')]);
+            fputcsv($out, ['  Transporter Payables', number_format(max(0,$transporterPayables), 2, '.', '')]);
+            fputcsv($out, ['  Depot Payables', number_format(max(0,$depotPayables), 2, '.', '')]);
+            fputcsv($out, ['Total Liabilities', number_format($totalLiabilities, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['EQUITY', '']);
+            fputcsv($out, ['  Net Equity (Assets − Liabilities)', number_format($equity, 2, '.', '')]);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportPl(Request $request)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfYear()->toDateString());
+        $to   = $request->input('to', today()->toDateString());
+
+        $company = DB::table('companies')->where('id', $cid)->first();
+        $useGL   = $company && $company->accounting_enabled && ChartOfAccount::where('company_id', $cid)->exists();
+
+        $filename = "profit-and-loss-{$from}-to-{$to}.csv";
+
+        if ($useGL) {
+            $lines = DB::table('journal_entry_lines')
+                ->join('journal_entries','journal_entries.id','=','journal_entry_lines.entry_id')
+                ->join('chart_of_accounts','chart_of_accounts.id','=','journal_entry_lines.account_id')
+                ->where('journal_entry_lines.company_id', $cid)
+                ->where('journal_entries.status','posted')
+                ->whereBetween('journal_entries.entry_date',[$from,$to])
+                ->whereIn('chart_of_accounts.type',['revenue','expense'])
+                ->selectRaw('chart_of_accounts.code, chart_of_accounts.name as account_name,
+                    chart_of_accounts.type as account_type, chart_of_accounts.sub_type,
+                    SUM(journal_entry_lines.credit) as total_credit, SUM(journal_entry_lines.debit) as total_debit')
+                ->groupBy('chart_of_accounts.code','chart_of_accounts.name','chart_of_accounts.type','chart_of_accounts.sub_type')
+                ->orderBy('chart_of_accounts.code')
+                ->get();
+
+            return response()->streamDownload(function () use ($lines, $from, $to) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ["Profit & Loss: {$from} to {$to} (GL Mode)"]);
+                fputcsv($out, []);
+                fputcsv($out, ['Section', 'Code', 'Account', 'Amount']);
+                foreach ($lines as $r) {
+                    $section = $r->account_type === 'revenue' ? 'Revenue'
+                        : ($r->sub_type === 'cogs' ? 'Cost of Goods Sold' : 'Operating Expenses');
+                    $net = $r->account_type === 'revenue'
+                        ? (float)$r->total_credit - (float)$r->total_debit
+                        : (float)$r->total_debit  - (float)$r->total_credit;
+                    fputcsv($out, [$section, $r->code, $r->account_name, number_format($net, 2, '.', '')]);
+                }
+                fputcsv($out, []);
+                $rev  = $lines->where('account_type','revenue')->sum(fn($r) => (float)$r->total_credit - (float)$r->total_debit);
+                $cogs = $lines->where('account_type','expense')->where('sub_type','cogs')->sum(fn($r) => (float)$r->total_debit - (float)$r->total_credit);
+                $opex = $lines->where('account_type','expense')->where('sub_type','!=','cogs')->sum(fn($r) => (float)$r->total_debit - (float)$r->total_credit);
+                fputcsv($out, ['', '', 'Total Revenue', number_format($rev, 2, '.', '')]);
+                fputcsv($out, ['', '', 'Total COGS', number_format($cogs, 2, '.', '')]);
+                fputcsv($out, ['', '', 'Gross Profit', number_format($rev - $cogs, 2, '.', '')]);
+                fputcsv($out, ['', '', 'Total Operating Expenses', number_format($opex, 2, '.', '')]);
+                fputcsv($out, ['', '', 'Net Profit', number_format($rev - $cogs - $opex, 2, '.', '')]);
+                fclose($out);
+            }, $filename, ['Content-Type' => 'text/csv']);
+        }
+
+        // ── Operational mode ─────────────────────────────────────────────
+        $revenue = (float)DB::table('sales')
+            ->where('company_id',$cid)->where('status','posted')
+            ->whereDate('posted_at','>=',$from)->whereDate('posted_at','<=',$to)
+            ->sum('total');
+
+        $cogs = (float)DB::table('sales')
+            ->where('company_id',$cid)->where('status','posted')
+            ->whereDate('posted_at','>=',$from)->whereDate('posted_at','<=',$to)
+            ->sum('cogs_total');
+
+        $landedRows = DB::select("
+            SELECT bc.category, SUM(
+                COALESCE(bc.amount_base,bc.amount)
+                / COALESCE(NULLIF(b.qty_received,0),NULLIF(b.qty_purchased,0))
+                * ic_agg.qty_consumed
+            ) AS total
+            FROM batch_costs bc
+            JOIN batches b ON b.id=bc.batch_id AND b.company_id=?
+            JOIN (
+                SELECT batch_id, SUM(qty) AS qty_consumed
+                FROM inventory_consumptions
+                WHERE company_id=? AND DATE(created_at) BETWEEN ? AND ?
+                GROUP BY batch_id
+            ) ic_agg ON ic_agg.batch_id=b.id
+            WHERE bc.amount>0 GROUP BY bc.category
+        ", [$cid,$cid,$from,$to]);
+        $totalLanded = collect($landedRows)->sum('total');
+
+        $grossProfit = $revenue - $cogs - $totalLanded;
+
+        $transporterCharges = DB::table('transporter_ledger_entries')
+            ->join('transporters','transporters.id','=','transporter_ledger_entries.transporter_id')
+            ->where('transporters.company_id',$cid)
+            ->where('transporter_ledger_entries.type','freight_charge')
+            ->where(function ($q) {
+                $q->whereNull('transporter_ledger_entries.ref_type')
+                  ->orWhere('transporter_ledger_entries.ref_type','!=',\App\Models\ImportTruck::class);
+            })
+            ->whereDate('transporter_ledger_entries.entry_date','>=',$from)
+            ->whereDate('transporter_ledger_entries.entry_date','<=',$to)
+            ->sum('transporter_ledger_entries.amount');
+
+        $depotCharges = DB::table('depot_ledger_entries')
+            ->join('depots','depots.id','=','depot_ledger_entries.depot_id')
+            ->where('depots.company_id',$cid)
+            ->whereDate('depot_ledger_entries.entry_date','>=',$from)
+            ->whereDate('depot_ledger_entries.entry_date','<=',$to)
+            ->whereIn('depot_ledger_entries.type',['storage_charge','handling_fee','loading_fee','other_charge'])
+            ->sum('depot_ledger_entries.amount');
+
+        $pettyCash = DB::table('petty_cash_transactions')
+            ->join('petty_cash_accounts','petty_cash_accounts.id','=','petty_cash_transactions.account_id')
+            ->where('petty_cash_accounts.company_id',$cid)
+            ->where('petty_cash_transactions.type','expense')
+            ->whereDate('petty_cash_transactions.transaction_date','>=',$from)
+            ->whereDate('petty_cash_transactions.transaction_date','<=',$to)
+            ->sum(DB::raw('ABS(petty_cash_transactions.amount)'));
+
+        $totalOpex  = $transporterCharges + $depotCharges + $pettyCash;
+        $netProfit  = $grossProfit - $totalOpex;
+
+        return response()->streamDownload(function () use (
+            $revenue,$cogs,$landedRows,$totalLanded,$grossProfit,
+            $transporterCharges,$depotCharges,$pettyCash,$totalOpex,$netProfit,$from,$to
+        ) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ["Profit & Loss: {$from} to {$to} (Operational Mode)"]);
+            fputcsv($out, []);
+            fputcsv($out, ['Section', 'Line Item', 'Amount']);
+            fputcsv($out, ['Revenue', 'Fuel Sales', number_format($revenue, 2, '.', '')]);
+            fputcsv($out, ['Cost of Sales', 'Cost of Fuel (COGS)', number_format($cogs, 2, '.', '')]);
+            foreach ($landedRows as $l) {
+                fputcsv($out, ['Cost of Sales', ucfirst(str_replace('_',' ',$l->category)), number_format((float)$l->total, 2, '.', '')]);
+            }
+            fputcsv($out, ['', 'Gross Profit', number_format($grossProfit, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Operating Expenses', 'Transport & Freight', number_format($transporterCharges, 2, '.', '')]);
+            fputcsv($out, ['Operating Expenses', 'Depot Charges', number_format($depotCharges, 2, '.', '')]);
+            fputcsv($out, ['Operating Expenses', 'Petty Cash Expenses', number_format($pettyCash, 2, '.', '')]);
+            fputcsv($out, ['', 'Total Operating Expenses', number_format($totalOpex, 2, '.', '')]);
+            fputcsv($out, []);
+            fputcsv($out, ['', 'NET PROFIT', number_format($netProfit, 2, '.', '')]);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     private function standardAccounts(): array
     {
         return [

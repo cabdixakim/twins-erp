@@ -30,7 +30,7 @@
 </div>
 
 {{-- Period selector --}}
-<div class="no-print flex items-center gap-2 mb-4">
+<div class="no-print flex items-center gap-2 mb-4 flex-wrap">
     <form method="GET" class="flex gap-2 items-center">
         <span class="text-xs {{ $muted }}">Show last</span>
         @foreach([3,6,12,24] as $m)
@@ -43,6 +43,11 @@
         </button>
         @endforeach
     </form>
+    <a href="{{ route('reports.throughput.export', ['months' => $months]) }}"
+       class="{{ $btnGhost }} ml-auto">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Export CSV
+    </a>
 </div>
 
 {{-- KPI bar --}}
