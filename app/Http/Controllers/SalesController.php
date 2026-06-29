@@ -528,6 +528,7 @@ class SalesController extends Controller
                         'product_id'    => (int) $sale->product_id,
                         'from_depot_id' => (int) $sale->depot_id,
                         'qty'           => $qty,
+                        'batch_id'      => $sale->batch_id ? (int) $sale->batch_id : null,
 
                         'ref_type'      => 'sale',
                         'ref_id'        => (int) $sale->id,

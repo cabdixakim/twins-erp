@@ -347,11 +347,18 @@ class AccountingController extends Controller
 
         $totalPettyCash = $pettyCashExpenses->sum('total');
 
-        // Transporter freight charges — use entry_date
+        // Transporter freight charges — local/cross-dock trips only.
+        // Import truck freight (ref_type = ImportTruck) is already captured in
+        // batch_costs as a landed cost and allocated proportionally above.
+        // Including it here would double-count it in the P&L.
         $transporterCharges = DB::table('transporter_ledger_entries')
             ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
             ->where('transporters.company_id', $cid)
             ->where('transporter_ledger_entries.type', 'freight_charge')
+            ->where(function ($q) {
+                $q->whereNull('transporter_ledger_entries.ref_type')
+                  ->orWhere('transporter_ledger_entries.ref_type', '!=', \App\Models\ImportTruck::class);
+            })
             ->whereDate('transporter_ledger_entries.entry_date', '>=', $from)
             ->whereDate('transporter_ledger_entries.entry_date', '<=', $to)
             ->sum('transporter_ledger_entries.amount');
