@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Batch;
 use App\Models\BatchCost;
 use App\Models\Sale;
+use App\Models\Company;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
@@ -79,33 +80,58 @@ class ReportController extends Controller
             ->orderByDesc('revenue')
             ->get();
 
-        // ── Landed / shipment costs — weighted-average pool approach ────────
-        // In WA costing all stock is one pool; landed costs are treated the same.
-        // Overall sell-through ratio = (total purchased - total remaining) / total purchased
-        // across ALL company batches. Apply that single ratio to total costs per category.
-        // No per-batch attribution, no FIFO — consistent with WA philosophy.
-        $poolRow = DB::selectOne("
-            SELECT COALESCE(SUM(qty_purchased), 0) AS total_purchased,
-                   COALESCE(SUM(qty_remaining),  0) AS total_remaining
-            FROM batches
-            WHERE company_id = ?
-        ", [$cid]);
+        // ── Landed / shipment costs ───────────────────────────────────────────
+        // Method depends on company costing setting:
+        //
+        //  weighted_average → pool approach: one sell-through ratio across ALL
+        //    batches, applied to total costs per category. No batch attribution.
+        //
+        //  specific_lot → per-batch proration: each batch's costs × that batch's
+        //    own sell-through (qty_purchased - qty_remaining) / qty_purchased.
+        //    Only costs from batches that were actually sold appear in COGS.
+        $costingMethod = Company::find($cid)?->costing_method ?? 'weighted_average';
 
-        $poolSellThrough = ($poolRow && $poolRow->total_purchased > 0)
-            ? min(1.0, ($poolRow->total_purchased - $poolRow->total_remaining) / $poolRow->total_purchased)
-            : 0.0;
+        if ($costingMethod === 'weighted_average') {
+            $poolRow = DB::selectOne("
+                SELECT COALESCE(SUM(qty_purchased), 0) AS total_purchased,
+                       COALESCE(SUM(qty_remaining),  0) AS total_remaining
+                FROM batches
+                WHERE company_id = ?
+            ", [$cid]);
 
-        $landedByCategory = DB::select("
-            SELECT bc.category,
-                   SUM(bc.amount) * ? AS total
-            FROM batch_costs bc
-            JOIN batches b ON b.id = bc.batch_id
-            WHERE b.company_id = ?
-            GROUP BY bc.category
-            HAVING SUM(bc.amount) * ? > 0.01
-        ", [$poolSellThrough, $cid, $poolSellThrough]);
+            $poolSellThrough = ($poolRow && $poolRow->total_purchased > 0)
+                ? min(1.0, ($poolRow->total_purchased - $poolRow->total_remaining) / $poolRow->total_purchased)
+                : 0.0;
 
-        $landedByCategory = collect($landedByCategory)->keyBy('category');
+            $rawLanded = DB::select("
+                SELECT bc.category,
+                       SUM(bc.amount) * ? AS total
+                FROM batch_costs bc
+                JOIN batches b ON b.id = bc.batch_id
+                WHERE b.company_id = ?
+                GROUP BY bc.category
+                HAVING SUM(bc.amount) * ? > 0.01
+            ", [$poolSellThrough, $cid, $poolSellThrough]);
+        } else {
+            // specific_lot: prorate each batch's costs by its own sell-through ratio
+            $rawLanded = DB::select("
+                SELECT bc.category,
+                       SUM(
+                           bc.amount
+                           * LEAST(1.0,
+                               (b.qty_purchased - b.qty_remaining)
+                               / NULLIF(b.qty_purchased, 0)
+                             )
+                       ) AS total
+                FROM batch_costs bc
+                JOIN batches b ON b.id = bc.batch_id
+                WHERE b.company_id = ?
+                GROUP BY bc.category
+                HAVING SUM(bc.amount * LEAST(1.0, (b.qty_purchased - b.qty_remaining) / NULLIF(b.qty_purchased,0))) > 0.01
+            ", [$cid]);
+        }
+
+        $landedByCategory = collect($rawLanded)->keyBy('category');
 
         $categoryLabels = [
             'freight'       => 'Freight & Transport',
