@@ -47,8 +47,9 @@ class InventoryAdjustmentController extends Controller
                             ->orderBy('name')->get();
 
         $totalValue = InventoryAdjustment::where('company_id', $cid)->sum('total_value');
+        $currency   = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
 
-        return view('inventory-adjustments.index', compact('adjustments', 'depots', 'totalValue'));
+        return view('inventory-adjustments.index', compact('adjustments', 'depots', 'totalValue', 'currency'));
     }
 
     public function create(Request $request)

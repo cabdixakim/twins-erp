@@ -63,7 +63,7 @@
 {{-- Summary card --}}
 <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 mb-4">
   <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss value (all time)</div>
-  <div class="text-2xl font-bold s-rose">{{ number_format($totalValue, 2) }}</div>
+  <div class="text-2xl font-bold s-rose">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
   <div class="text-xs {{ $muted }} mt-1">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
 </div>
 
@@ -106,8 +106,8 @@
               <td class="px-4 py-3 {{ $fg }} font-medium text-xs">{{ $adj->product?->name ?? '—' }}</td>
               <td class="px-4 py-3 {{ $muted }} text-xs">{{ $adj->depot?->name ?? '—' }}</td>
               <td class="px-4 py-3 text-right font-mono text-xs {{ $fg }}">{{ number_format($adj->qty, 3) }}</td>
-              <td class="px-4 py-3 text-right font-mono text-xs {{ $muted }}">{{ number_format($adj->unit_cost, 4) }}</td>
-              <td class="px-4 py-3 text-right font-mono text-sm font-semibold s-rose">{{ number_format($adj->total_value, 2) }}</td>
+              <td class="px-4 py-3 text-right font-mono text-xs {{ $muted }}">{{ $currency }} {{ number_format($adj->unit_cost, 4) }}</td>
+              <td class="px-4 py-3 text-right font-mono text-sm font-semibold s-rose">{{ $currency }} {{ number_format($adj->total_value, 2) }}</td>
               <td class="px-4 py-3 {{ $muted }} text-xs max-w-xs truncate">{{ $adj->notes ?: '—' }}</td>
             </tr>
           @endforeach
