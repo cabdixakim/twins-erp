@@ -421,43 +421,87 @@
                   .mod-toggle-track.on { background:#10b981; border-color:#10b981; }
                   .mod-toggle-thumb { position:absolute; top:.2rem; left:.2rem; width:1.1rem; height:1.1rem; border-radius:9999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s; }
                   .mod-toggle-track.on .mod-toggle-thumb { transform:translateX(1rem); }
+                  .mod-warn { display:none; margin-top:.4rem; padding:.4rem .65rem; border-radius:.6rem; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#b45309; font-size:11px; line-height:1.4; }
+                  .mod-warn.visible { display:block; }
                 </style>
-                <div class="space-y-3">
+                <div class="space-y-4">
                     {{-- Accounting --}}
-                    <div class="flex items-start gap-3">
-                        <input type="hidden" name="accounting_enabled" value="0">
-                        <input type="checkbox" id="chk_accounting" name="accounting_enabled" value="1"
-                               class="hidden"
-                               {{ old('accounting_enabled', $company->accounting_enabled) ? 'checked' : '' }}>
-                        <div class="mod-toggle-track mt-0.5 {{ old('accounting_enabled', $company->accounting_enabled) ? 'on' : '' }}"
-                             onclick="toggleMod('chk_accounting',this)">
-                            <div class="mod-toggle-thumb"></div>
-                        </div>
-                        <div>
-                            <div class="text-sm font-semibold {{ $fg }}">Double-entry accounting</div>
-                            <div class="text-[11px] {{ $muted }} mt-0.5">Enables Chart of Accounts, Journals, and Trial Balance. Set up your account tree before enabling to avoid unmatched entries.</div>
+                    @php $acctOn = (bool) old('accounting_enabled', $company->accounting_enabled); @endphp
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="hidden" name="accounting_enabled" value="0">
+                            <input type="checkbox" id="chk_accounting" name="accounting_enabled" value="1"
+                                   class="hidden"
+                                   {{ $acctOn ? 'checked' : '' }}
+                                   data-saved="{{ $acctOn ? '1' : '0' }}">
+                            <div class="mod-toggle-track mt-0.5 {{ $acctOn ? 'on' : '' }}"
+                                 onclick="toggleMod('chk_accounting', this, 'warn_accounting',
+                                    'Turning off double-entry accounting will stop all journal auto-posting. Existing journal entries will remain in the database but no new ones will be written. This can leave your Trial Balance out of sync with operational data.')">
+                                <div class="mod-toggle-thumb"></div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm font-semibold {{ $fg }}">Double-entry accounting</div>
+                                    @if($acctOn)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>
+                                    @endif
+                                </div>
+                                <div class="text-[11px] {{ $muted }} mt-0.5">Enables Chart of Accounts, Journals, and Trial Balance. Journal entries auto-post on every purchase receive and sale.</div>
+                                <div id="warn_accounting" class="mod-warn">
+                                    <strong>⚠ Are you sure?</strong> Disabling stops all auto-posting. Existing journal entries stay but future transactions won't be recorded. Your Trial Balance will go stale.
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {{-- Inventory periods --}}
-                    <div class="flex items-start gap-3">
-                        <input type="hidden" name="inventory_periods_enabled" value="0">
-                        <input type="checkbox" id="chk_periods" name="inventory_periods_enabled" value="1"
-                               class="hidden"
-                               {{ old('inventory_periods_enabled', $company->inventory_periods_enabled) ? 'checked' : '' }}>
-                        <div class="mod-toggle-track mt-0.5 {{ old('inventory_periods_enabled', $company->inventory_periods_enabled) ? 'on' : '' }}"
-                             onclick="toggleMod('chk_periods',this)">
-                            <div class="mod-toggle-thumb"></div>
-                        </div>
-                        <div>
-                            <div class="text-sm font-semibold {{ $fg }}">Inventory periods</div>
-                            <div class="text-[11px] {{ $muted }} mt-0.5">Locks stock postings within accounting periods. Managed from Settings → Inventory.</div>
+                    @php $perOn = (bool) old('inventory_periods_enabled', $company->inventory_periods_enabled); @endphp
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="hidden" name="inventory_periods_enabled" value="0">
+                            <input type="checkbox" id="chk_periods" name="inventory_periods_enabled" value="1"
+                                   class="hidden"
+                                   {{ $perOn ? 'checked' : '' }}
+                                   data-saved="{{ $perOn ? '1' : '0' }}">
+                            <div class="mod-toggle-track mt-0.5 {{ $perOn ? 'on' : '' }}"
+                                 onclick="toggleMod('chk_periods', this, 'warn_periods',
+                                    'Turning off inventory periods removes the period gate from all stock postings. Purchases can be received and stock issued without an open period, making period-based costing and audit trails unreliable.')">
+                                <div class="mod-toggle-thumb"></div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm font-semibold {{ $fg }}">Inventory periods</div>
+                                    @if($perOn)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:rgba(16,185,129,.12);color:#059669">ACTIVE</span>
+                                    @endif
+                                </div>
+                                <div class="text-[11px] {{ $muted }} mt-0.5">Locks stock postings within accounting periods. Prevents backdating and enforces period-close discipline.</div>
+                                <div id="warn_periods" class="mod-warn">
+                                    <strong>⚠ Are you sure?</strong> Disabling removes the period gate — stock can be posted freely with no period control. Period-based costing and audit trails become unreliable.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <script>
-                function toggleMod(cbId, track) {
-                    const cb = document.getElementById(cbId);
+                function toggleMod(cbId, track, warnId, warnMsg) {
+                    const cb      = document.getElementById(cbId);
+                    const warn    = document.getElementById(warnId);
+                    const savedOn = cb.dataset.saved === '1';
+                    const willBeOff = cb.checked; // currently on → clicking turns off
+
+                    // If it's currently ON (saved) and user is trying to turn it OFF → show warning, require second click
+                    if (savedOn && willBeOff) {
+                        if (!warn.classList.contains('visible')) {
+                            warn.classList.add('visible');
+                            return; // first click: just show warning, don't toggle yet
+                        }
+                        // second click while warning visible: proceed with toggle
+                        warn.classList.remove('visible');
+                    } else {
+                        warn.classList.remove('visible');
+                    }
+
                     cb.checked = !cb.checked;
                     track.classList.toggle('on', cb.checked);
                 }
