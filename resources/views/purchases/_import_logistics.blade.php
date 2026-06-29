@@ -750,7 +750,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <input type="number" name="rate_per_1000l" step="0.01" min="0" required
                    value="{{ $nom ? $nom->rate_per_1000l : '' }}"
                    placeholder="0.00"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                   class="w-full h-10 rounded-xl border {{ $errors->has('rate_per_1000l') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+            @error('rate_per_1000l')
+              <p class="mt-1.5 text-xs text-rose-500 font-medium">⚠ {{ $message }}</p>
+            @enderror
           </div>
         </div>
 
@@ -2251,6 +2254,11 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   const btnEdit  = document.getElementById('btnEditNomination');
   if (btnSetup) btnSetup.addEventListener('click', () => openTruckModal('nominationModal'));
   if (btnEdit)  btnEdit.addEventListener('click',  () => openTruckModal('nominationModal'));
+
+  // Auto-reopen nomination modal if a rate_per_1000l error was returned
+  @if($errors->has('rate_per_1000l'))
+  openTruckModal('nominationModal');
+  @endif
 
   // Add truck button
   const btnAdd = document.getElementById('btnAddTruck');
