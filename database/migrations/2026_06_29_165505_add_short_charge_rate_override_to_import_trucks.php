@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('import_trucks', 'short_charge_rate_override')) {
+            return;
+        }
         Schema::table('import_trucks', function (Blueprint $table) {
             // null = use nomination rate; set to override per-truck
             $table->decimal('short_charge_rate_override', 18, 4)->nullable()->after('shortfall_charge');
