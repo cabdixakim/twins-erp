@@ -420,6 +420,14 @@
                       </button>
                     @endif
 
+                    @if($truck->status === 'delivered' && !in_array($truck->duty_status ?? '', ['posted','waived']))
+                      <button type="button"
+                              onclick="openTruckModal('postDutyModal-{{ $truck->id }}')"
+                              class="h-7 px-2.5 rounded-lg border text-[11px] font-semibold transition s-blue cursor-pointer">
+                        Post duty
+                      </button>
+                    @endif
+
                   </div>
                 </td>
               </tr>
@@ -1418,6 +1426,150 @@
   </div>
   @endif
 
+  {{-- ── Post duty retroactively (delivered trucks with no duty) ── --}}
+  @if($truck->status === 'delivered' && !in_array($truck->duty_status ?? '', ['posted','waived']))
+  <div id="postDutyModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+        <div>
+          <div class="text-base font-semibold {{ $fg }}">Post duty — {{ $truck->truck_reg }}</div>
+          <div class="text-xs {{ $muted }} mt-0.5">Record duty that was not posted at border clearance</div>
+        </div>
+        <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
+      </div>
+      <form method="POST"
+            action="{{ route('purchases.import-nomination.trucks.post-duty', [$purchase, $nom, $truck]) }}">
+        @csrf
+        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+
+          {{-- Waive option --}}
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" name="waive_duty" value="1"
+                   id="pdWaiveDuty-{{ $truck->id }}"
+                   onchange="pdToggleWaive({{ $truck->id }})"
+                   class="rounded accent-rose-500">
+            <span class="text-sm {{ $fg }}">Waive duty for this truck (no cost entry)</span>
+          </label>
+
+          <div id="pdDutyFields-{{ $truck->id }}" class="space-y-3">
+            {{-- Vendor type --}}
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Duty paid to</label>
+              <select name="duty_vendor_type"
+                      id="pdVendorType-{{ $truck->id }}"
+                      onchange="pdToggleVendor({{ $truck->id }})"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                <option value="">Self / no AP entry</option>
+                <option value="customs_authority" {{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>Customs Authority (AP)</option>
+                <option value="supplier"          {{ ($truck->duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>Supplier (AP)</option>
+                <option value="depot"             {{ ($truck->duty_vendor_type ?? '') === 'depot' ? 'selected' : '' }}>Depot (AP)</option>
+                <option value="transporter"       {{ ($truck->duty_vendor_type ?? '') === 'transporter' ? 'selected' : '' }}>Transporter / Agent (AP)</option>
+              </select>
+            </div>
+
+            <input type="hidden" name="duty_vendor_id" id="pdVendorIdHidden-{{ $truck->id }}"
+                   value="{{ $truck->duty_vendor_id ?? '' }}">
+
+            <div id="pdVendorRowCustoms-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'customs_authority' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Customs Authority</label>
+              <select onchange="pdSyncVendorId({{ $truck->id }},'customs_authority',this.value)"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($_dutyVendorsList as $dv)
+                  <option value="{{ $dv->id }}" {{ ($truck->duty_vendor_id ?? '') == $dv->id && ($truck->duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>{{ $dv->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div id="pdVendorRowSupplier-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'supplier' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Supplier</label>
+              <select onchange="pdSyncVendorId({{ $truck->id }},'supplier',this.value)"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($_suppliersList as $sv)
+                  <option value="{{ $sv->id }}" {{ ($truck->duty_vendor_id ?? '') == $sv->id && ($truck->duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>{{ $sv->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div id="pdVendorRowDepot-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'depot' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Depot</label>
+              <select onchange="pdSyncVendorId({{ $truck->id }},'depot',this.value)"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($_depotsList as $dep)
+                  <option value="{{ $dep->id }}" {{ ($truck->duty_vendor_id ?? '') == $dep->id && ($truck->duty_vendor_type ?? '') === 'depot' ? 'selected' : '' }}>{{ $dep->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div id="pdVendorRowTransporter-{{ $truck->id }}" class="{{ ($truck->duty_vendor_type ?? '') === 'transporter' ? '' : 'hidden' }}">
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Transporter / Agent</label>
+              <select onchange="pdSyncVendorId({{ $truck->id }},'transporter',this.value)"
+                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
+                <option value="">— select —</option>
+                @foreach($_transportersList as $tp)
+                  <option value="{{ $tp->id }}" {{ ($truck->duty_vendor_id ?? '') == $tp->id && ($truck->duty_vendor_type ?? '') === 'transporter' ? 'selected' : '' }}>{{ $tp->name }}</option>
+                @endforeach
+              </select>
+            </div>
+
+            {{-- Rate + qty + currency --}}
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Rate / 1000 {{ $unitLabel }}</label>
+                <input type="number" name="duty_rate_per_1000l" step="0.0001" min="0"
+                       id="pdRate-{{ $truck->id }}"
+                       value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
+                       oninput="pdComputeAmount({{ $truck->id }})"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
+                       placeholder="0.0000" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty ({{ $unitLabel }})</label>
+                <input type="number" name="duty_qty" step="0.001" min="0"
+                       id="pdQty-{{ $truck->id }}"
+                       value="{{ $truck->qty_delivered ?? $truck->qty_loaded ?? '' }}"
+                       oninput="pdComputeAmount({{ $truck->id }})"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
+                <input type="text" name="duty_currency" maxlength="8"
+                       id="pdCurrency-{{ $truck->id }}"
+                       value="{{ $truck->duty_currency ?? ($nom->default_duty_currency ?? 'USD') }}"
+                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
+              </div>
+            </div>
+
+            {{-- Computed amount display --}}
+            <div class="flex items-center justify-between px-1">
+              <span class="text-xs {{ $muted }}">Computed duty amount:</span>
+              <span id="pdAmountDisplay-{{ $truck->id }}" class="text-sm font-bold {{ $fg }}">—</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes</label>
+              <input type="text" name="duty_notes" maxlength="500"
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
+                     placeholder="Receipt no., reference…" />
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+          <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-blue-500/40 bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 transition">
+            Post duty
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  @endif
+
   {{-- ── Quick load + deliver modal (skip intermediate stages) ── --}}
   @if($truck->status === 'nominated')
   <div id="quickDeliverModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
@@ -2221,6 +2373,49 @@ function toggleWaiveDuty(truckId) {
       const row = document.getElementById(prefix + truckId);
       if (row) row.classList.add('hidden');
     });
+  }
+}
+
+// ── Post-duty modal JS (pd- prefix, no conflict with border modal) ────────────
+function pdToggleWaive(truckId) {
+  const waived = document.getElementById('pdWaiveDuty-' + truckId)?.checked;
+  const fields = document.getElementById('pdDutyFields-' + truckId);
+  if (fields) fields.classList.toggle('hidden', !!waived);
+}
+
+function pdToggleVendor(truckId) {
+  const v = document.getElementById('pdVendorType-' + truckId)?.value;
+  const map = {
+    customs_authority: 'pdVendorRowCustoms-',
+    supplier:          'pdVendorRowSupplier-',
+    depot:             'pdVendorRowDepot-',
+    transporter:       'pdVendorRowTransporter-',
+  };
+  Object.entries(map).forEach(([key, prefix]) => {
+    const row = document.getElementById(prefix + truckId);
+    if (row) row.classList.toggle('hidden', v !== key);
+  });
+  // Clear hidden vendor id when type changes
+  const hidden = document.getElementById('pdVendorIdHidden-' + truckId);
+  if (hidden) hidden.value = '';
+}
+
+function pdSyncVendorId(truckId, type, val) {
+  const hidden = document.getElementById('pdVendorIdHidden-' + truckId);
+  if (hidden) hidden.value = val;
+}
+
+function pdComputeAmount(truckId) {
+  const rate = parseFloat(document.getElementById('pdRate-' + truckId)?.value) || 0;
+  const qty  = parseFloat(document.getElementById('pdQty-' + truckId)?.value)  || 0;
+  const cur  = (document.getElementById('pdCurrency-' + truckId)?.value || 'USD').trim();
+  const disp = document.getElementById('pdAmountDisplay-' + truckId);
+  if (!disp) return;
+  if (rate > 0 && qty > 0) {
+    const amt = (rate * qty / 1000).toFixed(2);
+    disp.textContent = cur + ' ' + parseFloat(amt).toLocaleString(undefined, {minimumFractionDigits: 2});
+  } else {
+    disp.textContent = '—';
   }
 }
 

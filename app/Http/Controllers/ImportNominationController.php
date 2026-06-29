@@ -1337,6 +1337,81 @@ class ImportNominationController extends Controller
         }
     }
 
+    // ── Retroactive duty posting ──────────────────────────────────────────────
+
+    public function postDuty(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
+        abort_if(! in_array($truck->status, ['border_cleared', 'delivered'], true), 422, 'Truck must be border-cleared or delivered to post duty retroactively.');
+        abort_if($truck->duty_status === 'posted', 422, 'Duty already posted for this truck.');
+
+        $waive = (bool) $request->input('waive_duty');
+
+        if ($waive) {
+            $truck->update([
+                'duty_status'    => 'waived',
+                'duty_vendor_type'  => null,
+                'duty_vendor_id'    => null,
+                'duty_amount'       => null,
+            ]);
+            return back()->with('status', "Duty waived for {$truck->truck_reg}.");
+        }
+
+        $data = $request->validate([
+            'duty_vendor_type'    => 'nullable|string|max:80',
+            'duty_vendor_id'      => 'nullable|integer',
+            'duty_rate_per_1000l' => 'nullable|numeric|min:0',
+            'duty_qty'            => 'nullable|numeric|min:0',
+            'duty_currency'       => 'nullable|string|max:8',
+            'duty_notes'          => 'nullable|string|max:500',
+        ]);
+
+        $vendorType = $data['duty_vendor_type'] ?: null;
+        $vendorId   = !empty($data['duty_vendor_id']) ? (int) $data['duty_vendor_id'] : null;
+        $rate       = isset($data['duty_rate_per_1000l']) ? (float) $data['duty_rate_per_1000l'] : null;
+        $qty        = isset($data['duty_qty']) && (float) $data['duty_qty'] > 0
+                        ? (float) $data['duty_qty']
+                        : (float) ($truck->qty_delivered ?? $truck->qty_loaded ?? 0);
+        $currency   = $data['duty_currency'] ?: 'USD';
+        $amount     = ($rate !== null && $qty > 0) ? round($rate * $qty / 1000, 4) : 0;
+
+        if ($amount <= 0 && !$vendorType) {
+            return back()->withErrors(['duty_rate_per_1000l' => 'Please enter a rate or waive duty.']);
+        }
+
+        $truck->update(array_filter([
+            'duty_vendor_type'    => $vendorType,
+            'duty_vendor_id'      => $vendorId,
+            'duty_rate_per_1000l' => $rate,
+            'duty_qty'            => $qty,
+            'duty_currency'       => $currency,
+            'duty_amount'         => $amount > 0 ? $amount : null,
+            'duty_notes'          => $data['duty_notes'] ?? null,
+            'duty_status'         => null,
+            'border_date'         => $truck->border_date ?? $truck->delivery_date ?? now()->toDateString(),
+        ], fn($v) => $v !== null));
+
+        $truck->refresh();
+
+        try {
+            $msg = DutyPostingService::postForTruck($truck, (int) auth()->id());
+        } catch (\Throwable $e) {
+            return back()->with('error', "Duty fields saved but posting failed: {$e->getMessage()}");
+        }
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Retroactive duty posted for truck {$truck->truck_reg} · {$purchase->reference}. " .
+                ($amount > 0 ? "{$currency} " . number_format($amount, 2) . "." : ''),
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'info',
+            after: ['duty_status' => 'posted', 'duty_amount' => $amount, 'duty_currency' => $currency],
+        );
+
+        return back()->with('status', $msg ?? "Duty posted for {$truck->truck_reg}.");
+    }
+
     /**
      * Verify the current user owns this purchase's company.
      * Returns the company ID for use in queries.
