@@ -35,7 +35,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
       </svg>
     </div>
-    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Money Owed to You</h3>
+    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Receivables</h3>
     <p class="text-xs {{ $muted }} leading-relaxed">Clients who haven't paid yet — sorted by how long they've been overdue.</p>
     @if($summary['overdue_invoices'] > 0)
     <div class="mt-4 text-[10px] font-semibold text-rose-400">{{ $summary['overdue_invoices'] }} overdue invoices</div>
@@ -53,7 +53,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
     </div>
-    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-rose-400 transition">Bills You Haven't Paid</h3>
+    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-rose-400 transition">Payables</h3>
     <p class="text-xs {{ $muted }} leading-relaxed">Outstanding amounts owed to suppliers, depots, and transporters — grouped by how old they are.</p>
   </a>
 

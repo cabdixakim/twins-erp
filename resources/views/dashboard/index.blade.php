@@ -161,7 +161,7 @@
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold tw-fg">Clients Owe You</p>
+          <p class="text-sm font-bold tw-fg">Receivables</p>
           <p class="text-[10px] tw-muted">money to collect from clients</p>
         </div>
         <svg class="w-4 h-4 tw-muted opacity-40 group-hover:opacity-80 transition shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -202,7 +202,7 @@
           </svg>
         </div>
         <div>
-          <p class="text-sm font-bold tw-fg">You Owe</p>
+          <p class="text-sm font-bold tw-fg">Payables</p>
           <p class="text-[10px] tw-muted">bills due to suppliers & depots</p>
         </div>
       </div>

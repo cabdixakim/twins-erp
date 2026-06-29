@@ -1,5 +1,5 @@
 @php
-    $title    = 'Money Owed to You';
+    $title    = 'Receivables';
     $subtitle = 'Clients who haven\'t paid yet — how much and how long they\'ve been overdue.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
@@ -21,7 +21,7 @@
 <div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
     <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-    <span>Money Owed to You</span>
+    <span>Receivables</span>
 </div>
 
 {{-- Filters --}}

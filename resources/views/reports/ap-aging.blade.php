@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Bills You Haven\'t Paid')
+@section('title', 'Payables')
 @section('subtitle', 'Outstanding amounts owed to suppliers, depots, and transporters — grouped by how old they are.')
 
 @section('content')
