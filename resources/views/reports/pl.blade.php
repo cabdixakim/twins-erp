@@ -160,7 +160,7 @@
 
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Operating Expenses</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalExpenses - $totalLanded) }}</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalExpenses) }}</span>
                 </div>
             </div>
         </div>

@@ -158,18 +158,28 @@ class ReportController extends Controller
         }
 
         // ── Transporter freight charges in period ────────────────────────
+        // Import truck freight (ref_type = ImportTruck) is already captured in
+        // batch_costs as a landed cost above — exclude it here to avoid double-counting.
         $transporterCharges = 0.0;
         if (DB::getSchemaBuilder()->hasTable('transporter_ledger_entries')) {
             $transporterCharges = (float) DB::table('transporter_ledger_entries')
                 ->join('transporters', 'transporters.id', '=', 'transporter_ledger_entries.transporter_id')
                 ->where('transporters.company_id', $cid)
                 ->where('transporter_ledger_entries.type', 'freight_charge')
+                ->where(function ($q) {
+                    $q->whereNull('transporter_ledger_entries.ref_type')
+                      ->orWhere('transporter_ledger_entries.ref_type', '!=', \App\Models\ImportTruck::class);
+                })
                 ->whereDate('transporter_ledger_entries.entry_date', '>=', $from)
                 ->whereDate('transporter_ledger_entries.entry_date', '<=', $to)
                 ->sum('transporter_ledger_entries.amount');
         }
 
-        $totalExpenses = $totalLanded + $depotCharges + $pettyCash + $transporterCharges;
+        // Gross profit = revenue − stock cost − landed costs (duty, freight per batch, border fees)
+        // Opex = ongoing operational costs (local transporter trips, depot storage, petty cash)
+        $grossProfit   = $revenue - $cogs - $totalLanded;
+        $grossMarginPct = $revenue > 0 ? round($grossProfit / $revenue * 100, 1) : null;
+        $totalExpenses = $depotCharges + $pettyCash + $transporterCharges;
         $netProfit     = $grossProfit - $totalExpenses;
         $netMarginPct  = $revenue > 0 ? round($netProfit / $revenue * 100, 1) : null;
 
