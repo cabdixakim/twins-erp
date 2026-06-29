@@ -620,6 +620,19 @@ class ImportNominationController extends Controller
             }
         }
 
+        if ($qtyDelivered > 0) {
+            try {
+                \App\Services\JournalAutoPost::for($cid)
+                    ->postImportDelivery(
+                        truckId:     $truck->id,
+                        reference:   'IMP-TRK-' . $truck->id,
+                        amount:      round($qtyDelivered * (float) $purchase->unit_price, 2),
+                        currency:    $purchase->currency ?? 'USD',
+                        description: "Import delivery truck {$truck->truck_reg} — {$qtyDelivered} {$volumeUnit} @ {$purchase->unit_price} {$purchase->currency}",
+                    );
+            } catch (\Throwable) {}
+        }
+
         // Auto-post freight as a batch cost (idempotent per truck)
         if ($purchase->batch_id && $freightAmt > 0) {
             $freightCostExists = DB::table('batch_costs')

@@ -134,7 +134,7 @@ class DepotLedgerController extends Controller
 
         $currency = $data['currency'] ?: ($depot->default_currency ?: 'USD');
 
-        DepotLedgerEntry::create([
+        $entry = DepotLedgerEntry::create([
             'company_id'  => $cid,
             'depot_id'    => $depot->id,
             'type'        => $data['type'],
@@ -144,6 +144,18 @@ class DepotLedgerController extends Controller
             'entry_date'  => $data['entry_date'],
             'created_by'  => auth()->id(),
         ]);
+
+        try {
+            \App\Services\JournalAutoPost::for($cid)
+                ->postDepotCharge(
+                    ledgerEntryId: $entry->id,
+                    reference:     'DC-' . $entry->id,
+                    amount:        (float) $data['amount'],
+                    currency:      $currency,
+                    description:   $entry->description,
+                    date:          $data['entry_date'],
+                );
+        } catch (\Throwable) {}
 
         $sym = SupplierLedgerController::currencySymbol($currency);
         return redirect()->route('depots.show', $depot)
@@ -164,7 +176,7 @@ class DepotLedgerController extends Controller
 
         $currency = $data['currency'] ?: ($depot->default_currency ?: 'USD');
 
-        DepotLedgerEntry::create([
+        $entry = DepotLedgerEntry::create([
             'company_id'  => $cid,
             'depot_id'    => $depot->id,
             'type'        => 'payment',
@@ -174,6 +186,18 @@ class DepotLedgerController extends Controller
             'entry_date'  => $data['entry_date'],
             'created_by'  => auth()->id(),
         ]);
+
+        try {
+            \App\Services\JournalAutoPost::for($cid)
+                ->postDepotPayment(
+                    ledgerEntryId: $entry->id,
+                    reference:     'DP-' . $entry->id,
+                    amount:        (float) $data['amount'],
+                    currency:      $currency,
+                    description:   $entry->description,
+                    date:          $data['entry_date'],
+                );
+        } catch (\Throwable) {}
 
         $sym = SupplierLedgerController::currencySymbol($currency);
         return redirect()->route('depots.show', $depot)

@@ -197,6 +197,79 @@ class AccountingController extends Controller
         $from = $request->input('from', now()->startOfYear()->toDateString());
         $to   = $request->input('to', now()->toDateString());
 
+        // GL mode: read from journal_entry_lines when accounting_enabled + CoA seeded
+        $company = DB::table('companies')->where('id', $cid)->first();
+        $useGL   = $company && $company->accounting_enabled
+                   && ChartOfAccount::where('company_id', $cid)->exists();
+
+        if ($useGL) {
+            $lines = DB::table('journal_entry_lines')
+                ->join('journal_entries',   'journal_entries.id',   '=', 'journal_entry_lines.entry_id')
+                ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
+                ->where('journal_entry_lines.company_id', $cid)
+                ->where('journal_entries.status', 'posted')
+                ->whereBetween('journal_entries.entry_date', [$from, $to])
+                ->whereIn('chart_of_accounts.type', ['revenue', 'expense'])
+                ->selectRaw('
+                    chart_of_accounts.code,
+                    chart_of_accounts.name     as account_name,
+                    chart_of_accounts.type     as account_type,
+                    chart_of_accounts.sub_type as sub_type,
+                    SUM(journal_entry_lines.credit) as total_credit,
+                    SUM(journal_entry_lines.debit)  as total_debit
+                ')
+                ->groupBy(
+                    'chart_of_accounts.code',
+                    'chart_of_accounts.name',
+                    'chart_of_accounts.type',
+                    'chart_of_accounts.sub_type'
+                )
+                ->orderBy('chart_of_accounts.code')
+                ->get();
+
+            $glRevenue = $lines
+                ->filter(fn($r) => $r->account_type === 'revenue')
+                ->map(fn($r) => (object)[
+                    'code'         => $r->code,
+                    'account_name' => $r->account_name,
+                    'net'          => round((float)$r->total_credit - (float)$r->total_debit, 2),
+                ])->values();
+
+            $glCogs = $lines
+                ->filter(fn($r) => $r->account_type === 'expense' && $r->sub_type === 'cogs')
+                ->map(fn($r) => (object)[
+                    'code'         => $r->code,
+                    'account_name' => $r->account_name,
+                    'net'          => round((float)$r->total_debit - (float)$r->total_credit, 2),
+                ])->values();
+
+            $glOpex = $lines
+                ->filter(fn($r) => $r->account_type === 'expense' && $r->sub_type !== 'cogs')
+                ->map(fn($r) => (object)[
+                    'code'         => $r->code,
+                    'account_name' => $r->account_name,
+                    'net'          => round((float)$r->total_debit - (float)$r->total_credit, 2),
+                ])->values();
+
+            $totalRevenue = round((float)$glRevenue->sum('net'), 2);
+            $totalCogs    = round((float)$glCogs->sum('net'), 2);
+            $totalOpex    = round((float)$glOpex->sum('net'), 2);
+            $grossProfit  = $totalRevenue - $totalCogs;
+            $netProfit    = $grossProfit - $totalOpex;
+            $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
+            $netMargin    = $totalRevenue > 0 ? round($netProfit  / $totalRevenue * 100, 1) : null;
+
+            return view('accounting.pl', compact(
+                'useGL', 'glRevenue', 'glCogs', 'glOpex',
+                'totalRevenue', 'totalCogs', 'totalOpex',
+                'grossProfit', 'netProfit', 'grossMargin', 'netMargin',
+                'from', 'to'
+            ));
+        }
+
+        // ── Operational mode ─────────────────────────────────────────────────
+        $useGL = false;
+
         // Revenue from posted sales
         $revenueRows = DB::table('sales')
             ->join('products', 'products.id', '=', 'sales.product_id')
@@ -263,8 +336,7 @@ class AccountingController extends Controller
             ->whereBetween(DB::raw('DATE(depot_ledger_entries.created_at)'), [$from, $to])
             ->sum('depot_ledger_entries.amount');
 
-        // Manual journal adjustments (ref_type IS NULL = manually posted, not auto-generated)
-        // Revenue accounts: net credit position = additional revenue
+        // Manual journal adjustments only (ref_type IS NULL = hand-posted, not auto-generated)
         $journalRevenue = DB::table('journal_entry_lines')
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
             ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
@@ -283,7 +355,6 @@ class AccountingController extends Controller
             ->orderBy('chart_of_accounts.code')
             ->get();
 
-        // Expense accounts: net debit position = additional expense
         $journalExpenses = DB::table('journal_entry_lines')
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
             ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
@@ -314,7 +385,7 @@ class AccountingController extends Controller
                         : null;
 
         return view('accounting.pl', compact(
-            'revenueRows', 'cogsRows', 'landedCosts', 'pettyCashExpenses',
+            'useGL', 'revenueRows', 'cogsRows', 'landedCosts', 'pettyCashExpenses',
             'totalRevenue', 'totalCogs', 'totalLanded', 'totalPettyCash',
             'transporterCharges', 'depotCharges',
             'journalRevenue', 'journalExpenses',

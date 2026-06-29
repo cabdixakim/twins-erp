@@ -176,6 +176,30 @@ class PettyCashController extends Controller
             ]);
         });
 
+        try {
+            if ($data['type'] === 'expense') {
+                \App\Services\JournalAutoPost::for($cid)
+                    ->postPettyCashExpense(
+                        txId:        $tx->id,
+                        reference:   'PC-' . $tx->id,
+                        amount:      (float) $data['amount'],
+                        currency:    $account->currency,
+                        description: $data['description'],
+                        date:        $data['transaction_date'],
+                    );
+            } elseif ($data['type'] === 'top_up') {
+                \App\Services\JournalAutoPost::for($cid)
+                    ->postPettyCashTopUp(
+                        txId:        $tx->id,
+                        reference:   'PC-' . $tx->id,
+                        amount:      (float) $data['amount'],
+                        currency:    $account->currency,
+                        description: $data['description'],
+                        date:        $data['transaction_date'],
+                    );
+            }
+        } catch (\Throwable) {}
+
         $sym = $account->currency;
         AuditLog::record(
             $data['type'] === 'top_up' ? 'created' : 'posted',

@@ -118,7 +118,8 @@ class SupplierLedgerController extends Controller
         $pcaId    = !empty($data['petty_cash_account_id']) ? (int) $data['petty_cash_account_id'] : null;
         $desc     = $data['description'] ?: 'Payment to supplier — ' . $supplier->name;
 
-        DB::transaction(function () use ($cid, $supplier, $data, $currency, $bankId, $pcaId, $desc) {
+        $savedEntry = null;
+        DB::transaction(function () use ($cid, $supplier, $data, $currency, $bankId, $pcaId, $desc, &$savedEntry) {
             $entry = SupplierLedgerEntry::create([
                 'company_id'            => $cid,
                 'supplier_id'           => $supplier->id,
@@ -150,7 +151,22 @@ class SupplierLedgerController extends Controller
                     'petty_cash_transaction_id' => $cash['petty_cash_transaction_id'],
                 ]);
             }
+            $savedEntry = $entry;
         });
+
+        try {
+            if ($savedEntry) {
+                \App\Services\JournalAutoPost::for($cid)
+                    ->postSupplierPayment(
+                        ledgerEntryId: $savedEntry->id,
+                        reference:     'SP-' . $savedEntry->id,
+                        amount:        (float) $data['amount'],
+                        currency:      $currency,
+                        description:   $desc,
+                        date:          $data['entry_date'],
+                    );
+            }
+        } catch (\Throwable) {}
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('suppliers.show', $supplier)

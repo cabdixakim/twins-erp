@@ -211,7 +211,8 @@ class TransporterLedgerController extends Controller
         $pcaId    = !empty($data['petty_cash_account_id']) ? (int) $data['petty_cash_account_id'] : null;
         $desc     = $data['description'] ?: 'Payment to transporter — ' . $transporter->name;
 
-        DB::transaction(function () use ($cid, $transporter, $data, $currency, $bankId, $pcaId, $desc) {
+        $savedEntry = null;
+        DB::transaction(function () use ($cid, $transporter, $data, $currency, $bankId, $pcaId, $desc, &$savedEntry) {
             $entry = TransporterLedgerEntry::create([
                 'company_id'            => $cid,
                 'transporter_id'        => $transporter->id,
@@ -243,7 +244,22 @@ class TransporterLedgerController extends Controller
                     'petty_cash_transaction_id' => $cash['petty_cash_transaction_id'],
                 ]);
             }
+            $savedEntry = $entry;
         });
+
+        try {
+            if ($savedEntry) {
+                \App\Services\JournalAutoPost::for($cid)
+                    ->postTransporterPayment(
+                        ledgerEntryId: $savedEntry->id,
+                        reference:     'TP-' . $savedEntry->id,
+                        amount:        (float) $data['amount'],
+                        currency:      $currency,
+                        description:   $desc,
+                        date:          $data['entry_date'],
+                    );
+            }
+        } catch (\Throwable) {}
 
         $sym = self::currencySymbol($currency);
         return redirect()->route('transporters.show', $transporter)
