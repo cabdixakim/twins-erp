@@ -1093,6 +1093,33 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
   </div>
 </div>
 
+{{-- Import wizard — over-nomination confirm modal --}}
+<div id="wiOverNomModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex items-center gap-3">
+      <span class="flex-shrink-0 h-8 w-8 rounded-xl flex items-center justify-center" style="background:rgba(245,158,11,.15)">
+        <svg class="w-4 h-4" style="color:#f59e0b" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      </span>
+      <div class="text-sm font-semibold {{ $fg }}">Over PO quantity</div>
+    </div>
+    <div class="px-5 py-4 space-y-2">
+      <p id="wiOverNomMessage" class="text-sm {{ $fg }}"></p>
+      <p class="text-xs" style="color:var(--tw-muted)">This is allowed if the supplier will top up, but you should confirm this is intentional.</p>
+    </div>
+    <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex gap-2 justify-end">
+      <button type="button" id="wiOverNomBackBtn"
+              class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:opacity-80 transition">
+        Go back
+      </button>
+      <button type="button" id="wiOverNomProceedBtn"
+              class="h-9 px-4 rounded-xl border text-sm font-semibold transition hover:opacity-80"
+              style="background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#d97706">
+        Import anyway
+      </button>
+    </div>
+  </div>
+</div>
+
 {{-- ── Per-truck modals ── --}}
 @foreach($trucks as $truck)
 
@@ -2901,7 +2928,8 @@ function syncNomDutyId(type) {
   let convertFactor    = null;
   let parsedSections   = [];  // [{label, rows}] when file has multiple product sections
   let columnSets       = [];  // [{label, rows}] when file has multiple capacity columns
-  let wiLitresConfirmed = false; // reset each wizard open
+  let wiLitresConfirmed  = false; // reset each wizard open
+  let wiOverNomConfirmed = false; // reset each wizard open
 
   // ── Open / close ──────────────────────────────────────────────────────────
   function openWizard() {
@@ -2967,7 +2995,8 @@ function syncNomDutyId(type) {
     importRows        = [];
     parsedSections    = [];
     columnSets        = [];
-    wiLitresConfirmed = false;
+    wiLitresConfirmed  = false;
+    wiOverNomConfirmed = false;
     if (fileBar)        fileBar.classList.add('hidden');
     if (fileInput)      fileInput.value = '';
     if (dropZone)       dropZone.style.background = '';
@@ -3580,6 +3609,38 @@ function syncNomDutyId(type) {
   wiLitresProceedBtn?.addEventListener('click', async () => {
     wiLitresConfirmed = true;
     wiLitresModal?.classList.add('hidden');
+    // still need to check over-nom before submitting
+    if (wiIsOverNominated()) { wiShowOverNomModal(); return; }
+    await submitImport();
+  });
+
+  // ── Wizard over-nomination confirm modal ──────────────────────────────────
+  const wiOverNomModal      = document.getElementById('wiOverNomModal');
+  const wiOverNomMsgEl      = document.getElementById('wiOverNomMessage');
+  const wiOverNomBackBtn    = document.getElementById('wiOverNomBackBtn');
+  const wiOverNomProceedBtn = document.getElementById('wiOverNomProceedBtn');
+
+  function wiIsOverNominated() {
+    if (wiOverNomConfirmed) return false;
+    const newCap = importRows.reduce((s, r) => { const n = parseFloat(r.capacity); return s + (isNaN(n) ? 0 : n); }, 0);
+    return (CURRENT_NOM + newCap) > PO_QTY;
+  }
+  function wiShowOverNomModal() {
+    const newCap = importRows.reduce((s, r) => { const n = parseFloat(r.capacity); return s + (isNaN(n) ? 0 : n); }, 0);
+    const projected = CURRENT_NOM + newCap;
+    const over      = Math.round(projected - PO_QTY).toLocaleString();
+    if (wiOverNomMsgEl) {
+      wiOverNomMsgEl.textContent = 'These ' + importRows.length + ' trucks add '
+        + Math.round(newCap).toLocaleString() + ' ' + VOLUME_UNIT
+        + ', bringing total nominated to ' + Math.round(projected).toLocaleString() + ' ' + VOLUME_UNIT
+        + ' — ' + over + ' ' + VOLUME_UNIT + ' over the PO quantity.';
+    }
+    wiOverNomModal?.classList.remove('hidden');
+  }
+  wiOverNomBackBtn?.addEventListener('click', () => wiOverNomModal?.classList.add('hidden'));
+  wiOverNomProceedBtn?.addEventListener('click', async () => {
+    wiOverNomConfirmed = true;
+    wiOverNomModal?.classList.add('hidden');
     await submitImport();
   });
 
@@ -3591,10 +3652,8 @@ function syncNomDutyId(type) {
       updateSummaryBar();
       updateImportButton();
     } else if (currentStep === 2) {
-      if (wiHasSuspiciousCapacities()) {
-        wiShowLitresModal();
-        return;
-      }
+      if (wiHasSuspiciousCapacities()) { wiShowLitresModal(); return; }
+      if (wiIsOverNominated())         { wiShowOverNomModal(); return; }
       await submitImport();
     }
   });
