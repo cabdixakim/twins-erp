@@ -24,8 +24,6 @@ Thumbs.db
 composer.phar
 composer.lock
 
-# Compiled Vite assets (generated on deploy)
-/public/build/
 /public/hot
 
 # Laravel generated / runtime files

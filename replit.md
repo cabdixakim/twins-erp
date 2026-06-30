@@ -374,4 +374,4 @@ php artisan route:list
 - **GitHub remote**: `https://github.com/cabdixakim/twins-erp`
 - **Session driver**: file (`storage/framework/sessions/`) — gitignored
 - **`.local/` directory**: gitignored (Replit internal)
-- **`public/build/`**: gitignored (compiled Vite output)
+- **`public/build/`**: committed to git — removing from .gitignore prevents blank/unstyled renders when the container resets
