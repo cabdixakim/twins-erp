@@ -117,6 +117,42 @@
       background: rgba(255,255,255,.10);
       color: #e2e8f0;
     }
+
+    /* Radio pill selection */
+    .ob-radio-opt {
+      border-color: #d1d5db;
+      color: #374151;
+    }
+    html.dark .ob-radio-opt {
+      border-color: #334155;
+      color: #cbd5e1;
+    }
+    .ob-radio-opt.selected {
+      border-color: #10b981;
+      background: rgba(16,185,129,.08);
+      color: #059669;
+    }
+    html.dark .ob-radio-opt.selected {
+      border-color: #34d399;
+      background: rgba(52,211,153,.10);
+      color: #34d399;
+    }
+    .ob-radio-dot {
+      border-color: #d1d5db;
+      background: transparent;
+      transition: border-color .15s, background .15s;
+    }
+    html.dark .ob-radio-dot { border-color: #475569; }
+    .ob-radio-opt.selected .ob-radio-dot {
+      border-color: #10b981;
+      background: #10b981;
+      box-shadow: inset 0 0 0 2px #fff;
+    }
+    html.dark .ob-radio-opt.selected .ob-radio-dot {
+      border-color: #34d399;
+      background: #34d399;
+      box-shadow: inset 0 0 0 2px #020617;
+    }
   </style>
 </head>
 <body class="ob-page min-h-full flex items-center justify-center px-4 py-8">
@@ -263,6 +299,54 @@
           {{-- Divider --}}
           <div class="border-t ob-divider-line"></div>
 
+          {{-- Operational defaults --}}
+          <div class="space-y-3">
+            <p class="text-[10px] uppercase tracking-widest font-semibold ob-section-title">Operational defaults</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+              {{-- Volume unit --}}
+              <div>
+                <label class="block text-xs font-medium ob-label mb-2">Volume unit</label>
+                <div class="flex gap-2">
+                  @foreach(['L' => 'Litres', 'USG' => 'US Gallons', 'IMG' => 'Imp. Gallons'] as $val => $label)
+                  <label class="flex-1 flex items-center gap-1.5 cursor-pointer rounded-lg border px-2.5 py-2 text-xs font-medium transition
+                                ob-radio-opt {{ old('volume_unit','L') === $val ? 'selected' : '' }}"
+                         style="border-color:#d1d5db;color:#374151">
+                    <input type="radio" name="volume_unit" value="{{ $val }}"
+                           {{ old('volume_unit','L') === $val ? 'checked' : '' }}
+                           class="sr-only ob-radio">
+                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0" style="border-color:#d1d5db"></span>
+                    {{ $label }}
+                  </label>
+                  @endforeach
+                </div>
+              </div>
+
+              {{-- Costing method --}}
+              <div>
+                <label class="block text-xs font-medium ob-label mb-2">Inventory costing</label>
+                <div class="flex gap-2 flex-col">
+                  @foreach(['weighted_average' => ['Weighted Average','Blended cost across all stock'], 'specific_lot' => ['Specific Lot','Exact cost per batch (FIFO)']] as $val => [$label, $desc])
+                  <label class="flex items-start gap-2 cursor-pointer rounded-lg border px-2.5 py-2 text-xs font-medium transition
+                                ob-radio-opt {{ old('costing_method','weighted_average') === $val ? 'selected' : '' }}"
+                         style="border-color:#d1d5db;color:#374151">
+                    <input type="radio" name="costing_method" value="{{ $val }}"
+                           {{ old('costing_method','weighted_average') === $val ? 'checked' : '' }}
+                           class="sr-only ob-radio mt-0.5">
+                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0 mt-0.5" style="border-color:#d1d5db"></span>
+                    <span>{{ $label }}<span class="block font-normal ob-muted text-[10px]">{{ $desc }}</span></span>
+                  </label>
+                  @endforeach
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {{-- Divider --}}
+          <div class="border-t ob-divider-line"></div>
+
           {{-- Owner section --}}
           <div class="space-y-3">
             <p class="text-[10px] uppercase tracking-widest font-semibold ob-section-title">Owner account</p>
@@ -344,6 +428,16 @@
         });
       });
     })();
+
+    // Radio pill interactivity
+    document.querySelectorAll('.ob-radio').forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        var name = this.name;
+        document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
+          r.closest('.ob-radio-opt').classList.toggle('selected', r.checked);
+        });
+      });
+    });
   </script>
 
 </body>

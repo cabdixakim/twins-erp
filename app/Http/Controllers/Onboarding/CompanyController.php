@@ -33,6 +33,8 @@ class CompanyController extends Controller
             'company_name'   => 'required|string|max:255',
             'code'           => 'required|string|alpha_num|unique:companies,code|min:2|max:10',
             'base_currency'  => 'required|string|max:10',
+            'volume_unit'    => 'required|in:L,USG,IMG',
+            'costing_method' => 'required|in:weighted_average,specific_lot',
             'owner_name'     => 'required|string|max:255',
             'owner_email'    => 'required|email|max:255|unique:users,email',
             'owner_password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
@@ -58,10 +60,12 @@ class CompanyController extends Controller
 
         // 4) Create company record
         $company = Company::create([
-            'name'          => $data['company_name'],
-            'code'          => $data['code'],
-            'slug'          => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
-            'base_currency' => $data['base_currency'],
+            'name'           => $data['company_name'],
+            'code'           => $data['code'],
+            'slug'           => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
+            'base_currency'  => $data['base_currency'],
+            'volume_unit'    => $data['volume_unit'],
+            'costing_method' => $data['costing_method'],
         ]);
         
         // ✅ ADDITION: create CROSS DOCK depot
