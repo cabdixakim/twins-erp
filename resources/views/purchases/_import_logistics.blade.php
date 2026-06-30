@@ -940,7 +940,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <button type="button" onclick="closeTruckModal('addTruckModal')"
               class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
     </div>
-    <form method="POST" action="{{ route('purchases.import-nomination.trucks.store', [$purchase, $nom]) }}">
+    <form id="addTruckForm" method="POST" action="{{ route('purchases.import-nomination.trucks.store', [$purchase, $nom]) }}">
       @csrf
       <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
         <div class="grid grid-cols-2 gap-3">
@@ -1009,6 +1009,32 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+{{-- Over-nomination confirm modal --}}
+<div id="overNomConfirmModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex items-center gap-3">
+      <span class="flex-shrink-0 h-8 w-8 rounded-xl bg-amber-500/15 flex items-center justify-center">
+        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      </span>
+      <div class="text-sm font-semibold {{ $fg }}">Over-nomination warning</div>
+    </div>
+    <div class="px-5 py-4 space-y-2">
+      <p id="overNomMessage" class="text-sm {{ $fg }}"></p>
+      <p class="text-xs" style="color:var(--tw-muted)">You can still add this truck — just confirm this is intentional.</p>
+    </div>
+    <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex gap-2 justify-end">
+      <button type="button" onclick="document.getElementById('overNomConfirmModal').classList.add('hidden'); document.getElementById('addTruckModal').classList.remove('hidden');"
+              class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:opacity-80 transition">
+        Go back
+      </button>
+      <button type="button" id="overNomProceedBtn"
+              class="h-9 px-4 rounded-xl border border-amber-500/50 bg-amber-500/10 text-amber-400 text-sm font-semibold hover:bg-amber-500/20 transition">
+        Add anyway
+      </button>
+    </div>
   </div>
 </div>
 
@@ -2250,6 +2276,44 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   // Expose globally for onclick handlers
   window.openTruckModal  = openTruckModal;
   window.closeTruckModal = closeTruckModal;
+
+  // ── Over-nomination guard on Add Truck form ───────────────────────────────
+  (function() {
+    const poQty          = {{ (float) $qty }};
+    const currentNom     = {{ (float) $totalCapacity }};
+    const unitLabel      = @json($unitLabel);
+    const form           = document.getElementById('addTruckForm');
+    const confirmModal   = document.getElementById('overNomConfirmModal');
+    const msgEl          = document.getElementById('overNomMessage');
+    const proceedBtn     = document.getElementById('overNomProceedBtn');
+    if (!form || !confirmModal) return;
+
+    let confirmed = false;
+
+    form.addEventListener('submit', function(e) {
+      if (confirmed) return; // already approved — let it through
+      const cap = parseFloat(form.querySelector('[name="capacity"]')?.value) || 0;
+      const proposed = currentNom + cap;
+      if (proposed > poQty) {
+        e.preventDefault();
+        const over = (proposed - poQty).toLocaleString(undefined, {maximumFractionDigits: 0});
+        const proposed_fmt = proposed.toLocaleString(undefined, {maximumFractionDigits: 0});
+        const poQty_fmt    = poQty.toLocaleString(undefined, {maximumFractionDigits: 0});
+        msgEl.textContent = 'This truck\u2019s capacity would bring total nominated to '
+          + proposed_fmt + ' ' + unitLabel
+          + ' \u2014 ' + over + ' ' + unitLabel + ' over the PO quantity of '
+          + poQty_fmt + ' ' + unitLabel + '.';
+        document.getElementById('addTruckModal').classList.add('hidden');
+        confirmModal.classList.remove('hidden');
+      }
+    });
+
+    proceedBtn.addEventListener('click', function() {
+      confirmed = true;
+      confirmModal.classList.add('hidden');
+      form.requestSubmit();
+    });
+  })();
 
   // ── Post-import highlight + auto-scroll ──────────────────────────────────
   (function handleJustImported() {
