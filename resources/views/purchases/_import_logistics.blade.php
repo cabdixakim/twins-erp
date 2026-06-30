@@ -1067,6 +1067,32 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
   </div>
 </div>
 
+{{-- Import wizard — looks-like-litres confirm modal --}}
+<div id="wiLitresWarnModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex items-center gap-3">
+      <span class="flex-shrink-0 h-8 w-8 rounded-xl bg-rose-500/15 flex items-center justify-center">
+        <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      </span>
+      <div class="text-sm font-semibold {{ $fg }}">Capacity unit check</div>
+    </div>
+    <div class="px-5 py-4 space-y-2">
+      <p id="wiLitresWarnMessage" class="text-sm {{ $fg }}"></p>
+      <p class="text-xs" style="color:var(--tw-muted)">Go back and divide capacities by 1 000 to convert to M³, or proceed if the values are correct.</p>
+    </div>
+    <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex gap-2 justify-end">
+      <button type="button" id="wiLitresWarnBackBtn"
+              class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:opacity-80 transition">
+        Let me correct it
+      </button>
+      <button type="button" id="wiLitresWarnProceedBtn"
+              class="h-9 px-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-400 text-sm font-semibold hover:bg-rose-500/20 transition">
+        Values are in M³, proceed
+      </button>
+    </div>
+  </div>
+</div>
+
 {{-- ── Per-truck modals ── --}}
 @foreach($trucks as $truck)
 
@@ -2870,11 +2896,12 @@ function syncNomDutyId(type) {
   const columnPicker  = document.getElementById('wiColumnPicker');
   const columnList    = document.getElementById('wiColumnList');
 
-  let importRows     = [];
-  let currentStep    = 1;
-  let convertFactor  = null;
-  let parsedSections = [];  // [{label, rows}] when file has multiple product sections
-  let columnSets     = [];  // [{label, rows}] when file has multiple capacity columns
+  let importRows       = [];
+  let currentStep      = 1;
+  let convertFactor    = null;
+  let parsedSections   = [];  // [{label, rows}] when file has multiple product sections
+  let columnSets       = [];  // [{label, rows}] when file has multiple capacity columns
+  let wiLitresConfirmed = false; // reset each wizard open
 
   // ── Open / close ──────────────────────────────────────────────────────────
   function openWizard() {
@@ -2937,9 +2964,10 @@ function syncNomDutyId(type) {
 
   // ── Reset ─────────────────────────────────────────────────────────────────
   function resetWizard() {
-    importRows     = [];
-    parsedSections = [];
-    columnSets     = [];
+    importRows        = [];
+    parsedSections    = [];
+    columnSets        = [];
+    wiLitresConfirmed = false;
     if (fileBar)        fileBar.classList.add('hidden');
     if (fileInput)      fileInput.value = '';
     if (dropZone)       dropZone.style.background = '';
@@ -3526,6 +3554,35 @@ function syncNomDutyId(type) {
   }
 
   // ── Next / Back ───────────────────────────────────────────────────────────
+  // ── Wizard litres-warn modal wiring ──────────────────────────────────────
+  const wiLitresModal       = document.getElementById('wiLitresWarnModal');
+  const wiLitresMsgEl       = document.getElementById('wiLitresWarnMessage');
+  const wiLitresBackBtn     = document.getElementById('wiLitresWarnBackBtn');
+  const wiLitresProceedBtn  = document.getElementById('wiLitresWarnProceedBtn');
+  const WI_LITRES_THRESHOLD = 500; // M³; anything ≥ this is almost certainly litres
+
+  function wiHasSuspiciousCapacities() {
+    if (wiLitresConfirmed || VOLUME_UNIT !== 'M3') return false;
+    return importRows.some(r => parseFloat(r.capacity) >= WI_LITRES_THRESHOLD);
+  }
+  function wiShowLitresModal() {
+    const suspicious = importRows.filter(r => parseFloat(r.capacity) >= WI_LITRES_THRESHOLD);
+    const n       = suspicious.length;
+    const example = parseFloat(suspicious[0]?.capacity || 0).toLocaleString(undefined, {maximumFractionDigits: 0});
+    if (wiLitresMsgEl) {
+      wiLitresMsgEl.textContent = n + ' truck' + (n !== 1 ? 's have' : ' has')
+        + ' very large M³ capacities (e.g. ' + example + ' M³).'
+        + ' A typical truck is 30\u201355 M³. Did you enter litres instead?';
+    }
+    wiLitresModal?.classList.remove('hidden');
+  }
+  wiLitresBackBtn?.addEventListener('click', () => wiLitresModal?.classList.add('hidden'));
+  wiLitresProceedBtn?.addEventListener('click', async () => {
+    wiLitresConfirmed = true;
+    wiLitresModal?.classList.add('hidden');
+    await submitImport();
+  });
+
   if (nextBtn) nextBtn.addEventListener('click', async () => {
     if (currentStep === 1) {
       renderReviewTable();
@@ -3534,6 +3591,10 @@ function syncNomDutyId(type) {
       updateSummaryBar();
       updateImportButton();
     } else if (currentStep === 2) {
+      if (wiHasSuspiciousCapacities()) {
+        wiShowLitresModal();
+        return;
+      }
       await submitImport();
     }
   });
