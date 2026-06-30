@@ -1015,6 +1015,32 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
   </div>
 </div>
 
+{{-- Looks-like-litres warning modal --}}
+<div id="litresWarnModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70">
+  <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b {{ $border }} {{ $surface2 }} flex items-center gap-3">
+      <span class="flex-shrink-0 h-8 w-8 rounded-xl bg-rose-500/15 flex items-center justify-center">
+        <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      </span>
+      <div class="text-sm font-semibold {{ $fg }}">Capacity unit check</div>
+    </div>
+    <div class="px-5 py-4 space-y-2">
+      <p id="litresWarnMessage" class="text-sm {{ $fg }}"></p>
+      <p class="text-xs" style="color:var(--tw-muted)">If you meant to enter litres, go back and divide by 1 000. If you're sure it's in M³, proceed.</p>
+    </div>
+    <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex gap-2 justify-end">
+      <button type="button" id="litresWarnBackBtn"
+              class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:opacity-80 transition">
+        Let me correct it
+      </button>
+      <button type="button" id="litresWarnProceedBtn"
+              class="h-9 px-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-400 text-sm font-semibold hover:bg-rose-500/20 transition">
+        It's in M³, proceed
+      </button>
+    </div>
+  </div>
+</div>
+
 {{-- Over-nomination confirm modal --}}
 <div id="overNomConfirmModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70">
   <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
@@ -1029,7 +1055,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <p class="text-xs" style="color:var(--tw-muted)">You can still add this truck — just confirm this is intentional.</p>
     </div>
     <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex gap-2 justify-end">
-      <button type="button" onclick="document.getElementById('overNomConfirmModal').classList.add('hidden'); document.getElementById('addTruckModal').classList.remove('hidden');"
+      <button type="button" id="overNomBackBtn"
               class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:opacity-80 transition">
         Go back
       </button>
@@ -2280,41 +2306,85 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
   window.openTruckModal  = openTruckModal;
   window.closeTruckModal = closeTruckModal;
 
-  // ── Over-nomination guard on Add Truck form ───────────────────────────────
+  // ── Add Truck guards: (1) looks-like-litres  (2) over-nomination ─────────
   (function() {
-    const poQty          = {{ (float) $qty }};
-    const currentNom     = {{ (float) $totalCapacity }};
-    const unitLabel      = @json($unitLabel);
-    const form           = document.getElementById('addTruckForm');
-    const confirmModal   = document.getElementById('overNomConfirmModal');
-    const msgEl          = document.getElementById('overNomMessage');
-    const proceedBtn     = document.getElementById('overNomProceedBtn');
-    if (!form || !confirmModal) return;
+    const poQty       = {{ (float) $qty }};
+    const currentNom  = {{ (float) $totalCapacity }};
+    const unitLabel   = @json($unitLabel);
+    const isM3        = @json(($volumeUnit ?? 'L') === 'M3');
+    // Trucks are typically 30-55 M³; anything ≥ 500 almost certainly entered as litres
+    const LITRES_THRESHOLD = 500;
 
-    let confirmed = false;
+    const form              = document.getElementById('addTruckForm');
+    const litresModal       = document.getElementById('litresWarnModal');
+    const litresMsgEl       = document.getElementById('litresWarnMessage');
+    const litresBackBtn     = document.getElementById('litresWarnBackBtn');
+    const litresProceedBtn  = document.getElementById('litresWarnProceedBtn');
+    const overNomModal      = document.getElementById('overNomConfirmModal');
+    const overNomMsgEl      = document.getElementById('overNomMessage');
+    const overNomBackBtn    = document.getElementById('overNomBackBtn');
+    const overNomProceedBtn = document.getElementById('overNomProceedBtn');
+    if (!form) return;
+
+    let litresConfirmed  = false;
+    let overNomConfirmed = false;
+
+    function showAddTruck() {
+      litresModal?.classList.add('hidden');
+      overNomModal?.classList.add('hidden');
+      document.getElementById('addTruckModal')?.classList.remove('hidden');
+    }
 
     form.addEventListener('submit', function(e) {
-      if (confirmed) return; // already approved — let it through
       const cap = parseFloat(form.querySelector('[name="capacity"]')?.value) || 0;
-      const proposed = currentNom + cap;
-      if (proposed > poQty) {
+
+      // ── Check 1: looks like litres? ──────────────────────────────────────
+      if (!litresConfirmed && isM3 && cap >= LITRES_THRESHOLD) {
         e.preventDefault();
-        const over = (proposed - poQty).toLocaleString(undefined, {maximumFractionDigits: 0});
+        litresMsgEl.textContent = 'You entered ' + cap.toLocaleString(undefined, {maximumFractionDigits: 0})
+          + ' M\u00B3. That\u2019s a very large capacity \u2014 a typical truck is 30\u201355 M\u00B3.'
+          + ' Did you mean to enter litres instead?';
+        document.getElementById('addTruckModal').classList.add('hidden');
+        litresModal.classList.remove('hidden');
+        return;
+      }
+
+      // ── Check 2: over-nomination? ─────────────────────────────────────────
+      if (!overNomConfirmed && (currentNom + cap) > poQty) {
+        e.preventDefault();
+        const proposed     = currentNom + cap;
+        const over         = (proposed - poQty).toLocaleString(undefined, {maximumFractionDigits: 0});
         const proposed_fmt = proposed.toLocaleString(undefined, {maximumFractionDigits: 0});
         const poQty_fmt    = poQty.toLocaleString(undefined, {maximumFractionDigits: 0});
-        msgEl.textContent = 'This truck\u2019s capacity would bring total nominated to '
+        overNomMsgEl.textContent = 'This truck\u2019s capacity would bring total nominated to '
           + proposed_fmt + ' ' + unitLabel
           + ' \u2014 ' + over + ' ' + unitLabel + ' over the PO quantity of '
           + poQty_fmt + ' ' + unitLabel + '.';
         document.getElementById('addTruckModal').classList.add('hidden');
-        confirmModal.classList.remove('hidden');
+        overNomModal.classList.remove('hidden');
+        return;
       }
+
+      // All checks passed — submit normally
     });
 
-    proceedBtn.addEventListener('click', function() {
-      confirmed = true;
-      confirmModal.classList.add('hidden');
-      form.requestSubmit();
+    // Litres modal buttons
+    litresBackBtn?.addEventListener('click', function() {
+      litresModal.classList.add('hidden');
+      document.getElementById('addTruckModal').classList.remove('hidden');
+    });
+    litresProceedBtn?.addEventListener('click', function() {
+      litresConfirmed = true;
+      litresModal.classList.add('hidden');
+      form.requestSubmit();   // re-runs submit handler → hits check 2 if needed
+    });
+
+    // Over-nom modal buttons
+    overNomBackBtn?.addEventListener('click', showAddTruck);
+    overNomProceedBtn?.addEventListener('click', function() {
+      overNomConfirmed = true;
+      overNomModal.classList.add('hidden');
+      form.requestSubmit();   // re-runs submit handler → all clear, submits
     });
   })();
 
