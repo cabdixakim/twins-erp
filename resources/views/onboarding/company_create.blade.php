@@ -309,7 +309,7 @@
               <div>
                 <label class="block text-xs font-medium ob-label mb-2">Volume unit</label>
                 <div class="flex gap-2">
-                  @foreach(['L' => 'Litres', 'USG' => 'US Gallons', 'IMG' => 'Imp. Gallons'] as $val => $label)
+                  @foreach(['L' => 'Litres', 'M3' => 'Cubic Metres (m³)'] as $val => $label)
                   <label class="flex-1 flex items-center gap-1.5 cursor-pointer rounded-lg border px-2.5 py-2 text-xs font-medium transition
                                 ob-radio-opt {{ old('volume_unit','L') === $val ? 'selected' : '' }}"
                          style="border-color:#d1d5db;color:#374151">

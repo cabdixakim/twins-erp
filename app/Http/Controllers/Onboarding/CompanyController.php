@@ -33,7 +33,7 @@ class CompanyController extends Controller
             'company_name'   => 'required|string|max:255',
             'code'           => 'required|string|alpha_num|unique:companies,code|min:2|max:10',
             'base_currency'  => 'required|string|max:10',
-            'volume_unit'    => 'required|in:L,USG,IMG',
+            'volume_unit'    => 'required|in:L,M3',
             'costing_method' => 'required|in:weighted_average,specific_lot',
             'owner_name'     => 'required|string|max:255',
             'owner_email'    => 'required|email|max:255|unique:users,email',
