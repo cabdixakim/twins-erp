@@ -215,7 +215,7 @@
 
                                             <div class="sm:col-span-1">
                                                 <label class="{{ $label }}">Base UOM</label>
-                                                <input name="base_uom" value="{{ $p->base_uom ?? 'L' }}" class="h-9 {{ $input }}" placeholder="L">
+                                                <input name="base_uom" value="{{ $p->base_uom ?? $volumeUnit }}" class="h-9 {{ $input }}" placeholder="{{ $volumeUnit }}">
                                             </div>
 
                                             <div class="sm:col-span-1">
@@ -315,9 +315,9 @@
 
                 <div>
                     <label class="{{ $label }}">Base UOM</label>
-                    <input name="base_uom" value="L"
+                    <input name="base_uom" value="{{ $volumeUnit }}"
                            class="h-10 {{ $input }}"
-                           placeholder="L">
+                           placeholder="{{ $volumeUnit }}">
                 </div>
 
                 <div>

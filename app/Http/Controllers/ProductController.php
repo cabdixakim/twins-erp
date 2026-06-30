@@ -17,7 +17,8 @@ class ProductController extends Controller
             ->orderBy('name')
             ->paginate(30);
 
-        return view('products.index', compact('products'));
+        $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
+        return view('products.index', compact('products', 'volumeUnit'));
     }
 
     public function store(Request $request)
