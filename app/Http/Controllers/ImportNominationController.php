@@ -416,7 +416,7 @@ class ImportNominationController extends Controller
         // Compute duty amount
         $dutyRate = $waiveDuty ? 0.0 : (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
         $dutyQty  = $waiveDuty ? 0.0 : (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
-        $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / 1000, 4) : null;
+        $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / $this->dutyDivisor($purchase), 4) : null;
 
         $otherChargesFields = [
             'other_border_charges'  => ($data['other_border_charges'] ?? null) ? (float) $data['other_border_charges'] : null,
@@ -1098,7 +1098,7 @@ class ImportNominationController extends Controller
                 $rate = (float) ($truck->duty_rate_per_1000l ?? 0);
                 $qty  = (float) ($truck->duty_qty ?? $truck->qty_loaded ?? 0);
                 if ($rate > 0 && $qty > 0) {
-                    $truck->update(['duty_amount' => round($rate * $qty / 1000, 4)]);
+                    $truck->update(['duty_amount' => round($rate * $qty / $this->dutyDivisor($purchase), 4)]);
                     $truck->refresh();
                 }
             }
@@ -1381,7 +1381,7 @@ class ImportNominationController extends Controller
                         ? (float) $data['duty_qty']
                         : (float) ($truck->qty_delivered ?? $truck->qty_loaded ?? 0);
         $currency   = $data['duty_currency'] ?: 'USD';
-        $amount     = ($rate !== null && $qty > 0) ? round($rate * $qty / 1000, 4) : 0;
+        $amount     = ($rate !== null && $qty > 0) ? round($rate * $qty / $this->dutyDivisor($purchase), 4) : 0;
 
         if ($amount <= 0 && !$vendorType) {
             return back()->withErrors(['duty_rate_per_1000l' => 'Please enter a rate or waive duty.']);
@@ -1505,6 +1505,17 @@ class ImportNominationController extends Controller
         );
 
         return back()->with('status', 'Advance voided and removed from transporter ledger.');
+    }
+
+    /**
+     * Duty rate divisor based on company volume unit.
+     * L  → rate is per 1000 L  → divide qty by 1000
+     * M3 → rate is per M³      → divide qty by 1 (1 M³ ≈ 1000 L, same real value)
+     */
+    private function dutyDivisor(Purchase $purchase): int
+    {
+        $unit = $purchase->company?->volume_unit ?? 'L';
+        return $unit === 'M3' ? 1 : 1000;
     }
 
     /**

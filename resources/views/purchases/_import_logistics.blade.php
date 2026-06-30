@@ -12,9 +12,12 @@
   $_suppliersList    = \App\Models\Supplier::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
   $_depotsList       = \App\Models\Depot::where('company_id', $_cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
   $_transportersList = \App\Models\Transporter::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
-  $unitLabel   = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
-  $rateLabel   = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/L';
-  $rateDivisor = 1;   // Rate is always per unit (per L when unit=L, per M³ when unit=M3)
+  $unitLabel     = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
+  $rateLabel     = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/L';
+  $rateDivisor   = 1;   // Freight & short-charge: always per unit (per L or per M³)
+  // Duty: per 1000 L when unit=L, per M³ when unit=M3 (1 M³ ≈ 1000 L so same real value)
+  $dutyDivisor   = ($volumeUnit ?? 'L') === 'M3' ? 1 : 1000;
+  $dutyRateLabel = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/1000L';
 
   // Summary totals — loading_failed trucks excluded from nominated capacity
   $failedCount    = $trucks->where('status', 'loading_failed')->count();
@@ -892,7 +895,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate / 1000{{ $unitLabel }}</label>
+              <label class="block text-xs font-semibold {{ $fg }} mb-1">Default rate <span class="{{ $muted }} font-normal">{{ $dutyRateLabel }}</span></label>
               <input type="number" name="default_duty_rate_per_1000l" step="0.0001" min="0"
                      value="{{ $nom?->default_duty_rate_per_1000l ?? '' }}"
                      placeholder="0.0000"
@@ -1110,9 +1113,9 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           </div>
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
             <label class="block text-xs font-semibold {{ $fg }} mb-0.5">Short-charge rate override <span class="{{ $muted }} font-normal">(optional)</span></label>
-            <p class="text-[11px] {{ $muted }} mb-2">Leave blank to use the nomination rate ({{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} / 1000 L). Set a value here to override for this truck only.</p>
+            <p class="text-[11px] {{ $muted }} mb-2">Leave blank to use the nomination rate ({{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }} {{ $rateLabel }}). Set a value here to override for this truck only.</p>
             <div class="flex items-center gap-2">
-              <span class="text-xs {{ $muted }} whitespace-nowrap">{{ $nom->short_charge_currency }} /1000 L</span>
+              <span class="text-xs {{ $muted }} whitespace-nowrap">{{ $nom->short_charge_currency }} {{ $rateLabel }}</span>
               <input type="number" name="short_charge_rate_override" step="0.01" min="0"
                      value="{{ $truck->short_charge_rate_override }}"
                      placeholder="e.g. {{ $nom->short_charge_rate }}"
@@ -1483,7 +1486,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div class="grid grid-cols-3 gap-3" id="dutyFieldsGrid-{{ $truck->id }}">
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">
-                  Rate / 1000{{ $unitLabel }}
+                  Rate <span class="font-normal opacity-60">{{ $dutyRateLabel }}</span>
                   @if($purchase->product_id)
                   <button type="button" onclick="autoFillDutyRate({{ $truck->id }}, {{ $purchase->product_id }})"
                           class="ml-1 text-[10px] text-[color:var(--tw-accent)] hover:underline font-normal">auto-fill</button>
@@ -1710,7 +1713,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             {{-- Rate + qty + currency --}}
             <div class="grid grid-cols-3 gap-3">
               <div>
-                <label class="block text-xs font-semibold {{ $fg }} mb-1">Rate / 1000 {{ $unitLabel }}</label>
+                <label class="block text-xs font-semibold {{ $fg }} mb-1">Rate <span class="font-normal opacity-60">{{ $dutyRateLabel }}</span></label>
                 <input type="number" name="duty_rate_per_1000l" step="0.0001" min="0"
                        id="pdRate-{{ $truck->id }}"
                        value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
