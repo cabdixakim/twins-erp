@@ -9,6 +9,7 @@
   $surface2 = 'bg-[color:var(--tw-surface-2)]';
   $fg       = 'text-[color:var(--tw-fg)]';
   $muted    = 'text-[color:var(--tw-muted)]';
+  $volLabel = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L');
 
   $typeLabel = match($purchase->type) {
     'import'      => 'Import',
@@ -222,7 +223,7 @@
         <dl class="divide-y {{ $border }}">
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Quantity</dt>
-            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $volLabel }}</span></dd>
           </div>
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Unit price</dt>
@@ -372,7 +373,7 @@
       <dl class="divide-y {{ $border }}">
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Quantity</dt>
-          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $volLabel }}</span></dd>
         </div>
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Unit price</dt>
@@ -949,7 +950,7 @@ function syncHospId(sel, type) {
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Quantity</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
-                {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span>
+                {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
               </div>
             </div>
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
@@ -1029,7 +1030,7 @@ function syncHospId(sel, type) {
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Quantity</div>
               <div class="mt-1 text-sm font-semibold {{ $fg }}">
-                {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span>
+                {{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
               </div>
             </div>
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
@@ -1085,7 +1086,7 @@ function syncHospId(sel, type) {
         <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $fg }}">
           <div class="font-semibold">What will happen</div>
           <ul class="mt-2 list-disc pl-5 {{ $muted }} space-y-1">
-            <li>The depot stock for batch #{{ $purchase->batch_id }} will be reduced by <strong class="{{ $fg }}">{{ number_format($qty, 3) }} L</strong></li>
+            <li>The depot stock for batch #{{ $purchase->batch_id }} will be reduced by <strong class="{{ $fg }}">{{ number_format($qty, 3) }} {{ $volLabel }}</strong></li>
             <li>Purchase status returns to <strong class="{{ $fg }}">confirmed</strong></li>
             <li>The original movement is flagged as reversed</li>
           </ul>
@@ -1425,7 +1426,7 @@ function syncHospId(sel, type) {
           </div>
           <div>
             <div class="text-[11px] {{ $muted }}">Quantity</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} {{ $volLabel }}</div>
           </div>
         </div>
 
@@ -1494,7 +1495,7 @@ function syncHospId(sel, type) {
           </div>
           <div>
             <div class="text-[11px] {{ $muted }}">Quantity to reverse</div>
-            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} L</div>
+            <div class="mt-0.5 font-semibold {{ $fg }}">{{ number_format($qty, 3) }} {{ $volLabel }}</div>
           </div>
           <div>
             <div class="text-[11px] {{ $muted }}">Batch</div>

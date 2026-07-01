@@ -7,7 +7,7 @@
   $nom  = $importNomination;   // shorthand
   $trucks = $nom ? $nom->trucks : collect();
   // Lookup lists pre-fetched by PurchaseController::show() — no DB calls here
-  $unitLabel     = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
+  $unitLabel     = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : 'L';
   $rateLabel     = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/L';
   $rateDivisor   = 1;   // Freight & short-charge: always per unit (per L or per M³)
   // Duty: per 1000 L when unit=L, per M³ when unit=M3 (1 M³ ≈ 1000 L so same real value)
@@ -473,7 +473,7 @@
         <div class="flex flex-wrap items-center gap-4 text-sm">
           <div>
             <div class="text-[10px] {{ $muted }}">Qty</div>
-            <div class="font-semibold {{ $fg }}">{{ number_format((float)$purchase->shipper_remainder_qty, 3) }} L</div>
+            <div class="font-semibold {{ $fg }}">{{ number_format((float)$purchase->shipper_remainder_qty, 3) }} {{ $unitLabel }}</div>
           </div>
           <div>
             <div class="text-[10px] {{ $muted }}">Resolution</div>
@@ -490,7 +490,7 @@
         {{-- Not yet resolved --}}
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="text-sm {{ $fg }}">
-            <span class="font-bold text-amber-400">{{ number_format($remainingAtShipper, 0) }} L</span>
+            <span class="font-bold text-amber-400">{{ number_format($remainingAtShipper, 3) }} {{ $unitLabel }}</span>
             <span class="{{ $muted }} ml-1">not yet loaded — still at the shipper's terminal</span>
           </div>
           <button type="button" onclick="document.getElementById('shipperRemainderModal').classList.remove('hidden')"

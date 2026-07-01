@@ -88,7 +88,9 @@ class PurchaseController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('purchases.index', compact('purchases', 'supplierOptions'));
+        $volumeUnit = \App\Models\Company::find((int) auth()->user()?->active_company_id)?->volume_unit ?? 'L';
+
+        return view('purchases.index', compact('purchases', 'supplierOptions', 'volumeUnit'));
     }
 
     public function exportCsv(Request $request)

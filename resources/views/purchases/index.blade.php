@@ -12,6 +12,7 @@
   $supplierOptions = $supplierOptions ?? [];
   $typeOptions     = $typeOptions ?? ['import','local_depot','cross_dock'];
   $statusOptions   = $statusOptions ?? ['draft','confirmed','nominated','received','transferred','dispatched','cancelled','voided'];
+  $volLabel        = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L');
 
   // Theme tokens
   $fg      = 'text-[color:var(--tw-fg)]';
@@ -334,7 +335,7 @@
 
               <td class="px-3 sm:px-5 py-4 {{ $fg }}">
                 {{ number_format($qty, 3) }}
-                <span class="text-xs {{ $muted }}">L</span>
+                <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
               </td>
 
               <td class="px-3 sm:px-5 py-4 {{ $fg }}">
