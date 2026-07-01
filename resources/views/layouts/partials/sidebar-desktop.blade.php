@@ -54,11 +54,37 @@
         </div>
     </div>
 
-    {{-- Logout --}}
+    {{-- Profile + Logout --}}
+    <div class="px-3 py-3 border-t space-y-1.5"
+         style="border-color: var(--tw-border);">
+
+        <a href="{{ route('profile') }}"
+           class="group w-full flex items-center gap-3 px-3 py-2 rounded-2xl
+                  text-xs font-medium transition
+                  border border-[color:var(--tw-border)]
+                  bg-[color:var(--tw-btn)]
+                  text-[color:var(--tw-fg)]
+                  hover:bg-[color:var(--tw-surface-2)]">
+            <span class="h-9 w-9 grid place-items-center rounded-xl
+                         border border-[color:var(--tw-border)]
+                         bg-[color:var(--tw-surface-2)]
+                         transition group-hover:bg-[color:var(--tw-surface)]">
+                <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </span>
+            <div class="sidebar-label min-w-0">
+                <div class="font-semibold truncate">{{ auth()->user()->name }}</div>
+                <div class="text-[10px] opacity-50 truncate">My profile &amp; password</div>
+            </div>
+        </a>
+
     <form method="post"
           action="{{ route('logout') }}"
-          class="px-3 py-3 border-t"
-          style="border-color: var(--tw-border);">
+          class="">
         @csrf
         <button type="submit"
                 class="group w-full flex items-center gap-3 px-3 py-2 rounded-2xl
@@ -93,5 +119,6 @@
             </span>
         </button>
     </form>
+    </div>
 
 </aside>
