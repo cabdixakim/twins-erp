@@ -10,6 +10,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\Depot;
 use Illuminate\Validation\Rules\Password;
 
@@ -82,10 +83,16 @@ class CompanyController extends Controller
         $user->active_company_id = $company->id;
         $user->save();
 
-        // 5) Keep your existing session key for backward compatibility (for now)
+        // 5) Generate owner recovery token — shown once on first dashboard load
+        $plainToken = Str::upper(implode('-', str_split(Str::random(16), 4)));
+        $user->recovery_token = Hash::make($plainToken);
+        $user->save();
+        session(['owner_recovery_token' => $plainToken]);
+
+        // 6) Keep your existing session key for backward compatibility (for now)
         session(['company_id' => $company->id]);
 
-        // 6) Go to dashboard
+        // 7) Go to dashboard
         return redirect()->route('dashboard');
     }
 
