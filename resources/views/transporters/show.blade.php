@@ -184,10 +184,11 @@
                   ? 'border-[color:var(--tw-accent)] text-[color:var(--tw-accent)]'
                   : 'border-transparent ' . $muted . ' hover:text-[color:var(--tw-fg)]' }}">
         Trips
-        @if(count($trips) + count($importTrips) > 0)
+        @php $totalTripCount = count($trips) + count($importTrips) + (isset($inProgressImportTrucks) ? count($inProgressImportTrucks) : 0); @endphp
+        @if($totalTripCount > 0)
             <span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold
                 {{ $activeTab === 'trips' ? 'bg-[color:var(--tw-accent)]/15 text-[color:var(--tw-accent)]' : 'bg-[color:var(--tw-surface-2)] ' . $muted }}">
-                {{ count($trips) + count($importTrips) }}
+                {{ $totalTripCount }}
             </span>
         @endif
     </a>
@@ -267,7 +268,7 @@
 </div>
 @endif
 
-@if(count($trips) === 0 && count($importTrips) === 0)
+@if(count($trips) === 0 && count($importTrips) === 0 && (!isset($inProgressImportTrucks) || count($inProgressImportTrucks) === 0))
     <div class="rounded-2xl border {{ $border }} {{ $surface }} px-5 py-14 text-center">
         <div class="text-sm font-semibold {{ $fg }} mb-1">No trips yet</div>
         <div class="text-xs {{ $muted }} max-w-xs mx-auto">

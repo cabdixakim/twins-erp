@@ -69,9 +69,11 @@
             <tbody>
                 @foreach($transporters as $tp)
                     @php
-                        $bal     = (float) ($balances[$tp->id] ?? 0);
-                        $freight = (float) ($freightTotals[$tp->id] ?? 0);
-                        $cur     = $tp->default_currency ?: 'USD';
+                        $bal       = (float) ($balances[$tp->id] ?? 0);
+                        $freight   = (float) ($freightTotals[$tp->id] ?? 0);
+                        $cur       = $tp->default_currency ?: 'USD';
+                        $projected = (float) ($projectedPayables[$tp->id] ?? 0);
+                        $projCur   = $projectedCurrencies[$tp->id] ?? $cur;
                     @endphp
                     <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                         <td class="py-3 pl-5 pr-3">
@@ -96,6 +98,9 @@
                                 <span class="text-sm font-bold text-amber-500">{{ $sym($cur) }}{{ number_format($bal, 2) }}</span>
                             @else
                                 <span class="text-xs text-emerald-500 font-semibold">Overpaid {{ $sym($cur) }}{{ number_format(abs($bal), 2) }}</span>
+                            @endif
+                            @if($projected > 0.005)
+                                <div class="text-[10px] text-amber-500/70 mt-0.5">~ {{ $sym($projCur) }}{{ number_format($projected, 2) }} projected</div>
                             @endif
                         </td>
                     </tr>

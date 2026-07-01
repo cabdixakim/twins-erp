@@ -37,7 +37,26 @@ class TransporterLedgerController extends Controller
             ->groupBy('transporter_id')
             ->pluck('total', 'transporter_id');
 
-        return view('transporters.index', compact('transporters', 'balances', 'freightTotals'));
+        // Projected payables — in-progress trucks not yet delivered
+        $allInProgress = ImportTruck::whereHas('nomination', function ($q) use ($cid) {
+            $q->whereHas('purchase', fn ($q2) => $q2->where('company_id', $cid));
+        })
+        ->whereNotIn('status', ['delivered', 'loading_failed'])
+        ->with(['nomination:id,transporter_id,rate_per_1000l,currency'])
+        ->get();
+
+        $projectedPayables   = [];
+        $projectedCurrencies = [];
+        foreach ($allInProgress as $ipt) {
+            $tid  = $ipt->nomination->transporter_id ?? null;
+            if (!$tid) continue;
+            $rate = (float) ($ipt->nomination->rate_per_1000l ?? 0);
+            $qty  = $ipt->status === 'nominated' ? (float) $ipt->capacity : (float) $ipt->qty_loaded;
+            $projectedPayables[$tid]   = ($projectedPayables[$tid] ?? 0.0) + $qty * $rate;
+            $projectedCurrencies[$tid] = $projectedCurrencies[$tid] ?? ($ipt->nomination->currency ?? 'USD');
+        }
+
+        return view('transporters.index', compact('transporters', 'balances', 'freightTotals', 'projectedPayables', 'projectedCurrencies'));
     }
 
     public function show(Transporter $transporter)
