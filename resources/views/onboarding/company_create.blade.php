@@ -276,7 +276,7 @@
                 </label>
                 <input name="code" value="{{ old('code') }}"
                        class="ob-input {{ $errors->has('code') ? 'error' : '' }}"
-                       placeholder="e.g. ACME" required>
+                       placeholder="e.g. ACME" autocomplete="off" required>
                 @error('code')
                   <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
                 @enderror
@@ -360,7 +360,7 @@
                 <label class="block text-xs font-medium ob-label mb-1">Email</label>
                 <input name="owner_email" type="email" value="{{ old('owner_email') }}"
                        class="ob-input {{ $errors->has('owner_email') ? 'error' : '' }}"
-                       placeholder="you@example.com" required>
+                       placeholder="you@example.com" autocomplete="email" required>
                 @error('owner_email')
                   <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
                 @enderror
@@ -371,7 +371,7 @@
               <label class="block text-xs font-medium ob-label mb-1">Password</label>
               <input name="owner_password" type="password"
                      class="ob-input {{ $errors->has('owner_password') ? 'error' : '' }}"
-                     placeholder="Min 8 chars, uppercase, number & symbol" required>
+                     placeholder="Min 8 chars, uppercase, number & symbol" autocomplete="new-password" required>
               @error('owner_password')
                 <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
               @enderror
