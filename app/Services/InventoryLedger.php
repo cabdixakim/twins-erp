@@ -673,11 +673,46 @@ class InventoryLedger
                 continue;
             }
 
-            // Prorate landed costs by this depot's share of total delivered qty.
-            // e.g. if depot received 60% of the batch, it gets 60% of landed costs.
-            $proratedLanded = $totalLandedCosts * ($depotQtyReceived / $totalQtyReceived);
-            $purchaseValue  = (float) $purchase->unit_price * $depotQtyReceived;
-            $newUnitCost    = round(($purchaseValue + $proratedLanded) / $depotQtyReceived, 6);
+            // Option B costing: for import purchases, landed costs (freight/duty) are
+            // charged on loaded qty per truck — spread over loaded qty, not delivered qty.
+            // For local_depot / cross_dock there are no trucks, so delivered qty = loaded qty.
+            if ($purchase->type === 'import') {
+                // Find the trucks that delivered to this depot via their receipt movements
+                $truckIds = DB::table('inventory_movements')
+                    ->where('company_id', $companyId)
+                    ->where('batch_id', $batchId)
+                    ->where('to_depot_id', $depotId)
+                    ->where('type', 'receipt')
+                    ->where('ref_type', 'App\\Models\\ImportTruck')
+                    ->whereNotNull('ref_id')
+                    ->pluck('ref_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                // Sum landed costs for those trucks specifically
+                $depotLandedCosts = $truckIds
+                    ? (float) DB::table('batch_costs')
+                        ->where('purchase_id', $purchase->id)
+                        ->whereIn('truck_id', $truckIds)
+                        ->sum('amount_base')
+                    : 0.0;
+
+                // Sum loaded qty for those trucks (not delivered qty)
+                $depotQtyLoaded = $truckIds
+                    ? (float) DB::table('import_trucks')
+                        ->whereIn('id', $truckIds)
+                        ->sum('qty_loaded')
+                    : $depotQtyReceived;
+
+                $landedPerUnit = $depotQtyLoaded > 0 ? $depotLandedCosts / $depotQtyLoaded : 0.0;
+                $newUnitCost   = round((float) $purchase->unit_price + $landedPerUnit, 6);
+            } else {
+                // local_depot / cross_dock: prorate landed costs by share of delivered qty
+                $proratedLanded = $totalQtyReceived > 0
+                    ? $totalLandedCosts * ($depotQtyReceived / $totalQtyReceived)
+                    : 0.0;
+                $newUnitCost    = round(((float) $purchase->unit_price * $depotQtyReceived + $proratedLanded) / $depotQtyReceived, 6);
+            }
 
             // Update the depot_stock row for this batch+depot
             $stockRow = DepotStock::where('company_id', $companyId)

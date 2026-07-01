@@ -538,8 +538,8 @@ class ImportNominationController extends Controller
         $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
             ? (float) ($truck->duty_amount ?? 0)
             : 0.0;
-        $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
-        $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+        $landedPerUnit = $qtyLoaded > 0 ? round(($dutyAmt + $freightAmt) / $qtyLoaded, 6) : 0.0;
+        $unitCost   = round((float) $purchase->unit_price + $landedPerUnit, 6);
 
         // Post inventory receipt into the depot (idempotent per truck)
         if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
@@ -773,8 +773,8 @@ class ImportNominationController extends Controller
         $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
             ? (float) ($truck->duty_amount ?? 0)
             : 0.0;
-        $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
-        $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+        $landedPerUnit = $qtyLoaded > 0 ? round(($dutyAmt + $freightAmt) / $qtyLoaded, 6) : 0.0;
+        $unitCost   = round((float) $purchase->unit_price + $landedPerUnit, 6);
 
         // Post inventory receipt into the depot (idempotent per truck)
         if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
@@ -948,8 +948,8 @@ class ImportNominationController extends Controller
             $dutyAmt    = ($truck->duty_status && $truck->duty_status !== 'waived')
                 ? (float) ($truck->duty_amount ?? 0)
                 : 0.0;
-            $totalCost  = ((float) $purchase->unit_price * $qtyDelivered) + $dutyAmt + $freightAmt;
-            $unitCost   = $qtyDelivered > 0 ? round($totalCost / $qtyDelivered, 6) : (float) $purchase->unit_price;
+            $landedPerUnit = $qtyLoaded > 0 ? round(($dutyAmt + $freightAmt) / $qtyLoaded, 6) : 0.0;
+            $unitCost   = round((float) $purchase->unit_price + $landedPerUnit, 6);
 
             // Post inventory receipt into the depot (idempotent per truck)
             if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
