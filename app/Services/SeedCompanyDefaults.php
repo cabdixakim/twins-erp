@@ -65,13 +65,23 @@ class SeedCompanyDefaults
             // Revenue
             ['4100', 'Fuel Sales Revenue',     'revenue',   null],
 
-            // Expenses
-            ['5100', 'Cost of Goods Sold',     'expense',   'cogs'],
-            ['5200', 'Depot Storage',          'expense',   'operating'],
-            ['5300', 'Operating Expenses',     'expense',   'operating'],
+            // Expenses — COGS parent
+            ['5100', 'Cost of Goods Sold',       'expense',   'cogs',      null],
+            // COGS sub-accounts (one per batch_cost category + purchase cost)
+            ['5101', 'Purchase Cost',             'expense',   'cogs',      '5100'],
+            ['5110', 'Freight & Transport',       'expense',   'cogs',      '5100'],
+            ['5120', 'Customs & Duty',            'expense',   'cogs',      '5100'],
+            ['5130', 'Border Charges',            'expense',   'cogs',      '5100'],
+            ['5140', 'Hospitality — COGS',        'expense',   'cogs',      '5100'],
+            ['5150', 'Storage — COGS',            'expense',   'cogs',      '5100'],
+            ['5160', 'Penalties',                 'expense',   'cogs',      '5100'],
+            ['5170', 'Other Landed Costs',        'expense',   'cogs',      '5100'],
+            // Operating expenses
+            ['5200', 'Depot Storage',             'expense',   'operating', null],
+            ['5300', 'Operating Expenses',        'expense',   'operating', null],
         ];
 
-        foreach ($accounts as [$code, $name, $type, $subType]) {
+        foreach ($accounts as [$code, $name, $type, $subType, $parentCode]) {
             // Skip if code already exists for this company
             $exists = DB::table('chart_of_accounts')
                 ->where('company_id', $companyId)
@@ -80,12 +90,21 @@ class SeedCompanyDefaults
 
             if ($exists) continue;
 
+            $parentId = null;
+            if ($parentCode) {
+                $parentId = DB::table('chart_of_accounts')
+                    ->where('company_id', $companyId)
+                    ->where('code', $parentCode)
+                    ->value('id');
+            }
+
             DB::table('chart_of_accounts')->insert([
                 'company_id' => $companyId,
                 'code'       => $code,
                 'name'       => $name,
                 'type'       => $type,
                 'sub_type'   => $subType,
+                'parent_id'  => $parentId,
                 'is_system'  => true,
                 'is_active'  => true,
                 'created_at' => $now,

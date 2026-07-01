@@ -104,29 +104,65 @@ class JournalAutoPost
     // ── 4. Sale post ─────────────────────────────────────────────────────────
     // DR AR / CR Revenue  +  DR COGS / CR Inventory
 
+    // Maps batch_cost category keys → COGS sub-account codes
+    private const COGS_ACCOUNT_MAP = [
+        'purchase_cost' => '5101',
+        'freight'       => '5110',
+        'duty'          => '5120',
+        'border_charge' => '5130',
+        'hospitality'   => '5140',
+        'storage'       => '5150',
+        'penalty'       => '5160',
+        'other'         => '5170',
+    ];
+
     public function postSale(
         int    $saleId,
         string $reference,
         float  $revenue,
         float  $cogs,
         string $currency,
-        string $description
+        string $description,
+        array  $cogsBreakdown = []
     ): void {
         if (!$this->isEnabled()) return;
         if ($this->alreadyPosted('sale', $saleId)) return;
 
         $ar        = $this->account('asset',   ['Accounts Receivable', 'receivable']);
         $revenueAc = $this->account('revenue', ['Revenue', 'Fuel Sales']);
-        $cogsAc    = $this->account('expense', ['Cost of Goods Sold', 'Fuel Purchase Cost', 'cogs']);
         $inventory = $this->account('asset',   ['Inventory']);
         if (!$ar || !$revenueAc) return;
 
         $journal = $this->journal('sale');
         if (!$journal) return;
 
+        // Build COGS debit lines from sub-accounts when a breakdown is provided
+        $cogsLines = [];
+        if (!empty($cogsBreakdown)) {
+            foreach ($cogsBreakdown as $key => $amount) {
+                if ($amount <= 0.005) continue;
+                $code = self::COGS_ACCOUNT_MAP[$key] ?? null;
+                if (!$code) continue;
+                $ac = $this->accountByCode($code);
+                if ($ac) {
+                    $label = $key === 'purchase_cost'
+                        ? 'Purchase Cost'
+                        : ucwords(str_replace('_', ' ', $key));
+                    $cogsLines[] = [$ac->id, round($amount, 2), $label];
+                }
+            }
+        }
+        // Fallback to single 5100 parent if no sub-accounts found
+        if (empty($cogsLines)) {
+            $cogsAc = $this->account('expense', ['Cost of Goods Sold', 'Fuel Purchase Cost', 'cogs']);
+            if ($cogsAc) {
+                $cogsLines[] = [$cogsAc->id, $cogs, 'COGS'];
+            }
+        }
+
         DB::transaction(function () use (
             $saleId, $reference, $revenue, $cogs, $currency,
-            $description, $ar, $revenueAc, $cogsAc, $inventory, $journal
+            $description, $ar, $revenueAc, $cogsLines, $inventory, $journal
         ) {
             $e1 = JournalEntry::create([
                 'company_id'  => $this->companyId,
@@ -143,7 +179,7 @@ class JournalAutoPost
             JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e1->id,'account_id'=>$ar->id,       'description'=>'Receivable','debit'=>$revenue,'credit'=>0]);
             JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e1->id,'account_id'=>$revenueAc->id,'description'=>'Revenue',   'debit'=>0,       'credit'=>$revenue]);
 
-            if ($cogsAc && $inventory && $cogs > 0) {
+            if (!empty($cogsLines) && $inventory && $cogs > 0) {
                 $e2 = JournalEntry::create([
                     'company_id'  => $this->companyId,
                     'journal_id'  => $journal->id,
@@ -156,8 +192,10 @@ class JournalAutoPost
                     'posted_by'   => auth()->id(),
                     'posted_at'   => now(),
                 ]);
-                JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$cogsAc->id,  'description'=>'COGS',              'debit'=>$cogs,'credit'=>0]);
-                JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$inventory->id,'description'=>'Inventory reduction','debit'=>0,    'credit'=>$cogs]);
+                foreach ($cogsLines as [$acId, $amount, $desc]) {
+                    JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$acId,        'description'=>$desc,               'debit'=>$amount,'credit'=>0]);
+                }
+                JournalEntryLine::create(['company_id'=>$this->companyId,'entry_id'=>$e2->id,'account_id'=>$inventory->id,'description'=>'Inventory reduction','debit'=>0,      'credit'=>$cogs]);
             }
         });
     }
@@ -364,6 +402,14 @@ class JournalAutoPost
     {
         return Journal::where('company_id', $this->companyId)->where('type', $type)->first()
             ?? Journal::where('company_id', $this->companyId)->first();
+    }
+
+    private function accountByCode(string $code): ?ChartOfAccount
+    {
+        return ChartOfAccount::where('company_id', $this->companyId)
+            ->where('code', $code)
+            ->where('is_active', true)
+            ->first();
     }
 
     private function account(string $type, array $nameHints): ?ChartOfAccount

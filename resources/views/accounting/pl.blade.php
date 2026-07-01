@@ -128,17 +128,6 @@
                 @empty
                 <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS journal entries in this period.</div>
                 @endforelse
-                @if(($cogsBreakdown ?? collect())->isNotEmpty())
-                <div class="px-5 py-1.5" style="background:var(--tw-surface-2)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Cost breakdown</span>
-                </div>
-                @foreach($cogsBreakdown as $line)
-                <div class="flex items-center justify-between px-5 py-2">
-                    <span class="text-sm {{ $muted }} pl-4">{{ $line['label'] }}</span>
-                    <span class="text-sm tabular-nums {{ $muted }}">({{ $fmt($line['amount']) }})</span>
-                </div>
-                @endforeach
-                @endif
             </div>
         </div>
 

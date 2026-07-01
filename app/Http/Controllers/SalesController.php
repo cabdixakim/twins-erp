@@ -676,16 +676,51 @@ class SalesController extends Controller
                 );
             });
 
+            // Compute COGS breakdown from batch costs for GL sub-account posting
+            $cogsBreakdown = [];
+            if (!empty($sale->batch_id)) {
+                $batchPurchaseId = \DB::table('batches')->where('id', $sale->batch_id)->value('purchase_id');
+                $loadedDenom = 0.0;
+                if ($batchPurchaseId) {
+                    $loadedDenom = (float) \DB::table('import_trucks')
+                        ->join('import_nominations', 'import_nominations.id', '=', 'import_trucks.nomination_id')
+                        ->where('import_nominations.purchase_id', $batchPurchaseId)
+                        ->whereNotNull('import_trucks.qty_loaded')
+                        ->sum('import_trucks.qty_loaded');
+                }
+                if (!$loadedDenom) {
+                    $batchRow    = \DB::table('batches')->where('id', $sale->batch_id)->first();
+                    $loadedDenom = (float) ($batchRow->qty_received ?: $batchRow->qty_purchased);
+                }
+                if ($loadedDenom > 0) {
+                    $batchCosts  = \DB::table('batch_costs')
+                        ->where('batch_id', $sale->batch_id)
+                        ->where('amount', '>', 0)
+                        ->get();
+                    $landedTotal = 0.0;
+                    foreach ($batchCosts as $bc) {
+                        $amt = round((float) ($bc->amount_base ?? $bc->amount) / $loadedDenom * $qty, 2);
+                        $cogsBreakdown[$bc->category] = ($cogsBreakdown[$bc->category] ?? 0) + $amt;
+                        $landedTotal += $amt;
+                    }
+                    $purchaseCost = round((float) ($sale->cogs_total ?? 0) - $landedTotal, 2);
+                    if ($purchaseCost > 0) {
+                        $cogsBreakdown = array_merge(['purchase_cost' => $purchaseCost], $cogsBreakdown);
+                    }
+                }
+            }
+
             // Auto-post journal entries — non-blocking, silently skips if CoA not seeded
             try {
                 \App\Services\JournalAutoPost::for((int) $sale->company_id)
                     ->postSale(
-                        saleId:      $sale->id,
-                        reference:   $sale->reference,
-                        revenue:     (float) $sale->total,
-                        cogs:        (float) ($sale->cogs_total ?? 0),
-                        currency:    $sale->currency ?? 'USD',
-                        description: 'Sale ' . $sale->reference
+                        saleId:        $sale->id,
+                        reference:     $sale->reference,
+                        revenue:       (float) $sale->total,
+                        cogs:          (float) ($sale->cogs_total ?? 0),
+                        currency:      $sale->currency ?? 'USD',
+                        description:   'Sale ' . $sale->reference,
+                        cogsBreakdown: $cogsBreakdown
                     );
             } catch (\Throwable) {}
 
