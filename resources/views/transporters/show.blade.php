@@ -207,6 +207,66 @@
 {{-- ══ TRIPS TAB ══ --}}
 @if($activeTab === 'trips')
 
+{{-- In-progress trucks (nominated / loaded / in-transit / border) --}}
+@if(isset($inProgressImportTrucks) && count($inProgressImportTrucks) > 0)
+<div class="mb-5">
+    <div class="text-[10px] uppercase tracking-widest font-semibold {{ $muted }} px-1 mb-2">In progress — projected payable</div>
+    <div class="space-y-2">
+        @foreach($inProgressImportTrucks as $ipt)
+        @php
+            $rate    = (float)($ipt->nomination->rate_per_1000l ?? 0);
+            $isNom   = $ipt->status === 'nominated';
+            $qty     = $isNom ? (float)$ipt->capacity : (float)$ipt->qty_loaded;
+            $proj    = $qty * $rate;
+            $cur     = $ipt->nomination->currency ?? $currency;
+            $scBadge = match($ipt->statusColor()) {
+                's-blue'   => 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30',
+                's-amber'  => 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+                's-orange' => 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30',
+                's-purple' => 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+                default    => 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30',
+            };
+        @endphp
+        <div class="rounded-2xl border border-dashed {{ $border }} {{ $surface }} overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-3.5 flex-wrap gap-2">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-sm font-semibold {{ $fg }}">{{ $ipt->truck_reg }}</span>
+                        @if($ipt->trailer_reg)
+                            <span class="text-[10px] {{ $muted }} font-mono">+ {{ $ipt->trailer_reg }}</span>
+                        @endif
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $scBadge }}">
+                            {{ $ipt->statusLabel() }}
+                        </span>
+                        @if($ipt->nomination?->purchase)
+                            <a href="{{ route('purchases.show', $ipt->nomination->purchase->id) }}"
+                               class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition">
+                                {{ $ipt->nomination->purchase->reference }}
+                            </a>
+                        @endif
+                    </div>
+                    <div class="text-[11px] {{ $muted }} mt-0.5 flex items-center gap-2 flex-wrap">
+                        @if($ipt->driver_name)
+                            <span>{{ $ipt->driver_name }}</span>
+                        @endif
+                        @if($isNom && $ipt->capacity > 0)
+                            <span>{{ number_format((float)$ipt->capacity, 0) }} capacity</span>
+                        @elseif(!$isNom && $qty > 0)
+                            <span>{{ number_format($qty, 0) }} loaded</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] {{ $muted }}">{{ $isNom ? 'Est. (capacity × rate)' : 'Projected (loaded × rate)' }}</div>
+                    <div class="text-sm font-semibold text-amber-600 dark:text-amber-400">~ {{ $sym($cur) }}{{ number_format($proj, 2) }}</div>
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
 @if(count($trips) === 0 && count($importTrips) === 0)
     <div class="rounded-2xl border {{ $border }} {{ $surface }} px-5 py-14 text-center">
         <div class="text-sm font-semibold {{ $fg }} mb-1">No trips yet</div>

@@ -157,6 +157,27 @@ class TransporterLedgerController extends Controller
             ($b['truck']?->delivery_date ?? now()) <=> ($a['truck']?->delivery_date ?? now())
         );
 
+        // In-progress trucks for this transporter (nominated, loaded, in-transit etc.)
+        $inProgressImportTrucks = ImportTruck::whereHas('nomination', function ($q) use ($cid, $transporter) {
+            $q->where('transporter_id', $transporter->id)
+              ->whereHas('purchase', fn ($q2) => $q2->where('company_id', $cid));
+        })
+        ->whereNotIn('status', ['delivered', 'loading_failed'])
+        ->with(['nomination.purchase'])
+        ->orderByDesc('id')
+        ->get();
+
+        $inProgressProjected = 0.0;
+        $inProgressCurrency  = $currency;
+        foreach ($inProgressImportTrucks as $ipt) {
+            $rate = (float) ($ipt->nomination->rate_per_1000l ?? 0);
+            $qty  = $ipt->status === 'nominated' ? (float) $ipt->capacity : (float) $ipt->qty_loaded;
+            $inProgressProjected += $qty * $rate;
+            if ($inProgressCurrency === $currency && !empty($ipt->nomination->currency)) {
+                $inProgressCurrency = $ipt->nomination->currency;
+            }
+        }
+
         // Build clickable reference links for ledger tab
         $allEntries = $entries->getCollection();
 
@@ -226,7 +247,8 @@ class TransporterLedgerController extends Controller
             'transporter', 'entries', 'refLinks',
             'freightTotal', 'advanceTotal', 'shortChargeTotal', 'paymentTotal',
             'netPayable', 'currency', 'pettyCashAccounts', 'bankAccounts',
-            'trips', 'importTrips', 'openSales'
+            'trips', 'importTrips', 'openSales',
+            'inProgressImportTrucks', 'inProgressProjected', 'inProgressCurrency'
         ));
     }
 

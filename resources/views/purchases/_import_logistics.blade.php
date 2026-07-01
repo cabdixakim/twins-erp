@@ -32,6 +32,10 @@
   $grossPayable        = $nom ? ($qtyLoaded * (float)$nom->rate_per_1000l / $rateDivisor) : 0;
   $totalShortCharge    = $deliveredTrucks->sum('shortfall_charge');
 
+  // Nominated estimate — trucks still at 'nominated' stage not yet loaded
+  $nominatedCapacity   = $trucks->where('status', 'nominated')->sum('capacity');
+  $nominatedEst        = $nom ? ($nominatedCapacity * (float)$nom->rate_per_1000l / $rateDivisor) : 0;
+
   // Advances — new multi-entry table takes precedence; fall back to legacy single field
   $nominationAdvances  = $nom
     ? \App\Models\NominationAdvance::where('nomination_id', $nom->id)->with('creator')->orderBy('advance_date')->get()
@@ -508,10 +512,24 @@
     {{-- Financial summary --}}
     <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }}">
       <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-3">Transporter payable</div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
         <div>
-          <div class="text-[10px] {{ $muted }}">Gross (loaded × rate)</div>
+          <div class="text-[10px] {{ $muted }}">Nominated est.</div>
+          <div class="font-semibold {{ $nominatedCapacity > 0 ? 's-slate' : $muted }}">
+            {{ $nom->currency }} {{ number_format($nominatedEst, 2) }}
+          </div>
+          @if($nominatedCapacity > 0)
+          <div class="text-[9px] {{ $muted }} mt-0.5">{{ number_format($nominatedCapacity, 0) }} {{ $unitLabel }} × rate</div>
+          @else
+          <div class="text-[9px] {{ $muted }} mt-0.5">No pending trucks</div>
+          @endif
+        </div>
+        <div>
+          <div class="text-[10px] {{ $muted }}">Loaded (confirmed)</div>
           <div class="font-semibold {{ $fg }}">{{ $nom->currency }} {{ number_format($grossPayable, 2) }}</div>
+          @if($qtyLoaded > 0)
+          <div class="text-[9px] {{ $muted }} mt-0.5">{{ number_format($qtyLoaded, 0) }} {{ $unitLabel }} loaded</div>
+          @endif
         </div>
         <div>
           <div class="text-[10px] {{ $muted }}">Advances</div>
