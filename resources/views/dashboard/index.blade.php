@@ -34,12 +34,10 @@
 
       {{-- Copy + recovery URL --}}
       <div class="flex gap-2">
-        <button @click="navigator.clipboard.writeText('{{ $recoveryToken }}'); copied = true; setTimeout(() => copied = false, 2500)"
-                type="button"
-                class="flex-1 h-9 rounded-lg border text-xs font-semibold transition"
-                :class="copied ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'">
-          <span x-show="!copied">📋 Copy code</span>
-          <span x-show="copied">✓ Copied!</span>
+        <button type="button" id="copyTokenBtn"
+                onclick="copyRecoveryToken(this, '{{ $recoveryToken }}')"
+                class="flex-1 h-9 rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 text-xs font-semibold transition">
+          📋 Copy code
         </button>
         <a href="{{ route('account-recovery') }}" target="_blank"
            class="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-xs text-slate-400 hover:bg-white/10 hover:text-slate-300 transition whitespace-nowrap">
@@ -525,4 +523,21 @@
   </div>
 
 </div>
+@if(isset($recoveryToken))
+<script>
+function copyRecoveryToken(btn, token) {
+  navigator.clipboard.writeText(token).then(function() {
+    var orig = btn.innerHTML;
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('border-emerald-500/40', 'bg-emerald-500/15', 'text-emerald-400');
+    btn.classList.remove('border-white/10', 'bg-white/5', 'text-slate-300');
+    setTimeout(function() {
+      btn.innerHTML = orig;
+      btn.classList.remove('border-emerald-500/40', 'bg-emerald-500/15', 'text-emerald-400');
+      btn.classList.add('border-white/10', 'bg-white/5', 'text-slate-300');
+    }, 2000);
+  });
+}
+</script>
+@endif
 @endsection
