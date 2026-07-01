@@ -227,7 +227,7 @@
           </div>
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Unit price</dt>
-            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/L</span></dd>
+            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/{{ $volLabel }}</span></dd>
           </div>
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Total value</dt>
@@ -377,7 +377,7 @@
         </div>
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Unit price</dt>
-          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/L</span></dd>
+          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($unit, 4) }}<span class="text-xs font-normal {{ $muted }} ml-1">{{ $currency }}/{{ $volLabel }}</span></dd>
         </div>
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Total value</dt>
