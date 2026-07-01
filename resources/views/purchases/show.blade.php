@@ -222,7 +222,7 @@
         <dl class="divide-y {{ $border }}">
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Quantity</dt>
-            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 0) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+            <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
           </div>
           <div class="px-4 py-2.5 flex items-center justify-between gap-2">
             <dt class="text-xs {{ $muted }}">Unit price</dt>
@@ -264,7 +264,7 @@
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
           <div class="px-4 py-3 {{ $surface2 }} border-b {{ $border }} flex items-center justify-between gap-2">
             <span class="text-xs font-semibold {{ $fg }}">Delivery progress</span>
-            <span class="text-xs {{ $muted }}">{{ number_format($qtyDelivered, 0) }} / {{ number_format($qty, 0) }} L
+            <span class="text-xs {{ $muted }}">{{ number_format($qtyDelivered, 3) }} / {{ number_format($qty, 3) }} L
               <span class="font-semibold {{ $fg }}">{{ $pct }}%</span>
             </span>
           </div>
@@ -287,7 +287,7 @@
                 @foreach($importMovements as $mv)
                   <tr>
                     <td class="px-4 py-2 {{ $fg }}">{{ $mv->toDepot?->name ?? '—' }}</td>
-                    <td class="px-4 py-2 text-right {{ $fg }} font-semibold">{{ number_format($mv->qty, 0) }}</td>
+                    <td class="px-4 py-2 text-right {{ $fg }} font-semibold">{{ number_format($mv->qty, 3) }}</td>
                     <td class="px-4 py-2 text-right {{ $muted }}">{{ $mv->created_at->format('d M') }}</td>
                   </tr>
                 @endforeach
@@ -372,7 +372,7 @@
       <dl class="divide-y {{ $border }}">
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Quantity</dt>
-          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 0) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
+          <dd class="text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }}<span class="text-xs font-normal {{ $muted }} ml-1">L</span></dd>
         </div>
         <div class="px-4 py-2.5 flex items-center justify-between gap-2">
           <dt class="text-xs {{ $muted }}">Unit price</dt>

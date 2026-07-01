@@ -139,13 +139,13 @@
           Nominated
           <strong class="{{ $overNominated ? 'text-amber-500' : $fg }}">{{ number_format($totalCapacity, 0) }} {{ $unitLabel }}</strong>
           @if($overNominated)
-            <span class="text-amber-500 ml-0.5">(+{{ number_format($totalCapacity - $qty, 0) }} over PO)</span>
+            <span class="text-amber-500 ml-0.5">(+{{ number_format($totalCapacity - $qty, 3) }} over PO)</span>
           @endif
         </span>
         <span class="{{ $muted }}">·</span>
-        <span class="{{ $muted }}">Loaded <strong class="{{ $fg }}">{{ number_format($qtyLoaded, 0) }}</strong></span>
+        <span class="{{ $muted }}">Loaded <strong class="{{ $fg }}">{{ number_format($qtyLoaded, 3) }}</strong></span>
         <span class="{{ $muted }}">·</span>
-        <span class="{{ $muted }}">Delivered <strong class="{{ $deliveredPct === 100 ? 'text-emerald-500' : $fg }}">{{ number_format($qtyDelivered, 0) }}</strong></span>
+        <span class="{{ $muted }}">Delivered <strong class="{{ $deliveredPct === 100 ? 'text-emerald-500' : $fg }}">{{ number_format($qtyDelivered, 3) }}</strong></span>
         @if($remainingAtShipper > 0)
           <span class="{{ $muted }}">·</span>
           <span class="{{ $muted }}">At shipper <strong class="text-amber-500">{{ number_format($remainingAtShipper, 0) }}</strong></span>
@@ -319,14 +319,14 @@
 
                 {{-- Capacity --}}
                 <td class="py-3 pr-3 text-right font-semibold {{ $fg }} whitespace-nowrap">
-                  {{ number_format($truck->capacity, 0) }}
+                  {{ number_format($truck->capacity, 3) }}
                   <span class="font-normal {{ $muted }}">{{ $unitLabel }}</span>
                 </td>
 
                 {{-- Loaded --}}
                 <td class="py-3 pr-3 text-right {{ $fg }} whitespace-nowrap">
                   @if($truck->qty_loaded !== null)
-                    <span class="font-semibold">{{ number_format($truck->qty_loaded, 0) }}</span>
+                    <span class="font-semibold">{{ number_format($truck->qty_loaded, 3) }}</span>
                     @if($truck->pickup_date)
                       <span class="block text-[10px] {{ $muted }}">{{ $truck->pickup_date->format('d M') }}</span>
                     @endif
@@ -338,7 +338,7 @@
                 {{-- Delivered --}}
                 <td class="py-3 pr-3 text-right whitespace-nowrap">
                   @if($truck->qty_delivered !== null)
-                    <span class="font-semibold text-emerald-500">{{ number_format($truck->qty_delivered, 0) }}</span>
+                    <span class="font-semibold text-emerald-500">{{ number_format($truck->qty_delivered, 3) }}</span>
                     @if($truck->delivery_date)
                       <span class="block text-[10px] {{ $muted }}">{{ $truck->delivery_date->format('d M') }}</span>
                     @endif
@@ -354,7 +354,7 @@
                       <span class="font-semibold text-rose-400">
                         {{ $nom->short_charge_currency }} {{ number_format($truck->shortfall_charge, 2) }}
                       </span>
-                      <span class="block text-[10px] {{ $muted }}">{{ number_format($truck->excess_loss_qty, 0) }} excess</span>
+                      <span class="block text-[10px] {{ $muted }}">{{ number_format($truck->excess_loss_qty, 3) }} excess</span>
                     @else
                       <span class="text-emerald-500 text-[11px]">Within tolerance</span>
                     @endif
@@ -473,7 +473,7 @@
         <div class="flex flex-wrap items-center gap-4 text-sm">
           <div>
             <div class="text-[10px] {{ $muted }}">Qty</div>
-            <div class="font-semibold {{ $fg }}">{{ number_format((float)$purchase->shipper_remainder_qty, 0) }} L</div>
+            <div class="font-semibold {{ $fg }}">{{ number_format((float)$purchase->shipper_remainder_qty, 3) }} L</div>
           </div>
           <div>
             <div class="text-[10px] {{ $muted }}">Resolution</div>
@@ -521,7 +521,7 @@
           <div class="text-[10px] {{ $muted }}">Loaded (confirmed)</div>
           <div class="font-semibold {{ $fg }}">{{ $nom->currency }} {{ number_format($grossPayable, 2) }}</div>
           @if($qtyLoaded > 0)
-          <div class="text-[9px] {{ $muted }} mt-0.5">{{ number_format($qtyLoaded, 0) }} {{ $unitLabel }} loaded</div>
+          <div class="text-[9px] {{ $muted }} mt-0.5">{{ number_format($qtyLoaded, 3) }} {{ $unitLabel }} loaded</div>
           @endif
         </div>
         <div>
@@ -1242,7 +1242,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         @csrf
         <div class="p-5 space-y-4">
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 text-xs {{ $muted }}">
-            Capacity: <span class="font-semibold {{ $fg }}">{{ number_format($truck->capacity, 0) }} {{ $unitLabel }}</span>
+            Capacity: <span class="font-semibold {{ $fg }}">{{ number_format($truck->capacity, 3) }} {{ $unitLabel }}</span>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -1297,7 +1297,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         @csrf
         <div class="p-5 space-y-4">
           <div class="alert-err rounded-xl p-3 text-sm">
-            This truck will be marked as <strong>loading failed</strong>. The capacity ({{ number_format($truck->capacity, 0) }} {{ $unitLabel }}) will remain as unloaded quantity at the shipper.
+            This truck will be marked as <strong>loading failed</strong>. The capacity ({{ number_format($truck->capacity, 3) }} {{ $unitLabel }}) will remain as unloaded quantity at the shipper.
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason</label>
@@ -1878,13 +1878,13 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty loaded ({{ $unitLabel }}) <span class="text-rose-400">*</span></label>
               <input type="number" name="qty_loaded" step="0.001" min="1" required
-                     placeholder="e.g. {{ number_format($truck->capacity, 0) }}"
+                     placeholder="e.g. {{ number_format($truck->capacity, 3) }}"
                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty delivered ({{ $unitLabel }}) <span class="text-rose-400">*</span></label>
               <input type="number" name="qty_delivered" step="0.001" min="0" required
-                     placeholder="e.g. {{ number_format($truck->capacity, 0) }}"
+                     placeholder="e.g. {{ number_format($truck->capacity, 3) }}"
                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
             </div>
           </div>
