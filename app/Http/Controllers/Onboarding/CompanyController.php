@@ -60,12 +60,13 @@ class CompanyController extends Controller
 
         // 4) Create company record
         $company = Company::create([
-            'name'           => $data['company_name'],
-            'code'           => $data['code'],
-            'slug'           => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
-            'base_currency'  => $data['base_currency'],
-            'volume_unit'    => $data['volume_unit'],
-            'costing_method' => $data['costing_method'],
+            'name'               => $data['company_name'],
+            'code'               => $data['code'],
+            'slug'               => strtolower(preg_replace('/[^a-z0-9]+/i', '-', $data['company_name'])) . '-' . uniqid(),
+            'base_currency'      => $data['base_currency'],
+            'volume_unit'        => $data['volume_unit'],
+            'costing_method'     => $data['costing_method'],
+            'accounting_enabled' => true,
         ]);
         
         // ✅ ADDITION: create CROSS DOCK depot
