@@ -8,10 +8,11 @@
     $btnPrimary = "inline-flex items-center gap-2 rounded-xl border border-emerald-500/50 bg-emerald-600 text-white hover:bg-emerald-500 transition font-semibold text-xs px-3 py-2";
     $btnGhost   = "inline-flex items-center gap-2 rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-btn)] text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-btn-hover)] transition text-xs px-3 py-2";
 
-    $fmt = fn($n) => number_format(abs($n), 2);
-    $fmtSigned = function($n) {
-        if ($n >= 0) return '<span class="text-emerald-400 font-bold">'.number_format($n, 2).'</span>';
-        return '<span class="text-rose-400 font-bold">('.number_format(abs($n), 2).')</span>';
+    $cur = $currency ?? 'USD';
+    $fmt = fn($n) => $cur . ' ' . number_format(abs($n), 2);
+    $fmtSigned = function($n) use ($cur) {
+        if ($n >= 0) return '<span class="text-emerald-400 font-bold">'.$cur.' '.number_format($n, 2).'</span>';
+        return '<span class="text-rose-400 font-bold">('.$cur.' '.number_format(abs($n), 2).')</span>';
     };
 
     $volUnit = $volumeUnit ?? 'L';
@@ -26,18 +27,16 @@
         'other'         => 'Other Costs',
     ];
 
-    // Build by-product summary for sidebar (operational mode only)
+    // Build by-product summary for sidebar
     $byProductMap = [];
-    if (!$useGL) {
-        foreach ($revenueRows ?? [] as $row) {
-            $byProductMap[$row->product_name] = ['revenue' => (float)$row->revenue, 'qty' => (float)$row->qty, 'cogs' => 0];
+    foreach ($revenueRows ?? [] as $row) {
+        $byProductMap[$row->product_name] = ['revenue' => (float)$row->revenue, 'qty' => (float)$row->qty, 'cogs' => 0];
+    }
+    foreach ($cogsRows ?? [] as $row) {
+        if (!isset($byProductMap[$row->product_name])) {
+            $byProductMap[$row->product_name] = ['revenue' => 0, 'qty' => (float)$row->qty, 'cogs' => 0];
         }
-        foreach ($cogsRows ?? [] as $row) {
-            if (!isset($byProductMap[$row->product_name])) {
-                $byProductMap[$row->product_name] = ['revenue' => 0, 'qty' => (float)$row->qty, 'cogs' => 0];
-            }
-            $byProductMap[$row->product_name]['cogs'] = (float)$row->cogs;
-        }
+        $byProductMap[$row->product_name]['cogs'] = (float)$row->cogs;
     }
 @endphp
 
@@ -100,114 +99,6 @@
     {{-- ── STATEMENT COLUMN ── --}}
     <div class="lg:col-span-2 space-y-3">
 
-@if($useGL)
-{{-- ══ GL MODE ══ --}}
-
-        {{-- Revenue --}}
-        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Revenue</span>
-                <span class="text-sm font-bold text-emerald-400">{{ $fmt($totalRevenue) }}</span>
-            </div>
-            <div class="divide-y divide-[color:var(--tw-border)]">
-                @forelse($glRevenue as $row)
-                <div class="flex items-center gap-3 px-5 py-2.5">
-                    <span class="font-mono text-[10px] {{ $muted }} w-16 shrink-0">{{ $row->code }}</span>
-                    <span class="text-sm {{ $fg }} flex-1">{{ $row->account_name }}</span>
-                    <span class="text-sm font-semibold tabular-nums {{ $row->net >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">{{ $fmt($row->net) }}</span>
-                </div>
-                @empty
-                <div class="px-5 py-4 text-sm {{ $muted }} italic">No revenue journal entries in this period.</div>
-                @endforelse
-            </div>
-        </div>
-
-        {{-- COGS --}}
-        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Goods Sold</span>
-                <span class="text-sm font-bold text-rose-400">({{ $fmt($totalCogs) }})</span>
-            </div>
-            <div class="divide-y divide-[color:var(--tw-border)]">
-                @forelse($glCogs as $row)
-                <div class="flex items-center gap-3 px-5 py-2.5">
-                    <span class="font-mono text-[10px] {{ $muted }} w-16 shrink-0">{{ $row->code }}</span>
-                    <span class="text-sm {{ $fg }} flex-1">{{ $row->account_name }}</span>
-                    <span class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($row->net) }})</span>
-                </div>
-                @empty
-                <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS journal entries in this period.</div>
-                @endforelse
-
-                {{-- Operational breakdown (from sales records) --}}
-                @if(($cogsRows ?? collect())->isNotEmpty() || ($landedCosts ?? collect())->isNotEmpty())
-                <div class="px-5 py-1.5" style="background:rgba(251,191,36,.06)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider" style="color:#f59e0b">Breakdown (from sales records)</span>
-                </div>
-                @if(($cogsRows ?? collect())->isNotEmpty())
-                <div class="px-5 py-1" style="background:var(--tw-surface-2)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Purchase cost by product</span>
-                </div>
-                @foreach($cogsRows ?? [] as $row)
-                <div class="flex items-center justify-between px-5 py-2">
-                    <span class="text-sm {{ $fg }}">{{ $row->product_name }}</span>
-                    <div class="text-right">
-                        <div class="text-sm tabular-nums {{ $fg }}">({{ $fmt($row->cogs) }})</div>
-                        <div class="text-[10px] {{ $muted }}">{{ number_format($row->qty, 0) }} {{ $volUnit }}</div>
-                    </div>
-                </div>
-                @endforeach
-                @endif
-                @if(($landedCosts ?? collect())->isNotEmpty())
-                <div class="px-5 py-1" style="background:var(--tw-surface-2)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Landed costs (proportional to qty sold)</span>
-                </div>
-                @foreach($landedCosts ?? [] as $row)
-                <div class="flex items-center justify-between px-5 py-2">
-                    <span class="text-sm {{ $fg }}">{{ $categoryLabels[$row->category] ?? ucfirst(str_replace('_', ' ', $row->category)) }}</span>
-                    <span class="text-sm tabular-nums {{ $fg }}">({{ $fmt($row->total) }})</span>
-                </div>
-                @endforeach
-                <div class="flex items-center justify-between px-5 py-2 text-[11px] font-semibold {{ $muted }}">
-                    <span>Total incl. landed</span>
-                    <span>({{ $fmt($totalCogs + ($totalLanded ?? 0)) }})</span>
-                </div>
-                @endif
-                @endif
-            </div>
-        </div>
-
-        {{-- Gross Profit --}}
-        <div class="rounded-2xl border overflow-hidden {{ $grossProfit >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
-            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfit >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
-                <div>
-                    <div class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Gross Profit</div>
-                    @if($grossMargin !== null)<div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMargin }}% margin</div>@endif
-                </div>
-                <div class="text-xl font-bold">{!! $fmtSigned($grossProfit) !!}</div>
-            </div>
-        </div>
-
-        {{-- Operating Expenses --}}
-        <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Operating Expenses</span>
-                <span class="text-sm font-bold text-rose-400">({{ $fmt($totalOpex) }})</span>
-            </div>
-            <div class="divide-y divide-[color:var(--tw-border)]">
-                @forelse($glOpex as $row)
-                <div class="flex items-center gap-3 px-5 py-2.5">
-                    <span class="font-mono text-[10px] {{ $muted }} w-16 shrink-0">{{ $row->code }}</span>
-                    <span class="text-sm {{ $fg }} flex-1">{{ $row->account_name }}</span>
-                    <span class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($row->net) }})</span>
-                </div>
-                @empty
-                <div class="px-5 py-4 text-sm {{ $muted }} italic">No operating expense journal entries in this period.</div>
-                @endforelse
-            </div>
-        </div>
-
-@else
 {{-- ══ OPERATIONAL MODE ══ --}}
 
         {{-- Revenue --}}
@@ -362,7 +253,6 @@
         </div>
         @endif
 
-@endif
 
         {{-- Net Profit -- shared --}}
         <div class="rounded-2xl border overflow-hidden {{ $netProfit >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40' }}">

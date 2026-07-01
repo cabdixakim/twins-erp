@@ -198,118 +198,10 @@ class AccountingController extends Controller
         // GL mode: read from journal_entry_lines when accounting_enabled + CoA seeded
         $company    = DB::table('companies')->where('id', $cid)->first();
         $volumeUnit = strtoupper($company->volume_unit ?? 'L') === 'M3' ? 'M3' : 'L';
+        $currency   = strtoupper($company->base_currency ?? 'USD');
         $useGL      = $company && $company->accounting_enabled
                    && ChartOfAccount::where('company_id', $cid)->exists();
 
-        if ($useGL) {
-            $lines = DB::table('journal_entry_lines')
-                ->join('journal_entries',   'journal_entries.id',   '=', 'journal_entry_lines.entry_id')
-                ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_entry_lines.account_id')
-                ->where('journal_entry_lines.company_id', $cid)
-                ->where('journal_entries.status', 'posted')
-                ->whereBetween('journal_entries.entry_date', [$from, $to])
-                ->whereIn('chart_of_accounts.type', ['revenue', 'expense'])
-                ->selectRaw('
-                    chart_of_accounts.code,
-                    chart_of_accounts.name     as account_name,
-                    chart_of_accounts.type     as account_type,
-                    chart_of_accounts.sub_type as sub_type,
-                    SUM(journal_entry_lines.credit) as total_credit,
-                    SUM(journal_entry_lines.debit)  as total_debit
-                ')
-                ->groupBy(
-                    'chart_of_accounts.code',
-                    'chart_of_accounts.name',
-                    'chart_of_accounts.type',
-                    'chart_of_accounts.sub_type'
-                )
-                ->orderBy('chart_of_accounts.code')
-                ->get();
-
-            $glRevenue = $lines
-                ->filter(fn($r) => $r->account_type === 'revenue')
-                ->map(fn($r) => (object)[
-                    'code'         => $r->code,
-                    'account_name' => $r->account_name,
-                    'net'          => round((float)$r->total_credit - (float)$r->total_debit, 2),
-                ])->values();
-
-            $glCogs = $lines
-                ->filter(fn($r) => $r->account_type === 'expense' && $r->sub_type === 'cogs')
-                ->map(fn($r) => (object)[
-                    'code'         => $r->code,
-                    'account_name' => $r->account_name,
-                    'net'          => round((float)$r->total_debit - (float)$r->total_credit, 2),
-                ])->values();
-
-            $glOpex = $lines
-                ->filter(fn($r) => $r->account_type === 'expense' && $r->sub_type !== 'cogs')
-                ->map(fn($r) => (object)[
-                    'code'         => $r->code,
-                    'account_name' => $r->account_name,
-                    'net'          => round((float)$r->total_debit - (float)$r->total_credit, 2),
-                ])->values();
-
-            $totalRevenue = round((float)$glRevenue->sum('net'), 2);
-            $totalCogs    = round((float)$glCogs->sum('net'), 2);
-            $totalOpex    = round((float)$glOpex->sum('net'), 2);
-            $grossProfit  = $totalRevenue - $totalCogs;
-            $netProfit    = $grossProfit - $totalOpex;
-            $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
-            $netMargin    = $totalRevenue > 0 ? round($netProfit  / $totalRevenue * 100, 1) : null;
-
-            // Operational COGS detail — shown as a breakdown inside the GL COGS card
-            $cogsRows = DB::table('sales')
-                ->join('products', 'products.id', '=', 'sales.product_id')
-                ->where('sales.company_id', $cid)
-                ->where('sales.status', 'posted')
-                ->whereBetween('sales.posted_at', [$from, $to])
-                ->selectRaw('products.name as product_name, SUM(sales.cogs_total) as cogs, SUM(sales.qty) as qty')
-                ->groupBy('products.name')
-                ->orderByDesc('cogs')
-                ->get();
-
-            $rawLandedGL = DB::select("
-                SELECT bc.category,
-                       SUM(
-                           COALESCE(bc.amount_base, bc.amount)
-                           / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
-                           * ic_agg.qty_consumed
-                       ) AS total
-                FROM batch_costs bc
-                JOIN batches b ON b.id = bc.batch_id AND b.company_id = ?
-                JOIN (
-                    SELECT batch_id, SUM(qty) AS qty_consumed
-                    FROM inventory_consumptions
-                    WHERE company_id = ?
-                      AND DATE(created_at) BETWEEN ? AND ?
-                    GROUP BY batch_id
-                ) ic_agg ON ic_agg.batch_id = b.id
-                WHERE bc.amount > 0
-                GROUP BY bc.category
-                HAVING SUM(
-                    COALESCE(bc.amount_base, bc.amount)
-                    / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
-                    * ic_agg.qty_consumed
-                ) > 0.01
-            ", [$cid, $cid, $from, $to]);
-            $landedCosts = collect($rawLandedGL)->map(fn($r) => (object)[
-                'category' => $r->category,
-                'total'    => (float) $r->total,
-            ]);
-            $totalLanded = $landedCosts->sum('total');
-
-            return view('accounting.pl', compact(
-                'useGL', 'glRevenue', 'glCogs', 'glOpex',
-                'totalRevenue', 'totalCogs', 'totalOpex',
-                'grossProfit', 'netProfit', 'grossMargin', 'netMargin',
-                'from', 'to', 'volumeUnit',
-                'cogsRows', 'landedCosts', 'totalLanded'
-            ));
-        }
-
-        // ── Operational mode ─────────────────────────────────────────────────
-        $useGL = false;
 
         // Revenue from posted sales — use posted_at (same as Reports P&L)
         $revenueRows = DB::table('sales')
@@ -469,7 +361,7 @@ class AccountingController extends Controller
             'totalJournalRevenue', 'totalJournalExpenses',
             'grossProfit', 'totalOpex', 'netProfit',
             'grossMargin', 'netMargin',
-            'from', 'to', 'volumeUnit'
+            'from', 'to', 'volumeUnit', 'currency'
         ));
     }
 
