@@ -6,6 +6,13 @@
 
 <div class="space-y-5">
 
+    {{-- Breadcrumb --}}
+    <div class="no-print flex items-center gap-2 text-xs mb-1" style="color:var(--tw-muted)">
+        <a href="{{ route('accounting.index') }}" class="hover:underline">Accounting</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>Journal Entries</span>
+    </div>
+
     {{-- Alerts --}}
     @if(session('success'))
     <div class="text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-4 py-3">{{ session('success') }}</div>
