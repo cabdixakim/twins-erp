@@ -16,6 +16,16 @@
 
     $volUnit = $volumeUnit ?? 'L';
 
+    $categoryLabels = [
+        'freight'       => 'Freight & Transport',
+        'duty'          => 'Customs & Duty',
+        'border_charge' => 'Border Charges',
+        'hospitality'   => 'Hospitality',
+        'storage'       => 'Storage',
+        'penalty'       => 'Penalties',
+        'other'         => 'Other Costs',
+    ];
+
     // Build by-product summary for sidebar (operational mode only)
     $byProductMap = [];
     if (!$useGL) {
@@ -228,7 +238,7 @@
                 </div>
                 @foreach($landedCosts ?? [] as $row)
                 <div class="flex items-center justify-between px-5 py-2.5">
-                    <span class="text-sm {{ $fg }}">{{ ucfirst(str_replace('_', ' ', $row->category)) }}</span>
+                    <span class="text-sm {{ $fg }}">{{ $categoryLabels[$row->category] ?? ucfirst(str_replace('_', ' ', $row->category)) }}</span>
                     <span class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($row->total) }})</span>
                 </div>
                 @endforeach

@@ -15,6 +15,7 @@
         if ($n >= 0) return '<span class="text-emerald-400 font-bold">'.number_format($n, 0).'</span>';
         return '<span class="text-rose-400 font-bold">('.number_format(abs($n), 0).')</span>';
     };
+    $volUnit = ($volumeUnit ?? 'L');
 @endphp
 
 @extends('layouts.app')
@@ -69,7 +70,7 @@
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
             <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Income</span>
-                <span class="text-[10px] {{ $muted }}">{{ number_format($qtySold, 0) }} L sold</span>
+                <span class="text-[10px] {{ $muted }}">{{ number_format($qtySold, 0) }} {{ $volUnit }} sold</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
                 <div class="flex items-center justify-between px-5 py-3">
@@ -96,17 +97,40 @@
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
-                <div class="flex items-center justify-between px-5 py-3">
+                {{-- Per-product purchase cost --}}
+                @if($byProduct->isNotEmpty())
+                <div class="px-5 py-1.5 {{ $surface2 }}">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Purchase cost by product</span>
+                </div>
+                @foreach($byProduct as $row)
+                @if((float)$row->cogs > 0)
+                <div class="flex items-center justify-between px-5 py-2.5">
+                    <span class="text-sm {{ $fg }}">{{ $row->product_name }}</span>
+                    <div class="text-right">
+                        <div class="text-sm tabular-nums {{ $fg }}">{{ $fmt($row->cogs) }}</div>
+                        <div class="text-[10px] {{ $muted }}">{{ number_format((float)$row->qty, 0) }} {{ $volUnit }}</div>
+                    </div>
+                </div>
+                @endif
+                @endforeach
+                @else
+                <div class="flex items-center justify-between px-5 py-2.5">
                     <span class="text-sm {{ $fg }}">Cost of Fuel Purchased</span>
                     <span class="text-sm {{ $muted }}">{{ $fmt($cogs) }}</span>
                 </div>
-                {{-- Landed costs are part of COGS --}}
+                @endif
+                {{-- Landed costs --}}
+                @if($landedLines->isNotEmpty())
+                <div class="px-5 py-1.5 {{ $surface2 }}">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Landed costs (proportional to qty sold)</span>
+                </div>
                 @foreach($landedLines as $line)
-                <div class="flex items-center justify-between px-5 py-3">
+                <div class="flex items-center justify-between px-5 py-2.5">
                     <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
-                    <span class="text-sm {{ $muted }}">{{ $fmt($line['amount']) }}</span>
+                    <span class="text-sm tabular-nums {{ $muted }}">{{ $fmt($line['amount']) }}</span>
                 </div>
                 @endforeach
+                @endif
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
                     <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
