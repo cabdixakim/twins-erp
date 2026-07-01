@@ -22,6 +22,7 @@
 @section('subtitle', $subtitle)
 
 @section('content')
+<div class="max-w-5xl mx-auto">
 
 {{-- Breadcrumb --}}
 <div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
@@ -267,5 +268,7 @@
 
     </div>
 </div>
+
+</div>{{-- max-w-5xl --}}
 
 @endsection
