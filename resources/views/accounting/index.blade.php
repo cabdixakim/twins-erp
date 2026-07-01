@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="space-y-6">
+<div class="max-w-5xl mx-auto space-y-6">
 
     {{-- MTD P&L strip --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
