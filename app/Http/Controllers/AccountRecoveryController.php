@@ -40,8 +40,19 @@ class AccountRecoveryController extends Controller
         $user->status         = 'active';
         $user->save();
 
+        // Optionally wipe all existing sessions before logging in fresh
+        if ($request->boolean('logout_all_sessions')) {
+            $sessionPath = storage_path('framework/sessions');
+            if (is_dir($sessionPath)) {
+                foreach (glob($sessionPath . '/*') as $file) {
+                    if (is_file($file)) @unlink($file);
+                }
+            }
+        }
+
         // Log them in immediately
         Auth::login($user);
+        $request->session()->regenerate();
 
         return redirect('/dashboard')->with('status', 'Account recovered. Welcome back.');
     }

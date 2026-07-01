@@ -75,6 +75,16 @@
                 autocomplete="new-password">
         </div>
 
+        <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="logout_all_sessions" value="1"
+                   class="mt-0.5 h-4 w-4 shrink-0 rounded accent-emerald-500 cursor-pointer"
+                   style="border-color:var(--tw-border);background:var(--tw-surface-2)">
+            <span class="text-xs leading-relaxed" style="color:var(--tw-muted)">
+                Sign out all other active sessions after recovery
+                <span class="block mt-0.5 opacity-70">Recommended if you suspect unauthorised access</span>
+            </span>
+        </label>
+
         <button type="submit"
             class="w-full h-11 rounded-xl border border-emerald-600 bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 hover:border-emerald-700 transition">
             Recover account
