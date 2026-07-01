@@ -2844,7 +2844,6 @@ function syncNomDutyId(type) {
 </script>
 
 @push('scripts')
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -3243,7 +3242,23 @@ function syncNomDutyId(type) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function parseFile(file) {
+  // ── Lazy SheetJS loader — fetched only when a file is actually selected ──
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      s.onload  = () => resolve(window.XLSX);
+      s.onerror = () => reject(new Error('Failed to load XLSX library'));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function parseFile(file) {
+    try { await loadXlsx(); } catch (_) {
+      showFileError(file.name, 'Could not load the spreadsheet library. Check your connection and try again.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
