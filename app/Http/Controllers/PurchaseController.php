@@ -520,7 +520,7 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         }
     });
 
-    if ($purchase->type === 'cross_dock') {
+    if (in_array($purchase->type, ['cross_dock', 'import'], true)) {
         try {
             \App\Services\JournalAutoPost::for((int) $purchase->company_id)
                 ->postCrossDockConfirm(
@@ -528,7 +528,8 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
                     reference:   $purchase->reference,
                     amount:      round((float) $purchase->qty * (float) $purchase->unit_price, 2),
                     currency:    $purchase->currency ?? 'USD',
-                    description: 'Cross-dock purchase ' . $purchase->reference . ' — stock receipted',
+                    description: ($purchase->type === 'import' ? 'Import purchase ' : 'Cross-dock purchase ')
+                                 . $purchase->reference . ' — obligation confirmed',
                 );
         } catch (\Throwable) {}
     }
