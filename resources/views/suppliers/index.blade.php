@@ -13,7 +13,7 @@
 
 @extends('layouts.app')
 @section('title', 'Suppliers')
-@section('subtitle', 'Fuel suppliers — invoices, payments & balances.')
+@section('subtitle', 'Fuel suppliers — balances and payment records.')
 
 @section('content')
 
@@ -58,19 +58,15 @@
                 <tr class="border-b {{ $border }} {{ $surface2 }} text-xs {{ $muted }}">
                     <th class="text-left py-3 pl-5 pr-3 font-semibold">Supplier</th>
                     <th class="text-left py-3 pr-3 font-semibold">Country</th>
-                    <th class="text-right py-3 pr-3 font-semibold">Committed</th>
-                    <th class="text-right py-3 pr-3 font-semibold">Invoiced</th>
                     <th class="text-right py-3 pr-5 font-semibold">Net payable</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($suppliers as $s)
                     @php
-                        $cur        = $s->default_currency ?: 'USD';
-                        $invoiced   = (float) ($invoicedTotals[$s->id] ?? 0);
-                        $bals       = $balances[$s->id] ?? collect();
-                        $netByCur   = $bals->filter(fn($b) => abs($b) >= 0.005);
-                        $committed  = $pendingCommitments[$s->id] ?? collect();
+                        $cur      = $s->default_currency ?: 'USD';
+                        $bals     = $balances[$s->id] ?? collect();
+                        $netByCur = $bals->filter(fn($b) => abs($b) >= 0.005);
                     @endphp
                     <tr class="border-b {{ $border }} last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
                         <td class="py-3 pl-5 pr-3">
@@ -83,27 +79,9 @@
                             @endif
                         </td>
                         <td class="py-3 pr-3 text-xs {{ $muted }}">{{ $s->country ?: '—' }}</td>
-                        <td class="py-3 pr-3 text-right">
-                            @if($committed->isEmpty())
-                                <span class="text-xs {{ $muted }}">—</span>
-                            @else
-                                @foreach($committed as $c => $amt)
-                                    <span class="text-xs font-semibold" style="color:#f59e0b">{{ $sym($c) }}{{ number_format($amt, 2) }}</span>
-                                    <span class="text-[10px] {{ $muted }} block">{{ $c }} committed</span>
-                                @endforeach
-                            @endif
-                        </td>
-                        <td class="py-3 pr-3 text-right text-xs {{ $muted }}">
-                            {{ $invoiced > 0 ? ($sym($cur) . number_format($invoiced, 2)) : '—' }}
-                        </td>
                         <td class="py-3 pr-5 text-right">
                             @if($netByCur->isEmpty())
-                                @if($committed->isNotEmpty())
-                                    <span class="text-xs font-semibold" style="color:#f59e0b">Pending</span>
-                                    <span class="text-[10px] {{ $muted }} block">not yet invoiced</span>
-                                @else
-                                    <span class="text-xs {{ $muted }}">Settled</span>
-                                @endif
+                                <span class="text-xs {{ $muted }}">Settled</span>
                             @else
                                 @foreach($netByCur as $c => $bal)
                                     @if($bal > 0)
