@@ -2,28 +2,6 @@
 @section('title','Dashboard')
 @section('content')
 
-@if(session('owner_recovery_token'))
-<div class="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5" x-data="{ copied: false }">
-  <div class="flex items-start gap-3">
-    <div class="mt-0.5 shrink-0 text-amber-400">
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-    </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-sm font-bold text-amber-400">Save your owner recovery token — shown only once</p>
-      <p class="mt-1 text-xs text-amber-300/80">If you ever lose access to this account, this token lets you recover it. Store it somewhere safe now — it will never be shown again.</p>
-      <div class="mt-3 flex items-center gap-3">
-        <code class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 font-mono text-base font-bold tracking-widest text-amber-300 select-all">{{ session('owner_recovery_token') }}</code>
-        <button @click="navigator.clipboard.writeText('{{ session('owner_recovery_token') }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                class="shrink-0 h-9 px-4 rounded-xl border border-amber-500/40 bg-amber-500/15 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition">
-          <span x-show="!copied">Copy</span>
-          <span x-show="copied">Copied ✓</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{{ session()->forget('owner_recovery_token') }}
-@endif
 
 @php
   $volUnit  = $volumeUnit ?? 'L';

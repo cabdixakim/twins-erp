@@ -83,16 +83,34 @@ class CompanyController extends Controller
         $user->active_company_id = $company->id;
         $user->save();
 
-        // 5) Generate owner recovery token — shown once on first dashboard load
+        // 5) Generate owner recovery token — shown once on dedicated token page
         $plainToken = Str::upper(implode('-', str_split(Str::random(16), 4)));
         $user->recovery_token = Hash::make($plainToken);
         $user->save();
         session(['owner_recovery_token' => $plainToken]);
 
-        // 6) Keep your existing session key for backward compatibility (for now)
+        // 6) Keep your existing session key for backward compatibility
         session(['company_id' => $company->id]);
 
-        // 7) Go to dashboard
+        // 7) Show recovery token page before going to dashboard
+        return redirect()->route('onboarding.token');
+    }
+
+    public function showRecoveryToken()
+    {
+        $token = session('owner_recovery_token');
+
+        // If no token in session (e.g. someone navigates here directly), send to dashboard
+        if (!$token) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('onboarding.recovery_token', ['token' => $token]);
+    }
+
+    public function dismissRecoveryToken()
+    {
+        session()->forget('owner_recovery_token');
         return redirect()->route('dashboard');
     }
 

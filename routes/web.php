@@ -58,6 +58,12 @@ Route::get('/company/create', [OnboardingCompanyController::class, 'create'])
 Route::post('/company', [OnboardingCompanyController::class, 'store'])
     ->name('company.store');
 
+Route::get('/onboarding/recovery-token', [OnboardingCompanyController::class, 'showRecoveryToken'])
+    ->name('onboarding.token');
+
+Route::post('/onboarding/recovery-token/dismiss', [OnboardingCompanyController::class, 'dismissRecoveryToken'])
+    ->name('onboarding.token.dismiss');
+
 /*
 |--------------------------------------------------------------------------
 | Auth routes
