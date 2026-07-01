@@ -433,9 +433,10 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
     DB::transaction(function () use ($purchase, $u, $ledger) {
         // 1) Ensure batch exists
         if (!$purchase->batch_id) {
-            $productCode = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
-            $poRef       = $purchase->reference ?? ('PO-' . now()->format('Y') . '-' . $purchase->id);
-            $code        = $productCode . '-' . $poRef;
+            $productCode  = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
+            $supplierSlug = strtoupper(trim(preg_replace('/[^A-Z0-9]+/i', '-', DB::table('suppliers')->where('id', $purchase->supplier_id)->value('name') ?? 'SUPPLIER'), '-'));
+            $qtyInt       = (int) round((float) $purchase->qty);
+            $code         = $productCode . '-' . $qtyInt . '-' . $supplierSlug;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
@@ -589,9 +590,10 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
 
         // Safety: ensure batch exists (should already exist, but never trust)
         if (!$purchase->batch_id) {
-            $productCode = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
-            $poRef       = $purchase->reference ?? ('PO-' . now()->format('Y') . '-' . $purchase->id);
-            $code        = $productCode . '-' . $poRef;
+            $productCode  = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
+            $supplierSlug = strtoupper(trim(preg_replace('/[^A-Z0-9]+/i', '-', DB::table('suppliers')->where('id', $purchase->supplier_id)->value('name') ?? 'SUPPLIER'), '-'));
+            $qtyInt       = (int) round((float) $purchase->qty);
+            $code         = $productCode . '-' . $qtyInt . '-' . $supplierSlug;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
