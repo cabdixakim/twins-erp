@@ -435,8 +435,10 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
         if (!$purchase->batch_id) {
             $productCode  = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
             $supplierSlug = strtoupper(trim(preg_replace('/[^A-Z0-9]+/i', '-', DB::table('suppliers')->where('id', $purchase->supplier_id)->value('name') ?? 'SUPPLIER'), '-'));
+            $volUnit      = strtoupper(DB::table('companies')->where('id', $purchase->company_id)->value('volume_unit') ?? 'L');
+            $volUnit      = $volUnit === 'M3' ? 'M3' : 'L';
             $qtyInt       = (int) round((float) $purchase->qty);
-            $code         = $productCode . '-' . $qtyInt . '-' . $supplierSlug;
+            $code         = $productCode . '-' . $qtyInt . $volUnit . '-' . $supplierSlug;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
@@ -592,8 +594,10 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
         if (!$purchase->batch_id) {
             $productCode  = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
             $supplierSlug = strtoupper(trim(preg_replace('/[^A-Z0-9]+/i', '-', DB::table('suppliers')->where('id', $purchase->supplier_id)->value('name') ?? 'SUPPLIER'), '-'));
+            $volUnit      = strtoupper(DB::table('companies')->where('id', $purchase->company_id)->value('volume_unit') ?? 'L');
+            $volUnit      = $volUnit === 'M3' ? 'M3' : 'L';
             $qtyInt       = (int) round((float) $purchase->qty);
-            $code         = $productCode . '-' . $qtyInt . '-' . $supplierSlug;
+            $code         = $productCode . '-' . $qtyInt . $volUnit . '-' . $supplierSlug;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
