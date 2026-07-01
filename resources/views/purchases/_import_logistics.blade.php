@@ -1369,17 +1369,17 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
   {{-- Border clearance modal --}}
   @if($truck->status === 'at_border')
-  <div id="borderModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+  <div id="borderModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] my-auto">
+      <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">DRC border clearance — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('borderModal-{{ $truck->id }}')"
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
-      <form method="POST" enctype="multipart/form-data"
+      <form method="POST" enctype="multipart/form-data" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.record-border', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+        <div class="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
           @if($truck->border_post)
           <div class="s-orange flex items-center gap-2 rounded-xl border px-3 py-2">
             <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1628,7 +1628,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             </div>
           </div>
         </div>
-        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+        <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('borderModal-{{ $truck->id }}')"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
@@ -1645,17 +1645,17 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
   {{-- Delivery modal --}}
   @if($truck->status === 'border_cleared')
-  <div id="deliveryModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+  <div id="deliveryModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] my-auto">
+      <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">Record delivery — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('deliveryModal-{{ $truck->id }}')"
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
-      <form method="POST"
+      <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.record-delivery', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+        <div class="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3 grid grid-cols-2 gap-2 text-xs">
             <div>
               <div class="{{ $muted }}">Loaded</div>
@@ -1699,7 +1699,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div>Allowed loss: <strong>{{ $nom->allowed_loss_pct }}%</strong> of qty loaded. Excess charged at <strong>{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}{{ $rateLabel }}</strong>.</div>
           </div>
         </div>
-        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+        <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('deliveryModal-{{ $truck->id }}')"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
@@ -1716,9 +1716,9 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
   {{-- ── Post duty retroactively (delivered trucks with no duty) ── --}}
   @if($truck->status === 'delivered' && !in_array($truck->duty_status ?? '', ['posted','waived']))
-  <div id="postDutyModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+  <div id="postDutyModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] my-auto">
+      <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div>
           <div class="text-base font-semibold {{ $fg }}">Post duty — {{ $truck->truck_reg }}</div>
           <div class="text-xs {{ $muted }} mt-0.5">Record duty that was not posted at border clearance</div>
@@ -1726,10 +1726,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
-      <form method="POST"
+      <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.post-duty', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+        <div class="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
 
           {{-- Waive option --}}
           <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -1843,7 +1843,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           </div>
         </div>
 
-        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+        <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
@@ -1860,9 +1860,9 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
   {{-- ── Quick load + deliver modal (skip intermediate stages) ── --}}
   @if($truck->status === 'nominated')
-  <div id="quickDeliverModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+  <div id="quickDeliverModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-black/60">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] my-auto">
+      <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div>
           <div class="text-base font-semibold {{ $fg }}">Quick post — {{ $truck->truck_reg }}</div>
           <div class="text-xs {{ $muted }} mt-0.5">Record load + delivery in one step (skips transit & border stages)</div>
@@ -1870,10 +1870,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
-      <form method="POST"
+      <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.quick-load-deliver', [$purchase, $nom, $truck]) }}">
         @csrf
-        <div class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+        <div class="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty loaded ({{ $unitLabel }}) <span class="text-rose-400">*</span></label>
@@ -1913,7 +1913,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div>Allowed loss: <strong>{{ $nom->allowed_loss_pct }}%</strong> of qty loaded. Excess charged at <strong>{{ $nom->short_charge_currency }} {{ number_format($nom->short_charge_rate, 2) }}{{ $rateLabel }}</strong>.</div>
           </div>
         </div>
-        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+        <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
