@@ -656,9 +656,27 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ]
         );
 
-        // Note: no shrinkage on local depot receipts — the seller already absorbed
-        // storage loss before you took custody. Shrinkage is only auto-applied on
-        // cross-dock transfers and import truck deliveries (your transit/handling).
+        // Auto-apply depot tank-loss shrinkage immediately on receipt
+        $depot        = \App\Models\Depot::find((int) $purchase->depot_id);
+        $shrinkagePct = (float) ($depot?->default_shrinkage_pct ?? 0);
+        if ($shrinkagePct > 0) {
+            $shrinkageQty = round($qty * $shrinkagePct / 100, 4);
+            if ($shrinkageQty > 0.0001) {
+                $ledger->adjustment([
+                    'company_id'  => (int) $purchase->company_id,
+                    'product_id'  => (int) $purchase->product_id,
+                    'depot_id'    => (int) $purchase->depot_id,
+                    'batch_id'    => (int) $purchase->batch_id,
+                    'reason_type' => 'depot_shrinkage',
+                    'qty'         => $shrinkageQty,
+                    'ref_type'    => 'purchase',
+                    'ref_id'      => (int) $purchase->id,
+                    'reference'   => 'shrinkage:purchase:' . $purchase->id,
+                    'notes'       => "Auto depot shrinkage ({$shrinkagePct}%) — {$purchase->reference}",
+                    'created_by'  => $u?->id,
+                ], ['type' => 'adjustment', 'reference' => 'shrinkage:purchase:' . $purchase->id]);
+            }
+        }
 
         // Mark as received (make sure your app recognises this status in filters/UI)
         $purchase->status = 'received';

@@ -415,7 +415,7 @@ class ImportNominationController extends Controller
 
         // Compute duty amount
         $dutyRate = $waiveDuty ? 0.0 : (float) ($data['duty_rate_per_1000l'] ?? $truck->duty_rate_per_1000l ?? 0);
-        $dutyQty  = $waiveDuty ? 0.0 : (float) ($data['duty_qty'] ?? $truck->qty_loaded ?? 0);
+        $dutyQty  = $waiveDuty ? 0.0 : (float) $truck->qty_loaded; // always on qty_loaded, never qty_delivered
         $dutyAmt  = $dutyRate > 0 && $dutyQty > 0 ? round($dutyRate * $dutyQty / $this->dutyDivisor($purchase), 4) : null;
 
         $otherChargesFields = [

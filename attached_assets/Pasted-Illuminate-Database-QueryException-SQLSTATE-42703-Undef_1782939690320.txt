@@ -1,0 +1,137 @@
+Illuminate\Database\QueryException
+SQLSTATE[42703]: Undefined column: 7 ERROR: column "depot_id" does not exist LINE 1: select "id", "code", "product_id", "depot_id" from "batches"... ^ (Connection: pgsql, SQL: select "id", "code", "product_id", "depot_id" from "batches" where "company_id" = 1 and "status" = active and "qty_remaining" > 0 and "batches"."company_id" = 1 order by "code" asc)
+GET 69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+PHP 8.2.23 — Laravel 11.46.1
+
+Expand
+vendor frames
+9 vendor frames collapsed
+
+App\Http\Controllers\SalesController
+:107
+index
+6 vendor frames collapsed
+
+App\Http\Middleware\PermissionMiddleware
+:21
+handle
+1 vendor frame collapsed
+
+App\Http\Middleware\EnsureActiveCompany
+:27
+handle
+1 vendor frame collapsed
+
+app/Http/Middleware/EnsureUserIsActive.php
+:25
+handle
+1 vendor frame collapsed
+
+App\Http\Middleware\EnsureCompanySetup
+:39
+handle
+38 vendor frames collapsed
+
+public/index.php
+:7
+require_once
+1 vendor frame collapsed
+app/Http/Controllers/SalesController.php :107
+        $batches = $costingMethod === 'specific_lot'
+            ? Batch::where('company_id', $cid)
+                ->where('status', 'active')
+                ->whereColumn('qty_remaining', '>', DB::raw('0'))
+                ->orderBy('code')
+                ->get(['id', 'code', 'product_id', 'depot_id'])
+            : collect();
+ 
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill', 'costingMethod', 'batches', 'volumeUnit'));
+    }
+ 
+    public function exportCsv()
+    {
+        $u   = auth()->user();
+        $cid = (int) ($u?->active_company_id ?? 0);
+ 
+        $rows     = Sale::where('company_id', $cid)
+Request
+GET /sales
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6IkRqTEhrbzVMejBDN1NSVG93eVFPaHc9PSIsInZhbHVlIjoiOW1BZEVYK0ZaUHNDSTNBUU45UHJOYUQ3b0FadXBvKzBGcHlmZ1Z1TlNuV3NWYndUeWlIM2hqSFo0SHRocGc4amI1dFBaZEs1dG1ka3l5NEsycVg4UmhVTllpM3ovUzhOOWkyYlRlajlFYXNKU0JJaEYrOElIZmQzRTlKbXlKTGIiLCJtYWMiOiJjNmM2ZDE2MGE0ZTQ2YzBlMWViMGM5MDczOWEzOTk2MmUxZDY3MDNkNDgxOGQ1NzYzNDgxNzk1MTA5NTdhZjYyIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6InhuRkdJeXp1ZE1JRXZ6eFcwRWJQWUE9PSIsInZhbHVlIjoibnJxL3ROQUYySThqRk5xSXRQSkVZYnZCcE9KNDBJenlOYU9ERHpzS3ZpRDc3KzJBRVRDVEdQVVUvVlp5TmlyTDZQM1lqLytpdFRjQmxqQmF2Z0NTYm5yQS93QXpiNFlWU2ZKcmx0ZTBsZURxMG5WMm9aNnMwOUluUnBod0xvRXkiLCJtYWMiOiI2NGI4ZmVjMzdjMmIyNmNhYWMzMjYyYzMyOThkMDZjOTMyYzViNDA3MDYyYjA1MWEzYTUyMGVhMmZmMDJiZmEyIiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/depot-stock?depot=3
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.16.75, 10.56.3.125, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\SalesController@index
+route name
+sales.index
+middleware
+web, auth, company.setup, user.active, active.company, permission:sales.view
+Database Queries
+pgsql (26.81 ms)
+select * from "users" where "id" = 1 limit 1
+pgsql (1.75 ms)
+select count(*) as aggregate from "companies"
+pgsql (2.65 ms)
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql (1.27 ms)
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql (0.85 ms)
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql (1.2 ms)
+select * from "depots" where "company_id" = 1 and "is_active" = 1 and "depots"."company_id" = 1 order by "name" asc
+pgsql (1.05 ms)
+select count(*) as aggregate from "sales" where "company_id" = 1 and "sales"."company_id" = 1
+pgsql (0.84 ms)
+select * from "products" where "company_id" = 1 and "is_active" = 1 and "products"."company_id" = 1 order by "name" asc
+pgsql (1.2 ms)
+select * from "transporters" where "company_id" = 1 and "is_active" = 1 and ("type" = 'local' or "type" is null) and "transporters"."company_id" = 1 order by "name" asc
+pgsql (0.81 ms)
+select * from "clients" where "company_id" = 1 and "is_active" = 1 and "clients"."company_id" = 1 order by "name" asc
+pgsql (0.96 ms)
+select * from "petty_cash_accounts" where "company_id" = 1 and "is_active" = 1 and "petty_cash_accounts"."company_id" = 1 order by "name" asc
+pgsql (0.68 ms)
+select * from "companies" where "companies"."id" = 1 limit 1

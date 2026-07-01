@@ -104,7 +104,7 @@ class SalesController extends Controller
                 ->where('status', 'active')
                 ->whereColumn('qty_remaining', '>', DB::raw('0'))
                 ->orderBy('code')
-                ->get(['id', 'code', 'product_id', 'depot_id'])
+                ->get(['id', 'code', 'product_id'])
             : collect();
 
         return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill', 'costingMethod', 'batches', 'volumeUnit'));
