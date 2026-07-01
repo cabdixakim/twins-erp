@@ -92,8 +92,8 @@ class CompanyController extends Controller
         // 6) Keep your existing session key for backward compatibility
         session(['company_id' => $company->id]);
 
-        // 7) Show recovery token page before going to dashboard
-        return redirect()->route('onboarding.token');
+        // 7) Go to dashboard — recovery token modal shown there
+        return redirect()->route('dashboard');
     }
 
     public function showRecoveryToken()

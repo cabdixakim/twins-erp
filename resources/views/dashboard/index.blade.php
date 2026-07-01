@@ -2,6 +2,77 @@
 @section('title','Dashboard')
 @section('content')
 
+@if(session('owner_recovery_token'))
+@php $recoveryToken = session('owner_recovery_token'); @endphp
+<div id="recoveryModal"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     x-data="{ acknowledged: false, copied: false }"
+     style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);">
+  <div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#161b22] shadow-2xl overflow-hidden">
+
+    {{-- Header --}}
+    <div class="bg-amber-500/10 border-b border-amber-500/20 px-5 py-4 flex items-start gap-3">
+      <div class="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/30">
+        <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-amber-400">Save your owner recovery code</p>
+        <p class="mt-0.5 text-xs text-amber-300/70">Shown <strong class="text-amber-300">once only</strong> — cannot be retrieved again.</p>
+      </div>
+    </div>
+
+    {{-- Body --}}
+    <div class="px-5 py-5 space-y-4">
+
+      {{-- Token display --}}
+      <div class="rounded-xl border border-white/10 bg-black/40 py-4 text-center">
+        <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-semibold">Recovery Code</p>
+        <code class="font-mono text-xl font-bold tracking-[0.18em] text-white select-all">{{ $recoveryToken }}</code>
+      </div>
+
+      {{-- Copy + recovery URL --}}
+      <div class="flex gap-2">
+        <button @click="navigator.clipboard.writeText('{{ $recoveryToken }}'); copied = true; setTimeout(() => copied = false, 2500)"
+                type="button"
+                class="flex-1 h-9 rounded-lg border text-xs font-semibold transition"
+                :class="copied ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'">
+          <span x-show="!copied">📋 Copy code</span>
+          <span x-show="copied">✓ Copied!</span>
+        </button>
+        <a href="{{ route('account-recovery') }}" target="_blank"
+           class="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-xs text-slate-400 hover:bg-white/10 hover:text-slate-300 transition whitespace-nowrap">
+          Recovery URL
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+        </a>
+      </div>
+
+      {{-- Acknowledge --}}
+      <label class="flex items-start gap-3 cursor-pointer group">
+        <input type="checkbox" x-model="acknowledged"
+               class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-800 accent-amber-500 cursor-pointer">
+        <span class="text-xs text-slate-400 group-hover:text-slate-300 transition leading-relaxed">
+          I've saved this code somewhere safe and understand it won't be shown again.
+        </span>
+      </label>
+
+      {{-- Dismiss --}}
+      <form method="POST" action="{{ route('onboarding.token.dismiss') }}">
+        @csrf
+        <button type="submit" :disabled="!acknowledged"
+                class="w-full h-10 rounded-xl text-sm font-bold transition"
+                :class="acknowledged
+                  ? 'bg-amber-500 hover:bg-amber-400 text-black cursor-pointer'
+                  : 'bg-white/5 text-slate-600 border border-white/10 cursor-not-allowed'">
+          Done — take me to the dashboard
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+@endif
 
 @php
   $volUnit  = $volumeUnit ?? 'L';
