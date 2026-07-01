@@ -227,6 +227,17 @@
         </span>
         <span class="tw-nav-label sidebar-label">Accounting</span>
     </a>
+    <a href="{{ route('accounting.journals') }}"
+       class="tw-nav-item {{ request()->routeIs('accounting.journals*') ? 'active' : '' }} sidebar-label-parent"
+       style="padding-left:2rem">
+        <span class="tw-nav-pip"></span>
+        <span class="tw-nav-icon">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+        </span>
+        <span class="tw-nav-label sidebar-label" style="font-size:0.75rem">Journal Entries</span>
+    </a>
     @endif
 
     {{-- DOCUMENTS — always visible --}}
