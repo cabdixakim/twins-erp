@@ -258,11 +258,53 @@ class AccountingController extends Controller
             $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
             $netMargin    = $totalRevenue > 0 ? round($netProfit  / $totalRevenue * 100, 1) : null;
 
+            // Operational COGS detail — shown as a breakdown inside the GL COGS card
+            $cogsRows = DB::table('sales')
+                ->join('products', 'products.id', '=', 'sales.product_id')
+                ->where('sales.company_id', $cid)
+                ->where('sales.status', 'posted')
+                ->whereBetween('sales.posted_at', [$from, $to])
+                ->selectRaw('products.name as product_name, SUM(sales.cogs_total) as cogs, SUM(sales.qty) as qty')
+                ->groupBy('products.name')
+                ->orderByDesc('cogs')
+                ->get();
+
+            $rawLandedGL = DB::select("
+                SELECT bc.category,
+                       SUM(
+                           COALESCE(bc.amount_base, bc.amount)
+                           / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
+                           * ic_agg.qty_consumed
+                       ) AS total
+                FROM batch_costs bc
+                JOIN batches b ON b.id = bc.batch_id AND b.company_id = ?
+                JOIN (
+                    SELECT batch_id, SUM(qty) AS qty_consumed
+                    FROM inventory_consumptions
+                    WHERE company_id = ?
+                      AND DATE(created_at) BETWEEN ? AND ?
+                    GROUP BY batch_id
+                ) ic_agg ON ic_agg.batch_id = b.id
+                WHERE bc.amount > 0
+                GROUP BY bc.category
+                HAVING SUM(
+                    COALESCE(bc.amount_base, bc.amount)
+                    / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
+                    * ic_agg.qty_consumed
+                ) > 0.01
+            ", [$cid, $cid, $from, $to]);
+            $landedCosts = collect($rawLandedGL)->map(fn($r) => (object)[
+                'category' => $r->category,
+                'total'    => (float) $r->total,
+            ]);
+            $totalLanded = $landedCosts->sum('total');
+
             return view('accounting.pl', compact(
                 'useGL', 'glRevenue', 'glCogs', 'glOpex',
                 'totalRevenue', 'totalCogs', 'totalOpex',
                 'grossProfit', 'netProfit', 'grossMargin', 'netMargin',
-                'from', 'to', 'volumeUnit'
+                'from', 'to', 'volumeUnit',
+                'cogsRows', 'landedCosts', 'totalLanded'
             ));
         }
 

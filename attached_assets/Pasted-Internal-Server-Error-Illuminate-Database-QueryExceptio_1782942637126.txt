@@ -1,0 +1,131 @@
+Internal Server Error
+
+Illuminate\Database\QueryException
+SQLSTATE[42702]: Ambiguous column: 7 ERROR: column reference "id" is ambiguous LINE 1: ... "n"."id" = "import_trucks"."nomination_id" where "id" in ($... ^ (Connection: pgsql, SQL: select "import_trucks"."id", "n"."purchase_id" from "import_trucks" inner join "import_nominations" as "n" on "n"."id" = "import_trucks"."nomination_id" where "id" in (1) and "import_trucks"."company_id" = 1)
+GET 69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+PHP 8.2.23 — Laravel 11.46.1
+
+Expand
+vendor frames
+8 vendor frames collapsed
+
+App\Http\Controllers\AuditLogController
+:62
+index
+6 vendor frames collapsed
+
+App\Http\Middleware\PermissionMiddleware
+:21
+handle
+1 vendor frame collapsed
+
+app/Http/Middleware/EnsureUserIsActive.php
+:25
+handle
+1 vendor frame collapsed
+
+App\Http\Middleware\EnsureActiveCompany
+:27
+handle
+1 vendor frame collapsed
+
+App\Http\Middleware\EnsureCompanySetup
+:39
+handle
+38 vendor frames collapsed
+
+public/index.php
+:7
+require_once
+1 vendor frame collapsed
+app/Http/Controllers/AuditLogController.php :62
+            ->unique();
+        $truckPurchaseMap = $truckIds->isNotEmpty()
+            ? ImportTruck::whereIn('id', $truckIds)
+                ->join('import_nominations as n', 'n.id', '=', 'import_trucks.nomination_id')
+                ->select('import_trucks.id', 'n.purchase_id')
+                ->pluck('purchase_id', 'import_trucks.id')
+            : collect();
+ 
+        $events = AuditLog::where('company_id', $company->id)
+            ->distinct()->orderBy('event')->pluck('event');
+ 
+        $modules = AuditLog::where('company_id', $company->id)
+            ->whereNotNull('module')
+            ->distinct()->orderBy('module')->pluck('module');
+ 
+        $users = AuditLog::where('company_id', $company->id)
+            ->whereNotNull('user_id')
+Request
+GET /admin/audit-log
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6InFQSXIvbS95aUJxUkUrWGdEMUIyUHc9PSIsInZhbHVlIjoieFk0YVY2Vi9NazJ4R2Z6TEJhT3c4ekd2bUlhb29Vc1dPMW9Cakx6Y25pTklFSlJob1VHb091VjJhZnpvZWRNVC82aUM3eU5RU0h3d0pkZXZVZWd5WlFHM1lxQUNpem9PUDR2QjVDRWEwU24zSE1Ca1BSMzhRckR6WEgwQUFBdGsiLCJtYWMiOiJhNDliNWI2ZjEzOTRiMjY0Njk0NTc2YzE2MDQzMjY2ZmNkMjRiZWFlZTU3YzA4ZGQyNDMxYzg4MTA0NGM0NTcwIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6IkxXRThSTGIzUmJNWmJtQUN5V3oyWXc9PSIsInZhbHVlIjoiWU4vYkVUMGtBckpwUExzWXVleHd5Tjd5RWZNUjJpV3FHUUdEZ1Z0eUdJejI1ekF2NHRtbUpNMjRtbFBTcG5qOFZ4bEk3Y0UzK1AvWkVoajB3L2tEWUc5Z01QNTl3MDgzbzJ5NExKZHdZQmVMRnpyZkdGVlZJVHpEOG5nTlN1UDUiLCJtYWMiOiI2OTZhNzJmYzNhNzA0YmRmMjgxN2JhNWE2NWVjMTI0NmM5NTM3MjU2YjA0MmQ0OGJhMWJlYjY2YTM2OWIzOGRmIiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/accounting/pl
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+document
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.3.224, 10.56.3.125, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\AuditLogController@index
+route name
+admin.audit-log
+middleware
+web, auth, company.setup, active.company, user.active, permission:purchases.view
+Database Queries
+pgsql (8.87 ms)
+select * from "users" where "id" = 1 limit 1
+pgsql (1.17 ms)
+select count(*) as aggregate from "companies"
+pgsql (1.26 ms)
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql (0.74 ms)
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql (0.73 ms)
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql (0.6 ms)
+select * from "companies" where "companies"."id" = 1 limit 1
+pgsql (0.89 ms)
+select count(*) as aggregate from "audit_logs" where "company_id" = 1
+pgsql (0.97 ms)
+select * from "audit_logs" where "company_id" = 1 order by "created_at" des

@@ -138,6 +138,42 @@
                 @empty
                 <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS journal entries in this period.</div>
                 @endforelse
+
+                {{-- Operational breakdown (from sales records) --}}
+                @if(($cogsRows ?? collect())->isNotEmpty() || ($landedCosts ?? collect())->isNotEmpty())
+                <div class="px-5 py-1.5" style="background:rgba(251,191,36,.06)">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider" style="color:#f59e0b">Breakdown (from sales records)</span>
+                </div>
+                @if(($cogsRows ?? collect())->isNotEmpty())
+                <div class="px-5 py-1" style="background:var(--tw-surface-2)">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Purchase cost by product</span>
+                </div>
+                @foreach($cogsRows ?? [] as $row)
+                <div class="flex items-center justify-between px-5 py-2">
+                    <span class="text-sm {{ $fg }}">{{ $row->product_name }}</span>
+                    <div class="text-right">
+                        <div class="text-sm tabular-nums {{ $fg }}">({{ $fmt($row->cogs) }})</div>
+                        <div class="text-[10px] {{ $muted }}">{{ number_format($row->qty, 0) }} {{ $volUnit }}</div>
+                    </div>
+                </div>
+                @endforeach
+                @endif
+                @if(($landedCosts ?? collect())->isNotEmpty())
+                <div class="px-5 py-1" style="background:var(--tw-surface-2)">
+                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Landed costs (proportional to qty sold)</span>
+                </div>
+                @foreach($landedCosts ?? [] as $row)
+                <div class="flex items-center justify-between px-5 py-2">
+                    <span class="text-sm {{ $fg }}">{{ $categoryLabels[$row->category] ?? ucfirst(str_replace('_', ' ', $row->category)) }}</span>
+                    <span class="text-sm tabular-nums {{ $fg }}">({{ $fmt($row->total) }})</span>
+                </div>
+                @endforeach
+                <div class="flex items-center justify-between px-5 py-2 text-[11px] font-semibold {{ $muted }}">
+                    <span>Total incl. landed</span>
+                    <span>({{ $fmt($totalCogs + ($totalLanded ?? 0)) }})</span>
+                </div>
+                @endif
+                @endif
             </div>
         </div>
 
