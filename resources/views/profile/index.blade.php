@@ -15,7 +15,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-4xl space-y-5">
+<div class="max-w-4xl mx-auto space-y-5">
 
     {{-- Flash messages --}}
     @if(session('status'))
