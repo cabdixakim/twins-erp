@@ -1,6 +1,7 @@
 {{-- resources/views/depot-stock/_details.blade.php --}}
 @php
-  $fmtL = fn ($v) => number_format((float)$v, 0, '.', ',');
+  $volUnit = $volumeUnit ?? 'L';
+  $fmtL = fn ($v) => number_format((float)$v, $volUnit === 'M3' ? 3 : 0, '.', ',');
   $fmtM = fn ($v) => number_format((float)$v, 2, '.', ',');
 
   $btnGreen = "border-emerald-600 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-700 transition";
@@ -69,7 +70,7 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Total received</div>
       <div class="mt-1 text-xl font-semibold text-emerald-500">
-        {{ $fmtL($stats['total_in'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span>
+        {{ $fmtL($stats['total_in'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span>
       </div>
       <div class="mt-1 text-[11px] {{ $muted }}">All receipts into this depot</div>
     </div>
@@ -77,7 +78,7 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Total issued</div>
       <div class="mt-1 text-xl font-semibold text-rose-500">
-        {{ $fmtL($stats['total_out'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span>
+        {{ $fmtL($stats['total_out'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span>
       </div>
       <div class="mt-1 text-[11px] {{ $muted }}">All issues from this depot</div>
     </div>
@@ -85,7 +86,7 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Current balance</div>
       <div class="mt-1 text-xl font-semibold {{ $fg }}">
-        {{ $fmtL($stats['net'] ?? 0) }} <span class="text-xs {{ $muted }}">L</span>
+        {{ $fmtL($stats['net'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span>
       </div>
       <div class="mt-1 text-[11px] {{ $muted }}">In − Out (all time)</div>
     </div>
@@ -109,17 +110,17 @@
           <div class="font-semibold text-sm {{ $fg }}">{{ $row->product?->name ?? ('Product #' . $row->product_id) }}</div>
           <div class="flex items-center gap-4 text-sm">
             <div class="text-right">
-              <div class="font-semibold {{ $fg }}">{{ $fmtL($onHand) }} <span class="text-xs {{ $muted }}">L</span></div>
+              <div class="font-semibold {{ $fg }}">{{ $fmtL($onHand) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span></div>
               <div class="text-[10px] {{ $muted }}">on hand</div>
             </div>
             @if($reserved > 0)
             <div class="text-right">
-              <div class="font-semibold text-amber-500">{{ $fmtL($reserved) }} <span class="text-xs {{ $muted }}">L</span></div>
+              <div class="font-semibold text-amber-500">{{ $fmtL($reserved) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span></div>
               <div class="text-[10px] {{ $muted }}">reserved</div>
             </div>
             @endif
             <div class="text-right">
-              <div class="font-semibold text-emerald-500">{{ $fmtL($available) }} <span class="text-xs {{ $muted }}">L</span></div>
+              <div class="font-semibold text-emerald-500">{{ $fmtL($available) }} <span class="text-xs {{ $muted }}">{{ $volUnit }}</span></div>
               <div class="text-[10px] {{ $muted }}">available</div>
             </div>
           </div>

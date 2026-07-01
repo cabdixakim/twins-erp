@@ -106,13 +106,14 @@
   {{-- Main --}}
   <main class="md:col-span-8 lg:col-span-9">
     @include('depot-stock._details', [
-      'border'   => $border,
-      'surface'  => $surface,
-      'surface2' => $surface2,
-      'fg'       => $fg,
-      'muted'    => $muted,
-      'btnGreen' => $btnGreen,
-      'pillGreen'=> $pillGreen,
+      'border'      => $border,
+      'surface'     => $surface,
+      'surface2'    => $surface2,
+      'fg'          => $fg,
+      'muted'       => $muted,
+      'btnGreen'    => $btnGreen,
+      'pillGreen'   => $pillGreen,
+      'volumeUnit'  => $volumeUnit,
     ])
   </main>
 

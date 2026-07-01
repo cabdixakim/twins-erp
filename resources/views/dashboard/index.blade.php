@@ -92,8 +92,8 @@
     <div class="tw-card rounded-2xl p-5">
       <p class="text-xs font-semibold tw-muted mb-3">⛽ Fuel in Stock</p>
       <p class="text-3xl font-black leading-none" style="color:#0ea5e9">
-        {{ number_format($totalStockOnHand, 0) }}
-        <span class="text-sm font-semibold" style="color:#0ea5e9;opacity:.7">L</span>
+        {{ number_format($totalStockOnHand, ($volumeUnit ?? 'L') === 'M3' ? 3 : 0) }}
+        <span class="text-sm font-semibold" style="color:#0ea5e9;opacity:.7">{{ $volumeUnit ?? 'L' }}</span>
       </p>
       <p class="text-xs tw-muted mt-2">
         across {{ $depotStockRows->count() }} depot{{ $depotStockRows->count() === 1 ? '' : 's' }}
@@ -295,7 +295,7 @@
         </div>
         <div>
           <p class="text-sm font-bold tw-fg">Fuel by Depot</p>
-          <p class="text-[10px] tw-muted">{{ number_format($totalStockOnHand, 0) }} L total across all depots — click to see full breakdown</p>
+          <p class="text-[10px] tw-muted">{{ number_format($totalStockOnHand, ($volumeUnit ?? 'L') === 'M3' ? 3 : 0) }} {{ $volumeUnit ?? 'L' }} total across all depots — click to see full breakdown</p>
         </div>
       </div>
       <svg class="w-4 h-4 tw-muted opacity-40 group-hover:opacity-80 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -308,7 +308,7 @@
       <div class="rounded-xl p-3" style="background:var(--tw-surface-2)">
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs font-semibold tw-fg truncate max-w-[60%]">{{ $row->depot_name }}</span>
-          <span class="text-xs font-bold shrink-0" style="color:#0ea5e9">{{ number_format($row->total_qty, 0) }} L</span>
+          <span class="text-xs font-bold shrink-0" style="color:#0ea5e9">{{ number_format($row->total_qty, ($volumeUnit ?? 'L') === 'M3' ? 3 : 0) }} {{ $volumeUnit ?? 'L' }}</span>
         </div>
         <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--tw-border)">
           <div class="h-full rounded-full" style="width:{{ round($pct) }}%; background:#0ea5e9"></div>

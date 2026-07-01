@@ -242,6 +242,7 @@ class DashboardController extends Controller {
 
         // ── Base currency ──────────────────────────────────────────────────
         $baseCurrency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? 'USD';
+        $volumeUnit   = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
 
         return view('dashboard.index', compact(
             'byCurrency',
@@ -271,7 +272,8 @@ class DashboardController extends Controller {
             'totalAP',
             'bankByCurrency',
             'topBankAccounts',
-            'baseCurrency'
+            'baseCurrency',
+            'volumeUnit'
         ));
     }
 }

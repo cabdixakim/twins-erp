@@ -9,6 +9,7 @@ use App\Models\InventoryMovement;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DepotStockController extends Controller
 {
@@ -108,8 +109,10 @@ class DepotStockController extends Controller
             $movements = $q->paginate(50)->withQueryString();
         }
 
+        $volumeUnit = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+
         return view('depot-stock.index', compact(
-            'depots', 'currentDepot', 'movements', 'balance', 'stats', 'products'
+            'depots', 'currentDepot', 'movements', 'balance', 'stats', 'products', 'volumeUnit'
         ));
     }
 
