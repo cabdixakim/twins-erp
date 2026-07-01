@@ -68,14 +68,8 @@ class DepotChargeConfig extends Model
     public static function paidByLabel(?string $type, ?string $name): string
     {
         return match($type) {
-            'self'              => 'We pay directly',
-            'depot'             => 'Depot (charge to depot ledger)',
-            'customs_authority' => 'Customs authority',
-            'transporter'       => 'Transporter',
-            'exempt'            => 'Exempt (no charge)',
-            'other'             => $name ?: 'Other',
-            null                => 'We pay directly',
-            default             => $type,
+            'exempt' => 'Exempt (no charge)',
+            default  => 'Payable to depot',
         };
     }
 

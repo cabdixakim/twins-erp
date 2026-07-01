@@ -361,25 +361,15 @@
                 </div>
             </div>
 
-            {{-- Who pays --}}
+            {{-- Payable status --}}
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="text-xs font-semibold {{ $muted }}">Payable to</label>
+                    <label class="text-xs font-semibold {{ $muted }}">Payable status</label>
                     <select name="paid_by_type"
                             class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
-                        <option value="self">We pay directly (COGS only, no secondary AP)</option>
-                        <option value="depot">This depot (COGS + depot ledger payable)</option>
-                        <option value="customs_authority">Customs authority (COGS only, tracked by name)</option>
-                        <option value="transporter">Transporter (COGS + transporter advance)</option>
+                        <option value="self">Payable — depot invoices us (normal AP)</option>
                         <option value="exempt">Exempt — contractually waived (nothing posted)</option>
-                        <option value="other">Other third party (COGS only)</option>
                     </select>
-                </div>
-                <div>
-                    <label class="text-xs font-semibold {{ $muted }}">Party name (if other)</label>
-                    <input name="paid_by_name" maxlength="200"
-                           class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
-                           placeholder="e.g. DGRAD, customs agent">
                 </div>
                 <div>
                     <label class="text-xs font-semibold {{ $muted }}">Effective from</label>
