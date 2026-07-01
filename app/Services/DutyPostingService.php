@@ -8,6 +8,7 @@ use App\Models\Purchase;
 use App\Models\DutyLedgerEntry;
 use App\Models\SupplierLedgerEntry;
 use App\Models\DepotLedgerEntry;
+use App\Services\InventoryLedger;
 
 class DutyPostingService
 {
@@ -35,18 +36,22 @@ class DutyPostingService
             $amount = round($rate * $qty / 1000, 4);
         }
 
+        // Resolve purchase early — needed for recompute in both exit paths
+        $nomination = $truck->nomination;
+        $purchase   = $nomination?->purchase;
+        $cid        = (int) $truck->company_id;
+
         if ($amount <= 0 || !$vendorType || $vendorType === 'self') {
             // No AP entry — just mark posted if duty amount is known
             if ($amount > 0) {
                 self::createBatchCostEntry($truck, $amount, $currency, $userId);
+                if ($purchase) {
+                    InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);
+                }
             }
             $truck->update(['duty_status' => 'posted', 'duty_posted_at' => now()]);
             return null;
         }
-
-        $nomination = $truck->nomination;
-        $purchase   = $nomination?->purchase;
-        $cid        = (int) $truck->company_id;
         $date       = $truck->border_date?->format('Y-m-d') ?? now()->toDateString();
         $desc       = "Duty — truck {$truck->truck_reg}" . ($purchase ? " — PO {$purchase->reference}" : '');
 
@@ -176,6 +181,12 @@ class DutyPostingService
                 'duty_posted_at'  => now(),
             ]);
         });
+
+        // Retroactively update depot_stocks.unit_cost and batches.unit_cost
+        // to include the newly posted duty in the landed cost.
+        if ($purchase) {
+            InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);
+        }
 
         return "Duty {$currency} " . number_format($amount, 2) . " posted for {$truck->truck_reg}";
     }
