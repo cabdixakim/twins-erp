@@ -9,6 +9,7 @@
   $muted    = 'text-[color:var(--tw-muted)]';
 
   $selectedId = $selected?->id ?? null;
+  $volLabel   = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L');
 
   $fieldBase = "mt-1 w-full rounded-xl border {$border} {$surface2} p-2 text-sm {$fg} outline-none focus:ring-2 focus:ring-emerald-500/30";
   $fieldErr  = "border-rose-500/40 ring-2 ring-rose-500/20";
@@ -75,7 +76,7 @@
           <div class="min-w-0 flex-1">
             <div class="font-mono text-[10px] {{ $muted }}">{{ $s->reference }}</div>
             <div class="font-semibold {{ $fg }} truncate">{{ $s->client_name ?: ($s->client?->name ?: '—') }}</div>
-            <div class="{{ $muted }} text-[10px]">{{ number_format((float)$s->qty, 0) }} L · {{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 0) }}</div>
+            <div class="{{ $muted }} text-[10px]">{{ number_format((float)$s->qty, 0) }} {{ $volLabel }} · {{ strtoupper($s->currency) }} {{ number_format((float)$s->total, 0) }}</div>
           </div>
           <span class="shrink-0 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold {{ $statusPill($s->status) }}">
             {{ ucfirst($s->status) }}
@@ -92,7 +93,7 @@
 
   {{-- Right: detail panel --}}
   <div class="md:col-span-2">
-    @include('sales.partials.details', ['sale' => $selected])
+    @include('sales.partials.details', ['sale' => $selected, 'volumeUnit' => $volumeUnit ?? 'L'])
   </div>
 </div>
 

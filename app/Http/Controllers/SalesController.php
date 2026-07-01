@@ -96,6 +96,7 @@ class SalesController extends Controller
 
         $company       = Company::find($cid);
         $costingMethod = $company?->costing_method ?? 'weighted_average';
+        $volumeUnit    = $company?->volume_unit ?? 'L';
 
         // For specific_lot: pass active batches so the sale form can show a picker
         $batches = $costingMethod === 'specific_lot'
@@ -106,7 +107,7 @@ class SalesController extends Controller
                 ->get(['id', 'code', 'product_id', 'depot_id'])
             : collect();
 
-        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill', 'costingMethod', 'batches'));
+        return view('sales.index', compact('sales', 'selected', 'depots', 'products', 'transporters', 'clients', 'pettyCashAccounts', 'prefill', 'costingMethod', 'batches', 'volumeUnit'));
     }
 
     public function exportCsv()

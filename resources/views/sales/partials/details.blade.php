@@ -7,10 +7,11 @@
   $fg       = 'text-[color:var(--tw-fg)]';
   $muted    = 'text-[color:var(--tw-muted)]';
 
-  $qty   = (float) ($sale->qty ?? 0);
-  $unit  = (float) ($sale->unit_price ?? 0);
-  $total = (float) ($sale->total ?? ($qty * $unit));
-  $cur   = strtoupper($sale->currency ?? 'USD');
+  $qty      = (float) ($sale->qty ?? 0);
+  $unit     = (float) ($sale->unit_price ?? 0);
+  $total    = (float) ($sale->total ?? ($qty * $unit));
+  $cur      = strtoupper($sale->currency ?? 'USD');
+  $volLabel = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L');
 
   $statusPill = match($sale->status) {
     'draft'     => 'border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] text-[color:var(--tw-fg)]',
@@ -143,7 +144,7 @@
   <div class="mt-5 grid gap-3 sm:grid-cols-3">
     <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
       <div class="text-[11px] {{ $muted }}">Quantity</div>
-      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span></div>
+      <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
     </div>
     <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
       <div class="text-[11px] {{ $muted }}">Unit price</div>
@@ -233,7 +234,7 @@
     <div class="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
       <div class="text-[11px] text-sky-400 font-semibold mb-2">POD Confirmed / Livraison confirmée</div>
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs {{ $fg }}">
-        <span><span class="{{ $muted }}">Qty delivered:</span> <span class="font-semibold">{{ number_format((float)$sale->qty_delivered, 3) }} L</span></span>
+        <span><span class="{{ $muted }}">Qty delivered:</span> <span class="font-semibold">{{ number_format((float)$sale->qty_delivered, 3) }} {{ $volLabel }}</span></span>
         <span><span class="{{ $muted }}">Date:</span> <span class="font-semibold">{{ $sale->pod_received_at?->format('Y-m-d') }}</span></span>
         @if($sale->pod_notes)<span><span class="{{ $muted }}">Notes:</span> <span class="font-semibold">{{ $sale->pod_notes }}</span></span>@endif
       </div>
@@ -268,7 +269,7 @@
             </div>
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Qty to issue</div>
-              <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">L</span></div>
+              <div class="mt-1 text-sm font-semibold {{ $fg }}">{{ number_format($qty, 3) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
             </div>
             <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
               <div class="text-[11px] {{ $muted }}">Sale total</div>
@@ -334,7 +335,7 @@
                      value="{{ old('qty_delivered', number_format($qty, 3, '.', '')) }}"
                      required
                      class="w-full rounded-xl border {{ $border }} bg-[color:var(--tw-bg)] px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-sky-500/30">
-              <div class="mt-1 text-[11px] {{ $muted }}">Ordered: {{ number_format($qty, 3) }} L — enter actual quantity received at destination.</div>
+              <div class="mt-1 text-[11px] {{ $muted }}">Ordered: {{ number_format($qty, 3) }} {{ $volLabel }} — enter actual quantity received at destination.</div>
             </div>
             <div>
               <label class="block text-[11px] {{ $muted }} mb-1">POD date / Date de réception *</label>
@@ -399,7 +400,7 @@
           @csrf
           <div class="p-5">
             <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-              Sale <strong>{{ $sale->reference }}</strong> — {{ number_format($qty, 3) }} L — {{ $cur }} {{ number_format($total, 2) }}
+              Sale <strong>{{ $sale->reference }}</strong> — {{ number_format($qty, 3) }} {{ $volLabel }} — {{ $cur }} {{ number_format($total, 2) }}
             </div>
           </div>
           <div class="px-5 pb-5 flex items-center justify-end gap-2">
