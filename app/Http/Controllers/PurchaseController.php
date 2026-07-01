@@ -374,15 +374,26 @@ class PurchaseController extends Controller
             ->get();
 
         // Import logistics nomination + trucks
-        $importNomination = null;
+        $importNomination   = null;
+        $importDutyVendors  = collect();
+        $importSuppliers    = collect();
+        $nominationAdvances = collect();
         if ($purchase->type === 'import') {
             $importNomination = $purchase->importNomination()->with(['transporter', 'trucks.depot'])->first();
+            // Fetch dropdowns + advances here so the blade partial has zero inline DB calls
+            $importDutyVendors = \App\Models\DutyVendor::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+            $importSuppliers   = \App\Models\Supplier::where('company_id', $cid)->where('is_active', true)->orderBy('name')->get();
+            if ($importNomination) {
+                $nominationAdvances = \App\Models\NominationAdvance::where('nomination_id', $importNomination->id)
+                    ->with('creator')->orderBy('advance_date')->get();
+            }
         }
 
+        // All active transporters — not filtered by type so the nomination dropdown
+        // shows every transporter the company has set up
         $transporters = \App\Models\Transporter::query()
             ->where('company_id', $cid)
             ->where('is_active', true)
-            ->where('type', 'intl')
             ->orderBy('name')
             ->get();
 
@@ -402,7 +413,8 @@ class PurchaseController extends Controller
 
         return view('purchases.show', compact(
             'purchase', 'depots', 'importMovements', 'clients',
-            'importNomination', 'transporters', 'volumeUnit', 'batchCosts'
+            'importNomination', 'transporters', 'volumeUnit', 'batchCosts',
+            'importDutyVendors', 'importSuppliers', 'nominationAdvances'
         ));
     }
 

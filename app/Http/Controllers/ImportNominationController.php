@@ -585,12 +585,16 @@ class ImportNominationController extends Controller
             }
         }
 
-        // Post ledger entries for freight earned + short charge (idempotent per truck)
+        // Resolve ledger currency once — transporter default_currency takes precedence over nomination currency
+        $ledgerCurrency = $nomination->currency ?? 'USD';
         if ($nomination->transporter_id) {
-            // Always use transporter's default_currency — keeps the ledger single-currency
             $ledgerCurrency = DB::table('transporters')
                 ->where('id', $nomination->transporter_id)
-                ->value('default_currency') ?? 'USD';
+                ->value('default_currency') ?? $ledgerCurrency;
+        }
+
+        // Post ledger entries for freight earned + short charge (idempotent per truck)
+        if ($nomination->transporter_id) {
 
             // $freightAmt already computed above for landed cost
 
@@ -648,9 +652,6 @@ class ImportNominationController extends Controller
                 ->where('category', 'freight')
                 ->exists();
             if (!$freightCostExists) {
-                $freightCurrency = ($nomination->transporter_id)
-                    ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD')
-                    : ($nomination->currency ?? 'USD');
                 DB::table('batch_costs')->insert([
                     'batch_id'           => $purchase->batch_id,
                     'purchase_id'        => $purchase->id,
@@ -660,7 +661,7 @@ class ImportNominationController extends Controller
                     'category'           => 'freight',
                     'description'        => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
                     'amount'             => $freightAmt,
-                    'currency'           => $freightCurrency,
+                    'currency'           => $ledgerCurrency,
                     'exchange_rate'      => 1,
                     'amount_base'        => $freightAmt,
                     'entry_date'         => $data['delivery_date'],
@@ -797,11 +798,16 @@ class ImportNominationController extends Controller
             );
         }
 
-        // Post transporter entries (freight + shortfall charge)
+        // Resolve ledger currency once — transporter default_currency takes precedence over nomination currency
+        $ledgerCurrency = $nomination->currency ?? 'USD';
         if ($nomination->transporter_id) {
             $ledgerCurrency = DB::table('transporters')
                 ->where('id', $nomination->transporter_id)
-                ->value('default_currency') ?? 'USD';
+                ->value('default_currency') ?? $ledgerCurrency;
+        }
+
+        // Post transporter entries (freight + shortfall charge)
+        if ($nomination->transporter_id) {
             // $freightAmt already computed above for landed cost
             if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
                 TransporterLedgerEntry::create([
@@ -827,13 +833,12 @@ class ImportNominationController extends Controller
 
         // Auto-post freight batch cost
         if ($purchase->batch_id && $freightAmt > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'freight')->exists()) {
-            $freightCurrency = ($nomination->transporter_id) ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD') : ($nomination->currency ?? 'USD');
             DB::table('batch_costs')->insert([
                 'batch_id' => $purchase->batch_id, 'purchase_id' => $purchase->id,
                 'nomination_id' => $nomination->id, 'truck_id' => $truck->id,
                 'company_id' => $cid, 'category' => 'freight',
                 'description' => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
-                'amount' => $freightAmt, 'currency' => $freightCurrency,
+                'amount' => $freightAmt, 'currency' => $ledgerCurrency,
                 'exchange_rate' => 1, 'amount_base' => $freightAmt,
                 'entry_date' => $data['date'], 'is_included_in_cost' => false,
                 'auto_posted' => true, 'created_by' => auth()->id(),
@@ -968,10 +973,11 @@ class ImportNominationController extends Controller
                 );
             }
 
+            $ledgerCurrency = $nomination->currency ?? 'USD';
             if ($nomination->transporter_id) {
                 $ledgerCurrency = DB::table('transporters')
                     ->where('id', $nomination->transporter_id)
-                    ->value('default_currency') ?? 'USD';
+                    ->value('default_currency') ?? $ledgerCurrency;
                 // $freightAmt already computed above for landed cost
                 if ($freightAmt > 0 && !TransporterLedgerEntry::where('ref_type', ImportTruck::class)->where('ref_id', $truck->id)->where('type', 'freight_charge')->exists()) {
                     TransporterLedgerEntry::create([
@@ -996,15 +1002,12 @@ class ImportNominationController extends Controller
             }
 
             if ($purchase->batch_id && $freightAmt > 0 && !DB::table('batch_costs')->where('batch_id', $purchase->batch_id)->where('truck_id', $truck->id)->where('category', 'freight')->exists()) {
-                $freightCurrency = ($nomination->transporter_id)
-                    ? (DB::table('transporters')->where('id', $nomination->transporter_id)->value('default_currency') ?? 'USD')
-                    : ($nomination->currency ?? 'USD');
                 DB::table('batch_costs')->insert([
                     'batch_id'             => $purchase->batch_id, 'purchase_id'    => $purchase->id,
                     'nomination_id'        => $nomination->id,     'truck_id'        => $truck->id,
                     'company_id'           => $cid,                'category'        => 'freight',
                     'description'          => "Freight — truck {$truck->truck_reg} ({$qtyLoaded} {$volumeUnit})",
-                    'amount'               => $freightAmt,         'currency'        => $freightCurrency,
+                    'amount'               => $freightAmt,         'currency'        => $ledgerCurrency,
                     'exchange_rate'        => 1,                   'amount_base'     => $freightAmt,
                     'entry_date'           => $date,               'is_included_in_cost' => false,
                     'auto_posted'          => true,                'created_by'      => auth()->id(),

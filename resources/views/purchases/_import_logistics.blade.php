@@ -6,12 +6,7 @@
 @php
   $nom  = $importNomination;   // shorthand
   $trucks = $nom ? $nom->trucks : collect();
-  // Shared lookup lists — fetched once, reused everywhere in this template
-  $_cid              = auth()->user()->active_company_id;
-  $_dutyVendorsList  = \App\Models\DutyVendor::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
-  $_suppliersList    = \App\Models\Supplier::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
-  $_depotsList       = \App\Models\Depot::where('company_id', $_cid)->where('is_active', true)->where('is_system', false)->orderBy('name')->get();
-  $_transportersList = \App\Models\Transporter::where('company_id', $_cid)->where('is_active', true)->orderBy('name')->get();
+  // Lookup lists pre-fetched by PurchaseController::show() — no DB calls here
   $unitLabel     = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
   $rateLabel     = ($volumeUnit ?? 'L') === 'M3' ? '/M³' : '/L';
   $rateDivisor   = 1;   // Freight & short-charge: always per unit (per L or per M³)
@@ -36,10 +31,8 @@
   $nominatedCapacity   = $trucks->where('status', 'nominated')->sum('capacity');
   $nominatedEst        = $nom ? ($nominatedCapacity * (float)$nom->rate_per_1000l / $rateDivisor) : 0;
 
-  // Advances — new multi-entry table takes precedence; fall back to legacy single field
-  $nominationAdvances  = $nom
-    ? \App\Models\NominationAdvance::where('nomination_id', $nom->id)->with('creator')->orderBy('advance_date')->get()
-    : collect();
+  // Advances — pre-fetched by controller; fall back to empty collection if not provided
+  $nominationAdvances  = $nominationAdvances ?? collect();
   $advancesFromTable   = $nominationAdvances->whereNull('voided_at')->sum('amount');
   $legacyAdvance       = ($advancesFromTable == 0) ? (float)($nom->advances ?? 0) : 0;
   $totalAdvances       = (float)$advancesFromTable + $legacyAdvance;
@@ -845,10 +838,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           @php
             $nomDutyType      = $nom?->default_duty_vendor_type ?? '';
             $nomDutyVendorId  = $nom?->default_duty_vendor_id ?? '';
-            $nomDutyVendors   = $_dutyVendorsList;
-            $nomSuppliers     = $_suppliersList;
-            $nomDepots        = $_depotsList;
-            $nomTransporters  = $_transportersList;
+            $nomDutyVendors   = $importDutyVendors;
+            $nomSuppliers     = $importSuppliers;
+            $nomDepots        = $depots;
+            $nomTransporters  = $transporters;
           @endphp
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Default duty paid to</label>
@@ -1508,10 +1501,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               </label>
             </div>
             @php
-              $dutyVendorsList  = $_dutyVendorsList;
-              $suppliersList    = $_suppliersList;
-              $depotsList       = $_depotsList;
-              $transportersList = $_transportersList;
+              $dutyVendorsList  = $importDutyVendors;
+              $suppliersList    = $importSuppliers;
+              $depotsList       = $depots;
+              $transportersList = $transporters;
               $truckDutyType   = $truck->duty_vendor_type ?? '';
             @endphp
             <div>
@@ -1771,7 +1764,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <select onchange="pdSyncVendorId({{ $truck->id }},'customs_authority',this.value)"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
-                @foreach($_dutyVendorsList as $dv)
+                @foreach($importDutyVendors as $dv)
                   <option value="{{ $dv->id }}" {{ ($truck->duty_vendor_id ?? '') == $dv->id && ($truck->duty_vendor_type ?? '') === 'customs_authority' ? 'selected' : '' }}>{{ $dv->name }}</option>
                 @endforeach
               </select>
@@ -1781,7 +1774,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <select onchange="pdSyncVendorId({{ $truck->id }},'supplier',this.value)"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
-                @foreach($_suppliersList as $sv)
+                @foreach($importSuppliers as $sv)
                   <option value="{{ $sv->id }}" {{ ($truck->duty_vendor_id ?? '') == $sv->id && ($truck->duty_vendor_type ?? '') === 'supplier' ? 'selected' : '' }}>{{ $sv->name }}</option>
                 @endforeach
               </select>
@@ -1791,7 +1784,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <select onchange="pdSyncVendorId({{ $truck->id }},'depot',this.value)"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
-                @foreach($_depotsList as $dep)
+                @foreach($depots as $dep)
                   <option value="{{ $dep->id }}" {{ ($truck->duty_vendor_id ?? '') == $dep->id && ($truck->duty_vendor_type ?? '') === 'depot' ? 'selected' : '' }}>{{ $dep->name }}</option>
                 @endforeach
               </select>
@@ -1801,7 +1794,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <select onchange="pdSyncVendorId({{ $truck->id }},'transporter',this.value)"
                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none">
                 <option value="">— select —</option>
-                @foreach($_transportersList as $tp)
+                @foreach($transporters as $tp)
                   <option value="{{ $tp->id }}" {{ ($truck->duty_vendor_id ?? '') == $tp->id && ($truck->duty_vendor_type ?? '') === 'transporter' ? 'selected' : '' }}>{{ $tp->name }}</option>
                 @endforeach
               </select>
