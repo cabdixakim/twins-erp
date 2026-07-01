@@ -48,7 +48,8 @@
 
       {{-- Acknowledge --}}
       <label class="flex items-start gap-3 cursor-pointer group">
-        <input type="checkbox" x-model="acknowledged"
+        <input type="checkbox" id="recoveryAck"
+               onchange="updateRecoveryBtn()"
                class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-800 accent-amber-500 cursor-pointer">
         <span class="text-xs text-slate-400 group-hover:text-slate-300 transition leading-relaxed">
           I've saved this code somewhere safe and understand it won't be shown again.
@@ -56,13 +57,10 @@
       </label>
 
       {{-- Dismiss --}}
-      <form method="POST" action="{{ route('onboarding.token.dismiss') }}">
+      <form method="POST" action="{{ route('onboarding.token.dismiss') }}" onsubmit="return document.getElementById('recoveryAck').checked;">
         @csrf
-        <button type="submit" :disabled="!acknowledged"
-                class="w-full h-10 rounded-xl text-sm font-bold transition"
-                :class="acknowledged
-                  ? 'bg-amber-500 hover:bg-amber-400 text-black cursor-pointer'
-                  : 'bg-white/5 text-slate-600 border border-white/10 cursor-not-allowed'">
+        <button type="submit" id="recoveryDismissBtn" disabled
+                class="w-full h-10 rounded-xl text-sm font-bold transition bg-white/5 text-slate-600 border border-white/10 cursor-not-allowed">
           Done — take me to the dashboard
         </button>
       </form>
@@ -525,6 +523,17 @@
 </div>
 @if(isset($recoveryToken))
 <script>
+function updateRecoveryBtn() {
+  var checked = document.getElementById('recoveryAck').checked;
+  var btn = document.getElementById('recoveryDismissBtn');
+  btn.disabled = !checked;
+  if (checked) {
+    btn.className = 'w-full h-10 rounded-xl text-sm font-bold transition bg-amber-500 hover:bg-amber-400 text-black cursor-pointer';
+  } else {
+    btn.className = 'w-full h-10 rounded-xl text-sm font-bold transition bg-white/5 text-slate-600 border border-white/10 cursor-not-allowed';
+  }
+}
+
 function copyRecoveryToken(btn, token) {
   navigator.clipboard.writeText(token).then(function() {
     var orig = btn.innerHTML;
