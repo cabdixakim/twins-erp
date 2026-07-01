@@ -6,7 +6,16 @@
 
 <div class="space-y-5">
 
-    {{-- Filters + nav --}}
+    {{-- Breadcrumb --}}
+    <div class="no-print flex items-center gap-2 text-xs" style="color:var(--tw-muted)">
+        <a href="{{ route('accounting.index') }}" class="hover:underline">Accounting</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <a href="{{ route('accounting.ledger', ['from' => $from, 'to' => $to]) }}" class="hover:underline">General Ledger</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>{{ $account->code }} — {{ $account->name }}</span>
+    </div>
+
+    {{-- Filters --}}
     <form method="GET" class="flex flex-wrap items-end gap-3">
         <div>
             <label class="block text-[11px] font-semibold mb-1" style="color:var(--tw-muted)">From</label>
@@ -21,8 +30,6 @@
                    style="background:var(--tw-surface-2);border-color:var(--tw-border);color:var(--tw-fg)">
         </div>
         <button type="submit" class="tw-btn-primary text-xs px-4 py-2 rounded-xl">Apply</button>
-        <a href="{{ route('accounting.ledger', ['from' => $from, 'to' => $to]) }}"
-           class="text-xs self-center" style="color:var(--tw-muted)">← General Ledger</a>
     </form>
 
     {{-- Account summary card --}}

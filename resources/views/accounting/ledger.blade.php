@@ -6,6 +6,13 @@
 
 <div class="space-y-5">
 
+    {{-- Breadcrumb --}}
+    <div class="no-print flex items-center gap-2 text-xs" style="color:var(--tw-muted)">
+        <a href="{{ route('accounting.index') }}" class="hover:underline">Accounting</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>General Ledger</span>
+    </div>
+
     {{-- Filters --}}
     <form method="GET" class="flex flex-wrap items-end gap-3">
         <div>
@@ -21,7 +28,6 @@
                    style="background:var(--tw-surface-2);border-color:var(--tw-border);color:var(--tw-fg)">
         </div>
         <button type="submit" class="tw-btn-primary text-xs px-4 py-2 rounded-xl">Apply</button>
-        <a href="{{ route('accounting.index') }}" class="text-xs self-center" style="color:var(--tw-muted)">← Accounting</a>
     </form>
 
     @php
