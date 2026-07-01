@@ -36,6 +36,7 @@
 @section('subtitle', $useGL ? 'General Ledger mode — journal_entry_lines.' : 'Operational mode — transactional data.')
 
 @section('content')
+<div class="max-w-7xl mx-auto">
 
 {{-- Breadcrumb --}}
 <div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
@@ -410,5 +411,7 @@
     </div>
 
 </div>
+
+</div>{{-- max-w-7xl --}}
 
 @endsection
