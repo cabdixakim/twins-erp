@@ -29,8 +29,7 @@ class JournalAutoPost
     public function isEnabled(): bool
     {
         $company = DB::table('companies')->where('id', $this->companyId)->first();
-        if (!$company || !$company->accounting_enabled) return false;
-        return ChartOfAccount::where('company_id', $this->companyId)->exists();
+        return $company && $company->accounting_enabled;
     }
 
     // ── 1. Purchase receipt (local depot) ───────────────────────────────────

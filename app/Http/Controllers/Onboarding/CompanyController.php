@@ -72,6 +72,9 @@ class CompanyController extends Controller
         // ✅ ADDITION: create CROSS DOCK depot
         $this->ensureCrossDockDepot($company->id, $user->id ?? auth()->id());
 
+        // ✅ ADDITION: seed default Chart of Accounts + Journals
+        \App\Services\SeedCompanyDefaults::seed($company->id);
+
         // ✅ ADDITION: attach membership + set active_company_id (multi-company)
         if (method_exists($user, 'companies')) {
             $user->companies()->syncWithoutDetaching([$company->id]);
