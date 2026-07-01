@@ -95,9 +95,10 @@
                 @foreach($batches ?? [] as $b)
                   <option value="{{ $b->id }}"
                           data-product="{{ $b->product_id }}"
-                          data-depot="{{ $b->depot_id }}"
                           @selected(old('batch_id') == $b->id)>
                     {{ $b->code }}
+                    @if($b->purchased_at) · {{ \Carbon\Carbon::parse($b->purchased_at)->format('M Y') }}@endif
+                    — {{ number_format($b->qty_remaining, 0) }} {{ $volumeUnit ?? 'L' }} remaining
                   </option>
                 @endforeach
               </select>

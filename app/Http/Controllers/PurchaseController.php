@@ -433,7 +433,9 @@ public function confirm(Purchase $purchase, InventoryLedger $ledger)
     DB::transaction(function () use ($purchase, $u, $ledger) {
         // 1) Ensure batch exists
         if (!$purchase->batch_id) {
-            $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+            $productCode = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
+            $poRef       = $purchase->reference ?? ('PO-' . now()->format('Y') . '-' . $purchase->id);
+            $code        = $productCode . '-' . $poRef;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
@@ -587,7 +589,9 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
 
         // Safety: ensure batch exists (should already exist, but never trust)
         if (!$purchase->batch_id) {
-            $code = 'BATCH-' . now()->format('Y') . '-' . strtoupper(Str::random(6));
+            $productCode = strtoupper(\App\Models\Product::where('id', $purchase->product_id)->value('code') ?? 'PRD');
+            $poRef       = $purchase->reference ?? ('PO-' . now()->format('Y') . '-' . $purchase->id);
+            $code        = $productCode . '-' . $poRef;
             $qty  = (float) $purchase->qty;
             $unit = (float) $purchase->unit_price;
 
