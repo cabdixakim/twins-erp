@@ -170,20 +170,30 @@
         </div>
         <table class="w-full text-sm" style="background:var(--tw-surface)">
             <tbody class="divide-y" style="divide-color:var(--tw-border)">
+                @if($cogsRows->isNotEmpty())
+                <tr style="background:var(--tw-surface-2)">
+                    <td colspan="3" class="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider" style="color:var(--tw-muted)">Purchase cost by product</td>
+                </tr>
                 @foreach($cogsRows as $row)
                 <tr>
-                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">{{ $row->product_name }} — purchase cost</td>
-                    <td class="px-5 py-2.5 text-right text-xs" style="color:var(--tw-muted)">{{ number_format($row->qty,0) }} L</td>
+                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">{{ $row->product_name }}</td>
+                    <td class="px-5 py-2.5 text-right text-xs" style="color:var(--tw-muted)">{{ number_format($row->qty,0) }} {{ $volumeUnit ?? 'L' }}</td>
                     <td class="px-5 py-2.5 text-right font-semibold tabular-nums" style="color:var(--tw-fg)">({{ number_format($row->cogs,2) }})</td>
                 </tr>
                 @endforeach
+                @endif
+                @if($landedCosts->isNotEmpty())
+                <tr style="background:var(--tw-surface-2)">
+                    <td colspan="3" class="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider" style="color:var(--tw-muted)">Landed costs (proportional to qty sold)</td>
+                </tr>
                 @foreach($landedCosts as $row)
                 <tr>
-                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">Landed cost — {{ ucfirst(str_replace('_',' ',$row->category)) }}</td>
+                    <td class="px-5 py-2.5" style="color:var(--tw-fg)">{{ ucfirst(str_replace('_',' ',$row->category)) }}</td>
                     <td class="px-5 py-2.5"></td>
                     <td class="px-5 py-2.5 text-right font-semibold tabular-nums" style="color:var(--tw-fg)">({{ number_format($row->total,2) }})</td>
                 </tr>
                 @endforeach
+                @endif
                 @if($cogsRows->isEmpty() && $landedCosts->isEmpty())
                 <tr><td colspan="3" class="px-5 py-4 text-sm" style="color:var(--tw-muted)">No COGS in this period.</td></tr>
                 @endif

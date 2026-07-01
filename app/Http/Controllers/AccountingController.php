@@ -32,30 +32,28 @@ class AccountingController extends Controller
         $from = now()->startOfMonth()->toDateString();
         $to   = now()->toDateString();
 
+        // Use posted_at + sales.cogs_total — same source as the full P&L page.
+        // Do NOT use inventory_consumptions + all batch_costs; that pulls the entire
+        // landed cost of the batch regardless of how much was sold, inflating COGS.
         $revenue = DB::table('sales')
             ->where('company_id', $cid)
             ->where('status', 'posted')
-            ->whereBetween(DB::raw('DATE(created_at)'), [$from, $to])
+            ->whereBetween(DB::raw('DATE(posted_at)'), [$from, $to])
             ->sum('total');
 
-        $cogsTotal = DB::table('inventory_consumptions')
+        $cogsTotal = DB::table('sales')
             ->where('company_id', $cid)
-            ->whereBetween(DB::raw('DATE(created_at)'), [$from, $to])
-            ->sum(DB::raw('qty * unit_cost'));
-
-        $landedCosts = DB::table('batch_costs')
-            ->join('batches', 'batches.id', '=', 'batch_costs.batch_id')
-            ->where('batches.company_id', $cid)
-            ->whereBetween(DB::raw('DATE(batch_costs.created_at)'), [$from, $to])
-            ->sum('batch_costs.amount');
+            ->where('status', 'posted')
+            ->whereBetween(DB::raw('DATE(posted_at)'), [$from, $to])
+            ->sum('cogs_total');
 
         $summary = [
             'coa_count'     => $coaCount,
             'journal_count' => $journalCount,
             'draft_count'   => $draftCount,
             'revenue_mtd'   => round((float)$revenue, 2),
-            'cogs_mtd'      => round((float)$cogsTotal + (float)$landedCosts, 2),
-            'gross_profit'  => round((float)$revenue - (float)$cogsTotal - (float)$landedCosts, 2),
+            'cogs_mtd'      => round((float)$cogsTotal, 2),
+            'gross_profit'  => round((float)$revenue - (float)$cogsTotal, 2),
         ];
 
         return view('accounting.index', compact('summary'));
@@ -198,8 +196,9 @@ class AccountingController extends Controller
         $to   = $request->input('to', now()->toDateString());
 
         // GL mode: read from journal_entry_lines when accounting_enabled + CoA seeded
-        $company = DB::table('companies')->where('id', $cid)->first();
-        $useGL   = $company && $company->accounting_enabled
+        $company    = DB::table('companies')->where('id', $cid)->first();
+        $volumeUnit = strtoupper($company->volume_unit ?? 'L') === 'M3' ? 'M3' : 'L';
+        $useGL      = $company && $company->accounting_enabled
                    && ChartOfAccount::where('company_id', $cid)->exists();
 
         if ($useGL) {
@@ -263,7 +262,7 @@ class AccountingController extends Controller
                 'useGL', 'glRevenue', 'glCogs', 'glOpex',
                 'totalRevenue', 'totalCogs', 'totalOpex',
                 'grossProfit', 'netProfit', 'grossMargin', 'netMargin',
-                'from', 'to'
+                'from', 'to', 'volumeUnit'
             ));
         }
 
@@ -428,7 +427,7 @@ class AccountingController extends Controller
             'totalJournalRevenue', 'totalJournalExpenses',
             'grossProfit', 'totalOpex', 'netProfit',
             'grossMargin', 'netMargin',
-            'from', 'to'
+            'from', 'to', 'volumeUnit'
         ));
     }
 
