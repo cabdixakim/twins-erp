@@ -84,47 +84,38 @@
         </div>
 
         {{-- COST OF SALES --}}
-        @php
-            $totalCostOfSales = $cogs + $totalLanded;
-            $grossProfitAfterLanded = $revenue - $totalCostOfSales;
-            $grossMarginAfterLandedPct = $revenue > 0
-                ? round($grossProfitAfterLanded / $revenue * 100, 1)
-                : null;
-        @endphp
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }}">
+            <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
+                <span class="text-sm font-bold text-rose-400">({{ $fmt($cogs) }})</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
-                <div class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm {{ $fg }}">Cost of Fuel Purchased</span>
-                    <span class="text-sm {{ $muted }}">{{ $fmt($cogs) }}</span>
-                </div>
-                {{-- Landed costs are part of COGS --}}
-                @foreach($landedLines as $line)
+                @forelse($cogsBreakdown as $line)
                 <div class="flex items-center justify-between px-5 py-3">
                     <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
                     <span class="text-sm {{ $muted }}">{{ $fmt($line['amount']) }}</span>
                 </div>
-                @endforeach
+                @empty
+                <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS in this period.</div>
+                @endforelse
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($cogs) }}</span>
                 </div>
             </div>
         </div>
 
         {{-- GROSS PROFIT --}}
-        <div class="rounded-2xl border overflow-hidden {{ $grossProfitAfterLanded >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
-            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfitAfterLanded >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
+        <div class="rounded-2xl border overflow-hidden {{ $grossProfit >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30' }}">
+            <div class="flex items-center justify-between px-5 py-4 {{ $grossProfit >= 0 ? 'bg-emerald-500/5' : 'bg-rose-500/5' }}">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Gross Profit</div>
-                    @if($grossMarginAfterLandedPct !== null)
-                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMarginAfterLandedPct }}% margin</div>
+                    @if($grossMarginPct !== null)
+                    <div class="text-[10px] {{ $muted }} mt-0.5">{{ $grossMarginPct }}% margin</div>
                     @endif
                 </div>
                 <div class="text-xl font-bold">
-                    {!! $fmtSigned($grossProfitAfterLanded) !!}
+                    {!! $fmtSigned($grossProfit) !!}
                 </div>
             </div>
         </div>
@@ -202,14 +193,14 @@
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Cost of Sales</span>
-                    <span class="text-sm {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
+                    <span class="text-sm {{ $fg }}">{{ $fmt($cogs) }}</span>
                 </div>
                 <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Gross Profit</span>
                     <span class="text-sm font-semibold">
-                        {!! $fmtSigned($grossProfitAfterLanded) !!}
-                        @if($grossMarginAfterLandedPct !== null)
-                        <span class="text-[10px] font-normal {{ $muted }} ml-1">{{ $grossMarginAfterLandedPct }}%</span>
+                        {!! $fmtSigned($grossProfit) !!}
+                        @if($grossMarginPct !== null)
+                        <span class="text-[10px] font-normal {{ $muted }} ml-1">{{ $grossMarginPct }}%</span>
                         @endif
                     </span>
                 </div>

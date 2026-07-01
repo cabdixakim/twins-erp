@@ -201,44 +201,23 @@
         </div>
 
         {{-- Cost of Sales --}}
-        @php $totalCostOfSales = $totalCogs + $totalLanded; @endphp
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
             <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
-                <span class="text-sm font-bold text-rose-400">({{ $fmt($totalCostOfSales) }})</span>
+                <span class="text-sm font-bold text-rose-400">({{ $fmt($totalCogs) }})</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
-                @if(($cogsRows ?? collect())->isNotEmpty())
-                <div class="px-5 py-1.5" style="background:var(--tw-surface-2)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Purchase cost by product</span>
-                </div>
-                @foreach($cogsRows ?? [] as $row)
+                @forelse($cogsBreakdown ?? [] as $line)
                 <div class="flex items-center justify-between px-5 py-2.5">
-                    <span class="text-sm {{ $fg }}">{{ $row->product_name }}</span>
-                    <div class="text-right">
-                        <div class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($row->cogs) }})</div>
-                        <div class="text-[10px] {{ $muted }}">{{ number_format($row->qty, 0) }} {{ $volUnit }}</div>
-                    </div>
+                    <span class="text-sm {{ $fg }}">{{ $line['label'] }}</span>
+                    <span class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($line['amount']) }})</span>
                 </div>
-                @endforeach
-                @endif
-                @if(($landedCosts ?? collect())->isNotEmpty())
-                <div class="px-5 py-1.5" style="background:var(--tw-surface-2)">
-                    <span class="text-[10px] font-semibold uppercase tracking-wider {{ $muted }}">Landed costs (proportional to qty sold)</span>
-                </div>
-                @foreach($landedCosts ?? [] as $row)
-                <div class="flex items-center justify-between px-5 py-2.5">
-                    <span class="text-sm {{ $fg }}">{{ ucfirst(str_replace('_', ' ', $row->category)) }}</span>
-                    <span class="text-sm font-semibold tabular-nums {{ $fg }}">({{ $fmt($row->total) }})</span>
-                </div>
-                @endforeach
-                @endif
-                @if(($cogsRows ?? collect())->isEmpty() && ($landedCosts ?? collect())->isEmpty())
+                @empty
                 <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS in this period.</div>
-                @endif
+                @endforelse
                 <div class="flex items-center justify-between px-5 py-2.5 {{ $surface2 }}">
                     <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
-                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalCostOfSales) }}</span>
+                    <span class="text-sm font-bold {{ $fg }}">{{ $fmt($totalCogs) }}</span>
                 </div>
             </div>
         </div>
@@ -343,17 +322,10 @@
                     <span class="text-xs {{ $muted }}">Revenue</span>
                     <span class="text-sm font-semibold {{ $fg }}">{{ $fmt($totalRevenue + ($totalJournalRevenue ?? 0)) }}</span>
                 </div>
-                @if(!$useGL)
-                <div class="flex justify-between items-center">
-                    <span class="text-xs {{ $muted }}">Cost of Sales</span>
-                    <span class="text-sm {{ $fg }}">{{ $fmt($totalCostOfSales ?? ($totalCogs + ($totalLanded ?? 0))) }}</span>
-                </div>
-                @else
                 <div class="flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Cost of Sales</span>
                     <span class="text-sm {{ $fg }}">{{ $fmt($totalCogs) }}</span>
                 </div>
-                @endif
                 <div class="border-t {{ $border }} pt-2.5 flex justify-between items-center">
                     <span class="text-xs {{ $muted }}">Gross Profit</span>
                     <span class="text-sm font-semibold">

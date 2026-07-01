@@ -298,15 +298,25 @@ class AccountingController extends Controller
 
         $totalCogs = $cogsRows->sum('cogs');
 
-        // Landed costs — cost-per-litre × qty consumed in period.
-        // Denominator = qty_received (updated per truck delivery by InventoryLedger::receipt).
-        // For imports this equals total litres physically delivered, giving the true
-        // average rate (e.g. $0.22/L). Falls back to qty_purchased for local/cross-dock.
-        $rawLanded = DB::select("
+        // COGS breakdown — split sales.cogs_total into purchase cost + per-category landed.
+        // Denominator for import batches = SUM(qty_loaded) from import_trucks (rate × qty).
+        // Falls back to qty_received / qty_purchased for local/cross-dock (no trucks).
+        $cogsComponentsRaw = DB::select("
             SELECT bc.category,
                    SUM(
                        COALESCE(bc.amount_base, bc.amount)
-                       / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
+                       / COALESCE(
+                           NULLIF(
+                               (SELECT SUM(it2.qty_loaded)
+                                FROM import_trucks it2
+                                JOIN import_nominations inn2 ON inn2.id = it2.nomination_id
+                                WHERE inn2.purchase_id = bc.purchase_id
+                                  AND it2.qty_loaded IS NOT NULL),
+                               0
+                           ),
+                           NULLIF(b.qty_received, 0),
+                           NULLIF(b.qty_purchased, 0)
+                       )
                        * ic_agg.qty_consumed
                    ) AS total
             FROM batch_costs bc
@@ -320,17 +330,31 @@ class AccountingController extends Controller
             ) ic_agg ON ic_agg.batch_id = b.id
             WHERE bc.amount > 0
             GROUP BY bc.category
-            HAVING SUM(
-                COALESCE(bc.amount_base, bc.amount)
-                / COALESCE(NULLIF(b.qty_received, 0), NULLIF(b.qty_purchased, 0))
-                * ic_agg.qty_consumed
-            ) > 0.01
         ", [$cid, $cid, $from, $to]);
-        $landedCosts = collect($rawLanded)->map(fn($r) => (object)[
-            'category' => $r->category,
-            'total'    => (float) $r->total,
-        ]);
-        $totalLanded = $landedCosts->sum('total');
+
+        $landedCategoryLabels = [
+            'freight'       => 'Freight & Transport',
+            'duty'          => 'Customs & Duty',
+            'border_charge' => 'Border Charges',
+            'hospitality'   => 'Hospitality',
+            'storage'       => 'Storage',
+            'penalty'       => 'Penalties',
+            'other'         => 'Other Landed Costs',
+        ];
+        $landedComponentsMap    = collect($cogsComponentsRaw)->keyBy('category');
+        $totalLandedComponents  = collect($cogsComponentsRaw)->sum('total');
+        $purchaseCostComponent  = round((float) $totalCogs - (float) $totalLandedComponents, 2);
+
+        $cogsBreakdown = collect();
+        if ($purchaseCostComponent > 0.005) {
+            $cogsBreakdown->push(['label' => 'Purchase Cost', 'amount' => $purchaseCostComponent]);
+        }
+        foreach ($landedCategoryLabels as $key => $label) {
+            $amount = round((float) ($landedComponentsMap[$key]->total ?? 0), 2);
+            if ($amount > 0.005) {
+                $cogsBreakdown->push(['label' => $label, 'amount' => $amount]);
+            }
+        }
 
         // Operating expenses from petty cash — use transaction_date (same as Reports P&L)
         $pettyCashExpenses = DB::table('petty_cash_transactions')
@@ -411,7 +435,7 @@ class AccountingController extends Controller
         $totalJournalRevenue  = (float) $journalRevenue->sum('net');
         $totalJournalExpenses = (float) $journalExpenses->sum('net');
 
-        $grossProfit  = $totalRevenue - $totalCogs - $totalLanded;
+        $grossProfit  = $totalRevenue - $totalCogs;
         $totalOpex    = $totalPettyCash + $transporterCharges + $depotCharges;
         $netProfit    = $grossProfit - $totalOpex + $totalJournalRevenue - $totalJournalExpenses;
         $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
@@ -420,8 +444,8 @@ class AccountingController extends Controller
                         : null;
 
         return view('accounting.pl', compact(
-            'useGL', 'revenueRows', 'cogsRows', 'landedCosts', 'pettyCashExpenses',
-            'totalRevenue', 'totalCogs', 'totalLanded', 'totalPettyCash',
+            'useGL', 'revenueRows', 'cogsRows', 'cogsBreakdown', 'pettyCashExpenses',
+            'totalRevenue', 'totalCogs', 'totalPettyCash',
             'transporterCharges', 'depotCharges',
             'journalRevenue', 'journalExpenses',
             'totalJournalRevenue', 'totalJournalExpenses',
@@ -971,10 +995,14 @@ class AccountingController extends Controller
             ->whereDate('posted_at','>=',$from)->whereDate('posted_at','<=',$to)
             ->sum('cogs_total');
 
-        $landedRows = DB::select("
+        $cogsComponentsRaw = DB::select("
             SELECT bc.category, SUM(
                 COALESCE(bc.amount_base,bc.amount)
-                / COALESCE(NULLIF(b.qty_received,0),NULLIF(b.qty_purchased,0))
+                / COALESCE(
+                    NULLIF((SELECT SUM(it2.qty_loaded) FROM import_trucks it2
+                            JOIN import_nominations inn2 ON inn2.id=it2.nomination_id
+                            WHERE inn2.purchase_id=bc.purchase_id AND it2.qty_loaded IS NOT NULL),0),
+                    NULLIF(b.qty_received,0),NULLIF(b.qty_purchased,0))
                 * ic_agg.qty_consumed
             ) AS total
             FROM batch_costs bc
@@ -987,9 +1015,20 @@ class AccountingController extends Controller
             ) ic_agg ON ic_agg.batch_id=b.id
             WHERE bc.amount>0 GROUP BY bc.category
         ", [$cid,$cid,$from,$to]);
-        $totalLanded = collect($landedRows)->sum('total');
+        $exportLandedLabels   = ['freight'=>'Freight & Transport','duty'=>'Customs & Duty','border_charge'=>'Border Charges','hospitality'=>'Hospitality','storage'=>'Storage','penalty'=>'Penalties','other'=>'Other Landed Costs'];
+        $exportLandedMap      = collect($cogsComponentsRaw)->keyBy('category');
+        $exportLandedTotal    = collect($cogsComponentsRaw)->sum('total');
+        $exportPurchaseCost   = round($cogs - $exportLandedTotal, 2);
+        $exportCogsBreakdown  = collect();
+        if ($exportPurchaseCost > 0.005) {
+            $exportCogsBreakdown->push(['label' => 'Purchase Cost', 'amount' => $exportPurchaseCost]);
+        }
+        foreach ($exportLandedLabels as $key => $label) {
+            $amt = round((float)($exportLandedMap[$key]->total ?? 0), 2);
+            if ($amt > 0.005) $exportCogsBreakdown->push(['label' => $label, 'amount' => $amt]);
+        }
 
-        $grossProfit = $revenue - $cogs - $totalLanded;
+        $grossProfit = $revenue - $cogs;
 
         $transporterCharges = DB::table('transporter_ledger_entries')
             ->join('transporters','transporters.id','=','transporter_ledger_entries.transporter_id')
@@ -1023,7 +1062,7 @@ class AccountingController extends Controller
         $netProfit  = $grossProfit - $totalOpex;
 
         return response()->streamDownload(function () use (
-            $revenue,$cogs,$landedRows,$totalLanded,$grossProfit,
+            $revenue,$cogs,$exportCogsBreakdown,$grossProfit,
             $transporterCharges,$depotCharges,$pettyCash,$totalOpex,$netProfit,$from,$to
         ) {
             $out = fopen('php://output', 'w');
@@ -1031,10 +1070,10 @@ class AccountingController extends Controller
             fputcsv($out, []);
             fputcsv($out, ['Section', 'Line Item', 'Amount']);
             fputcsv($out, ['Revenue', 'Fuel Sales', number_format($revenue, 2, '.', '')]);
-            fputcsv($out, ['Cost of Sales', 'Cost of Fuel (COGS)', number_format($cogs, 2, '.', '')]);
-            foreach ($landedRows as $l) {
-                fputcsv($out, ['Cost of Sales', ucfirst(str_replace('_',' ',$l->category)), number_format((float)$l->total, 2, '.', '')]);
+            foreach ($exportCogsBreakdown as $line) {
+                fputcsv($out, ['Cost of Sales', $line['label'], number_format($line['amount'], 2, '.', '')]);
             }
+            fputcsv($out, ['Cost of Sales', 'Total Cost of Sales', number_format($cogs, 2, '.', '')]);
             fputcsv($out, ['', 'Gross Profit', number_format($grossProfit, 2, '.', '')]);
             fputcsv($out, []);
             fputcsv($out, ['Operating Expenses', 'Transport & Freight', number_format($transporterCharges, 2, '.', '')]);
