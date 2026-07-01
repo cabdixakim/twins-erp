@@ -81,7 +81,9 @@ class SeedCompanyDefaults
             ['5300', 'Operating Expenses',        'expense',   'operating', null],
         ];
 
-        foreach ($accounts as [$code, $name, $type, $subType, $parentCode]) {
+        foreach ($accounts as $acct) {
+            [$code, $name, $type, $subType] = $acct;
+            $parentCode = $acct[4] ?? null;
             // Skip if code already exists for this company
             $exists = DB::table('chart_of_accounts')
                 ->where('company_id', $companyId)
