@@ -156,10 +156,11 @@
                         Recovery page
                     </a>
 
-                    <form action="{{ route('profile.recovery-token') }}" method="POST">
+                    <form action="{{ route('profile.recovery-token') }}" method="POST" id="frmGenToken">
                         @csrf
-                        <button type="submit" class="{{ $btnPrimary }} text-xs"
-                            onclick="return confirm('Generate a new recovery token? This will invalidate any existing code.')">
+                        <button type="button" id="btnGenToken"
+                                onclick="armAndFire('btnGenToken','frmGenToken','{{ $user->recovery_token ? 'Regenerate — click again to confirm' : 'Generate — click again to confirm' }}')"
+                                class="{{ $btnPrimary }} text-xs">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
@@ -168,10 +169,11 @@
                     </form>
 
                     @if($user->recovery_token)
-                    <form action="{{ route('profile.recovery-token.clear') }}" method="POST">
+                    <form action="{{ route('profile.recovery-token.clear') }}" method="POST" id="frmClearToken">
                         @csrf
-                        <button type="submit" class="{{ $btnDanger }} text-xs"
-                            onclick="return confirm('Clear the recovery token? You will not be able to use it to recover your account.')">
+                        <button type="button" id="btnClearToken"
+                                onclick="armAndFire('btnClearToken','frmClearToken','Click again to confirm clear')"
+                                class="{{ $btnDanger }} text-xs">
                             Clear token
                         </button>
                     </form>
@@ -195,4 +197,26 @@
     </div>{{-- end two-column --}}
 
 </div>
+
+<script>
+var _armed = {};
+function armAndFire(btnId, formId, armedLabel) {
+  var btn = document.getElementById(btnId);
+  if (_armed[btnId]) {
+    document.getElementById(formId).submit();
+    return;
+  }
+  _armed[btnId] = true;
+  var orig = btn.innerHTML;
+  btn.textContent = armedLabel;
+  btn.style.opacity = '0.75';
+  setTimeout(function () {
+    if (_armed[btnId]) {
+      _armed[btnId] = false;
+      btn.innerHTML = orig;
+      btn.style.opacity = '';
+    }
+  }, 3000);
+}
+</script>
 @endsection
