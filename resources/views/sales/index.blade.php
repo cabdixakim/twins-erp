@@ -167,7 +167,7 @@
           <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:85px">Date</th>
           <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}">Client</th>
           <th class="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider {{ $muted }}">Product / Depot</th>
-          <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Qty (L)</th>
+          <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Qty ({{ $volLabel }})</th>
           <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:120px">Total</th>
           <th class="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Margin</th>
           <th class="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider {{ $muted }}" style="width:90px">Status</th>
@@ -323,6 +323,7 @@
   'selected'     => $selected,
   'costingMethod'=> $costingMethod ?? 'weighted_average',
   'batches'      => $batches ?? collect(),
+  'volumeUnit'   => $volumeUnit ?? 'L',
 ])
 
 @push('scripts')

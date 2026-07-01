@@ -516,6 +516,8 @@ window.selectedSale = @json($selected);
   const qtyInput   = document.getElementById('f_qty');
   const stockHint  = document.getElementById('saleStockHint');
   let   availableStock = null;
+  const SALE_VOL_UNIT  = @json(($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L'));
+  const SALE_VOL_DECS  = @json(($volumeUnit ?? 'L') === 'M3' ? 3 : 0);
 
   const renderStockHint = () => {
     if (!stockHint) return;
@@ -524,15 +526,15 @@ window.selectedSale = @json($selected);
       return;
     }
     const qty = parseFloat(qtyInput?.value?.replace(/,/g, '')) || 0;
-    const fmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(availableStock);
+    const fmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: SALE_VOL_DECS, maximumFractionDigits: SALE_VOL_DECS }).format(availableStock);
     if (qty > 0 && qty > availableStock + 0.001) {
-      stockHint.textContent = '⚠ Exceeds available: ' + fmt + ' L';
+      stockHint.textContent = '⚠ Exceeds available: ' + fmt + ' ' + SALE_VOL_UNIT;
       stockHint.style.cssText = 'color:#f59e0b;font-weight:600';
     } else if (availableStock === 0) {
       stockHint.textContent = 'No stock in this depot for selected product';
       stockHint.style.cssText = 'color:#f87171;font-weight:600';
     } else {
-      stockHint.textContent = 'Available: ' + fmt + ' L';
+      stockHint.textContent = 'Available: ' + fmt + ' ' + SALE_VOL_UNIT;
       stockHint.style.cssText = 'color:#34d399';
     }
   };
