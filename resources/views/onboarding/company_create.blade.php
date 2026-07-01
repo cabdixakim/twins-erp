@@ -157,7 +157,7 @@
 </head>
 <body class="ob-page min-h-full flex items-center justify-center px-4 py-8">
 
-  <div class="ob-card w-full max-w-3xl rounded-3xl border overflow-hidden">
+  <div class="ob-card w-full max-w-4xl rounded-3xl border overflow-hidden">
     <div class="grid grid-cols-1 md:grid-cols-5">
 
       {{-- Left panel — always dark brand panel --}}
