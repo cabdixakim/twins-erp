@@ -1,6 +1,6 @@
 @php
     $title    = 'Profit & Loss';
-    $subtitle = 'Revenue, cost of sales, and expenses for the selected period.';
+    $subtitle = 'Revenue, cost of goods sold, and expenses for the selected period.';
     $border   = 'border-[color:var(--tw-border)]';
     $surface  = 'bg-[color:var(--tw-surface)]';
     $surface2 = 'bg-[color:var(--tw-surface-2)]';
@@ -86,7 +86,7 @@
         {{-- COST OF SALES --}}
         <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
             <div class="px-5 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Sales</span>
+                <span class="text-xs font-bold uppercase tracking-widest {{ $muted }}">Cost of Goods Sold</span>
                 <span class="text-sm font-bold text-rose-400">({{ $fmt($cogs) }})</span>
             </div>
             <div class="divide-y divide-[color:var(--tw-border)]">
@@ -99,7 +99,7 @@
                 <div class="px-5 py-4 text-sm {{ $muted }} italic">No COGS in this period.</div>
                 @endforelse
                 <div class="flex items-center justify-between px-5 py-3 {{ $surface2 }}">
-                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Sales</span>
+                    <span class="text-xs font-bold uppercase tracking-wide {{ $muted }}">Total Cost of Goods Sold</span>
                     <span class="text-sm font-bold {{ $fg }}">{{ $fmt($cogs) }}</span>
                 </div>
             </div>
@@ -192,7 +192,7 @@
                     <span class="text-sm font-semibold {{ $fg }}">{{ $fmt($revenue) }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-xs {{ $muted }}">Cost of Sales</span>
+                    <span class="text-xs {{ $muted }}">Cost of Goods Sold</span>
                     <span class="text-sm {{ $fg }}">{{ $fmt($cogs) }}</span>
                 </div>
                 <div class="border-t {{ $border }} pt-3 flex justify-between items-center">
