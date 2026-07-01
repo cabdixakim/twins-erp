@@ -602,6 +602,99 @@ class AccountingController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
+    /*  General Ledger                                                       */
+    /* ------------------------------------------------------------------ */
+
+    public function ledger(Request $request)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfYear()->toDateString());
+        $to   = $request->input('to', today()->toDateString());
+
+        $accounts = ChartOfAccount::where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->map(function ($account) use ($cid, $from, $to) {
+                $totals = DB::table('journal_entry_lines')
+                    ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+                    ->where('journal_entry_lines.company_id', $cid)
+                    ->where('journal_entry_lines.account_id', $account->id)
+                    ->where('journal_entries.status', 'posted')
+                    ->whereDate('journal_entries.entry_date', '>=', $from)
+                    ->whereDate('journal_entries.entry_date', '<=', $to)
+                    ->selectRaw('COALESCE(SUM(debit),0) as total_debit, COALESCE(SUM(credit),0) as total_credit')
+                    ->first();
+
+                $account->total_debit  = (float) ($totals->total_debit ?? 0);
+                $account->total_credit = (float) ($totals->total_credit ?? 0);
+                $account->balance      = $account->total_debit - $account->total_credit;
+                $account->has_activity = $account->total_debit > 0 || $account->total_credit > 0;
+                return $account;
+            });
+
+        return view('accounting.ledger', compact('accounts', 'from', 'to'));
+    }
+
+    public function ledgerAccount(Request $request, ChartOfAccount $account)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfYear()->toDateString());
+        $to   = $request->input('to', today()->toDateString());
+
+        // Opening balance — all posted entries before $from
+        $opening = DB::table('journal_entry_lines')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+            ->where('journal_entry_lines.company_id', $cid)
+            ->where('journal_entry_lines.account_id', $account->id)
+            ->where('journal_entries.status', 'posted')
+            ->whereDate('journal_entries.entry_date', '<', $from)
+            ->selectRaw('COALESCE(SUM(debit),0) as d, COALESCE(SUM(credit),0) as c')
+            ->first();
+
+        $openingBalance = (float) $opening->d - (float) $opening->c;
+
+        // Lines in period
+        $lines = DB::table('journal_entry_lines')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_entry_lines.entry_id')
+            ->leftJoin('journals', 'journals.id', '=', 'journal_entries.journal_id')
+            ->where('journal_entry_lines.company_id', $cid)
+            ->where('journal_entry_lines.account_id', $account->id)
+            ->where('journal_entries.status', 'posted')
+            ->whereDate('journal_entries.entry_date', '>=', $from)
+            ->whereDate('journal_entries.entry_date', '<=', $to)
+            ->orderBy('journal_entries.entry_date')
+            ->orderBy('journal_entries.id')
+            ->select([
+                'journal_entry_lines.id',
+                'journal_entry_lines.debit',
+                'journal_entry_lines.credit',
+                'journal_entry_lines.description as line_desc',
+                'journal_entries.entry_date',
+                'journal_entries.reference',
+                'journal_entries.description as entry_desc',
+                'journal_entries.ref_type',
+                'journal_entries.ref_id',
+                'journals.name as journal_name',
+            ])
+            ->get();
+
+        // Compute running balance
+        $running = $openingBalance;
+        $lines = $lines->map(function ($line) use (&$running) {
+            $running += (float) $line->debit - (float) $line->credit;
+            $line->running_balance = $running;
+            return $line;
+        });
+
+        $closingBalance = $running;
+
+        return view('accounting.ledger-account', compact(
+            'account', 'lines', 'from', 'to', 'openingBalance', 'closingBalance'
+        ));
+    }
+
+    /* ------------------------------------------------------------------ */
     /*  Trial Balance                                                        */
     /* ------------------------------------------------------------------ */
 

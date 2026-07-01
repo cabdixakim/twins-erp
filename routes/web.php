@@ -827,6 +827,12 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
         Route::get('/balance-sheet', [\App\Http\Controllers\AccountingController::class, 'balanceSheet'])
             ->middleware('permission:reports.export')
             ->name('balance-sheet');
+        Route::get('/ledger', [\App\Http\Controllers\AccountingController::class, 'ledger'])
+            ->middleware('permission:reports.export')
+            ->name('ledger');
+        Route::get('/ledger/{account}', [\App\Http\Controllers\AccountingController::class, 'ledgerAccount'])
+            ->middleware('permission:reports.export')
+            ->name('ledger.account');
         Route::get('/journals', [\App\Http\Controllers\AccountingController::class, 'journals'])
             ->middleware('permission:reports.export')
             ->name('journals');

@@ -96,6 +96,20 @@
             @endif
         </a>
 
+        {{-- General Ledger --}}
+        <a href="{{ route('accounting.ledger') }}"
+           class="group rounded-2xl border p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 block"
+           style="background:var(--tw-surface);border-color:var(--tw-border)">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                 style="background:rgba(20,184,166,.10);border:1px solid rgba(20,184,166,.20)">
+                <svg class="w-6 h-6" style="color:#14b8a6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"/>
+                </svg>
+            </div>
+            <h3 class="text-sm font-bold mb-1 group-hover:text-teal-400 transition" style="color:var(--tw-fg)">General Ledger</h3>
+            <p class="text-xs leading-relaxed" style="color:var(--tw-muted)">Per-account transaction history with running balance — drill into any account to see every debit and credit posted.</p>
+        </a>
+
         {{-- Trial Balance --}}
         <a href="{{ route('accounting.trial-balance') }}"
            class="group rounded-2xl border p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 block"
