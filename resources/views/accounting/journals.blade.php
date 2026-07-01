@@ -62,7 +62,8 @@
     </div>
     @else
     <div class="rounded-2xl border overflow-hidden" style="border-color:var(--tw-border)">
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="w-full min-w-[640px] text-sm">
             <thead>
                 <tr class="text-[11px] uppercase tracking-wider" style="background:var(--tw-surface-2);color:var(--tw-muted)">
                     <th class="px-4 py-3 text-left">Date</th>
@@ -100,6 +101,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
     </div>
     <div class="mt-3">{{ $entries->links() }}</div>
     @endif

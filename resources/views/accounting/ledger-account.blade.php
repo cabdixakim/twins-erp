@@ -73,7 +73,8 @@
     @else
 
     <div class="rounded-2xl border overflow-hidden" style="border-color:var(--tw-border)">
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="w-full min-w-[720px] text-sm">
             <thead>
                 <tr class="text-[10px] uppercase tracking-wider border-b"
                     style="background:var(--tw-surface-2);color:var(--tw-muted);border-color:var(--tw-border)">
@@ -145,6 +146,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
     @endif
 

@@ -49,7 +49,8 @@
             <span class="text-[11px] ml-auto" style="color:var(--tw-muted)">{{ $group->count() }} accounts</span>
         </div>
 
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="w-full min-w-[560px] text-sm">
             <thead>
                 <tr class="text-[10px] uppercase tracking-wider border-b" style="background:var(--tw-surface);color:var(--tw-muted);border-color:var(--tw-border)">
                     <th class="px-4 py-2.5 text-left w-20">Code</th>
@@ -103,6 +104,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
     </div>
 
     @endif
