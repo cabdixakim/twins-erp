@@ -183,8 +183,6 @@ class ReportController extends Controller
         $netProfit     = $grossProfit - $totalExpenses;
         $netMarginPct  = $revenue > 0 ? round($netProfit / $revenue * 100, 1) : null;
 
-        $volumeUnit = strtoupper(DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L') === 'M3' ? 'M3' : 'L';
-
         return view('reports.pl', compact(
             'from', 'to',
             'revenue', 'cogs', 'qtySold',
@@ -193,7 +191,7 @@ class ReportController extends Controller
             'depotCharges', 'pettyCash', 'transporterCharges',
             'totalExpenses',
             'netProfit', 'netMarginPct',
-            'byProduct', 'volumeUnit'
+            'byProduct'
         ));
     }
 

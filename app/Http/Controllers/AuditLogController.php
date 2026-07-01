@@ -56,7 +56,7 @@ class AuditLogController extends Controller
             ->pluck('model_id')
             ->unique();
         $truckPurchaseMap = $truckIds->isNotEmpty()
-            ? ImportTruck::whereIn('import_trucks.id', $truckIds)
+            ? ImportTruck::whereIn('id', $truckIds)
                 ->join('import_nominations as n', 'n.id', '=', 'import_trucks.nomination_id')
                 ->select('import_trucks.id', 'n.purchase_id')
                 ->pluck('purchase_id', 'import_trucks.id')
