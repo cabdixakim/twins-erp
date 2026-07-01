@@ -76,13 +76,15 @@
             </thead>
             <tbody class="divide-y" style="divide-color:var(--tw-border)">
                 @foreach($entries as $entry)
-                <tr class="hover:bg-white/[.02] transition" style="background:var(--tw-surface)">
-                    <td class="px-4 py-3 text-xs" style="color:var(--tw-muted)">{{ $entry->entry_date->format('d M Y') }}</td>
-                    <td class="px-4 py-3 font-mono text-xs font-semibold" style="color:var(--tw-fg)">{{ $entry->reference }}</td>
-                    <td class="px-4 py-3 text-xs" style="color:var(--tw-fg)">{{ Str::limit($entry->description,60) }}</td>
-                    <td class="px-4 py-3 text-right tabular-nums font-semibold" style="color:var(--tw-fg)">{{ number_format($entry->lines->sum('debit'),2) }}</td>
-                    <td class="px-4 py-3 text-right tabular-nums font-semibold" style="color:var(--tw-fg)">{{ number_format($entry->lines->sum('credit'),2) }}</td>
-                    <td class="px-4 py-3 text-center">
+                <tr class="hover:bg-white/[.02] transition border-t" style="background:var(--tw-surface);border-color:var(--tw-border)">
+                    <td class="px-4 py-2.5 text-xs whitespace-nowrap" style="color:var(--tw-muted)">{{ $entry->entry_date->format('d M Y') }}</td>
+                    <td class="px-4 py-2.5 font-mono text-xs font-semibold whitespace-nowrap" style="color:var(--tw-fg)">{{ $entry->reference }}</td>
+                    <td class="px-4 py-2.5 text-xs max-w-[200px]">
+                        <span class="block truncate" title="{{ $entry->description }}" style="color:var(--tw-fg)">{{ $entry->description }}</span>
+                    </td>
+                    <td class="px-4 py-2.5 text-right tabular-nums text-xs font-semibold whitespace-nowrap" style="color:var(--tw-fg)">{{ number_format($entry->lines->sum('debit'),2) }}</td>
+                    <td class="px-4 py-2.5 text-right tabular-nums text-xs font-semibold whitespace-nowrap" style="color:var(--tw-fg)">{{ number_format($entry->lines->sum('credit'),2) }}</td>
+                    <td class="px-4 py-2.5 text-center whitespace-nowrap">
                         @php $sc = ['posted'=>'text-emerald-400','draft'=>'text-amber-400','reversed'=>'text-rose-400'] @endphp
                         <span class="text-[10px] font-semibold {{ $sc[$entry->status] ?? '' }}">{{ ucfirst($entry->status) }}</span>
                     </td>
@@ -90,11 +92,18 @@
                 {{-- Lines sub-rows --}}
                 @foreach($entry->lines as $line)
                 <tr style="background:var(--tw-surface-2)">
-                    <td class="px-4 py-1.5 pl-8 text-[11px]" style="color:var(--tw-muted)"></td>
-                    <td class="px-4 py-1.5 text-[11px] font-mono" style="color:var(--tw-muted)">{{ $line->account?->code }}</td>
-                    <td class="px-4 py-1.5 text-[11px]" style="color:var(--tw-muted)">{{ $line->account?->name }}{{ $line->description ? ' — '.$line->description : '' }}</td>
-                    <td class="px-4 py-1.5 text-right text-[11px] tabular-nums" style="color:var(--tw-muted)">{{ $line->debit > 0 ? number_format($line->debit,2) : '' }}</td>
-                    <td class="px-4 py-1.5 text-right text-[11px] tabular-nums" style="color:var(--tw-muted)">{{ $line->credit > 0 ? number_format($line->credit,2) : '' }}</td>
+                    <td class="py-1 text-[11px]" style="color:var(--tw-muted)"></td>
+                    <td class="px-4 py-1 text-[11px]" style="color:var(--tw-muted)">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="opacity-30">└</span>
+                            <span class="font-mono">{{ $line->account?->code }}</span>
+                        </span>
+                    </td>
+                    <td class="px-4 py-1 text-[11px] max-w-[200px]">
+                        <span class="block truncate" title="{{ $line->account?->name }}" style="color:var(--tw-muted)">{{ $line->account?->name }}</span>
+                    </td>
+                    <td class="px-4 py-1 text-right text-[11px] tabular-nums whitespace-nowrap" style="color:var(--tw-muted)">{{ $line->debit > 0 ? number_format($line->debit,2) : '' }}</td>
+                    <td class="px-4 py-1 text-right text-[11px] tabular-nums whitespace-nowrap" style="color:var(--tw-muted)">{{ $line->credit > 0 ? number_format($line->credit,2) : '' }}</td>
                     <td></td>
                 </tr>
                 @endforeach
