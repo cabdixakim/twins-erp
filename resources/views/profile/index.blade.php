@@ -117,14 +117,20 @@
 
                 {{-- Show the plain token immediately after generation --}}
                 @if(session('recovery_plain'))
-                <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-                    <div class="text-xs font-bold text-amber-400 mb-2">
+                @php $plainToken = session('recovery_plain'); @endphp
+                <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3">
+                    <div class="text-xs font-bold text-amber-400">
                         ⚠ Copy this code now — it won't be shown again
                     </div>
-                    <div class="font-mono text-base font-bold tracking-widest text-amber-300 select-all break-all">
-                        {{ session('recovery_plain') }}
+                    <div class="flex items-center gap-3">
+                        <code class="font-mono text-base font-bold tracking-widest text-amber-300 select-all break-all flex-1">{{ $plainToken }}</code>
+                        <button type="button" id="profileCopyBtn"
+                                onclick="profileCopyToken(this, '{{ $plainToken }}')"
+                                class="shrink-0 h-8 px-3 rounded-lg border border-amber-500/40 bg-amber-500/15 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition whitespace-nowrap">
+                            📋 Copy
+                        </button>
                     </div>
-                    <p class="mt-2 text-xs {{ $muted }}">Store this in a password manager or safe location.</p>
+                    <p class="text-xs {{ $muted }}">Store this in a password manager or safe location.</p>
                 </div>
                 @endif
 
@@ -199,6 +205,20 @@
 </div>
 
 <script>
+function profileCopyToken(btn, token) {
+  navigator.clipboard.writeText(token).then(function() {
+    var orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('border-emerald-500/40','bg-emerald-500/15','text-emerald-400');
+    btn.classList.remove('border-amber-500/40','bg-amber-500/15','text-amber-300');
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.classList.remove('border-emerald-500/40','bg-emerald-500/15','text-emerald-400');
+      btn.classList.add('border-amber-500/40','bg-amber-500/15','text-amber-300');
+    }, 2000);
+  });
+}
+
 var _armed = {};
 function armAndFire(btnId, formId, armedLabel) {
   var btn = document.getElementById(btnId);
