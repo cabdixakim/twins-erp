@@ -311,12 +311,11 @@
                 <div class="flex gap-2">
                   @foreach(['L' => 'Litres', 'M3' => 'Cubic Metres (m³)'] as $val => $label)
                   <label class="flex-1 flex items-center gap-1.5 cursor-pointer rounded-lg border px-2.5 py-2 text-xs font-medium transition
-                                ob-radio-opt {{ old('volume_unit','L') === $val ? 'selected' : '' }}"
-                         style="border-color:#d1d5db;color:#374151">
+                                ob-radio-opt {{ old('volume_unit','L') === $val ? 'selected' : '' }}">
                     <input type="radio" name="volume_unit" value="{{ $val }}"
                            {{ old('volume_unit','L') === $val ? 'checked' : '' }}
                            class="sr-only ob-radio">
-                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0" style="border-color:#d1d5db"></span>
+                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0"></span>
                     {{ $label }}
                   </label>
                   @endforeach
@@ -329,12 +328,11 @@
                 <div class="flex gap-2 flex-col">
                   @foreach(['weighted_average' => ['Weighted Average','Blended cost across all stock'], 'specific_lot' => ['Specific Lot','Exact cost per batch (FIFO)']] as $val => [$label, $desc])
                   <label class="flex items-start gap-2 cursor-pointer rounded-lg border px-2.5 py-2 text-xs font-medium transition
-                                ob-radio-opt {{ old('costing_method','weighted_average') === $val ? 'selected' : '' }}"
-                         style="border-color:#d1d5db;color:#374151">
+                                ob-radio-opt {{ old('costing_method','weighted_average') === $val ? 'selected' : '' }}">
                     <input type="radio" name="costing_method" value="{{ $val }}"
                            {{ old('costing_method','weighted_average') === $val ? 'checked' : '' }}
                            class="sr-only ob-radio mt-0.5">
-                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0 mt-0.5" style="border-color:#d1d5db"></span>
+                    <span class="ob-radio-dot h-3 w-3 rounded-full border-2 flex-shrink-0 mt-0.5"></span>
                     <span>{{ $label }}<span class="block font-normal ob-muted text-[10px]">{{ $desc }}</span></span>
                   </label>
                   @endforeach
