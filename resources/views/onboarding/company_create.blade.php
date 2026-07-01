@@ -276,7 +276,7 @@
                 </label>
                 <input name="code" value="{{ old('code') }}"
                        class="ob-input {{ $errors->has('code') ? 'error' : '' }}"
-                       placeholder="e.g. TWE" required>
+                       placeholder="e.g. ACME" required>
                 @error('code')
                   <p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>
                 @enderror
