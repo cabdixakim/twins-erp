@@ -258,9 +258,50 @@ class AccountingController extends Controller
             $grossMargin  = $totalRevenue > 0 ? round($grossProfit / $totalRevenue * 100, 1) : null;
             $netMargin    = $totalRevenue > 0 ? round($netProfit  / $totalRevenue * 100, 1) : null;
 
+            // COGS breakdown — same logic as operational mode, driven by batch_costs
+            $glCogsComponentsRaw = DB::select("
+                SELECT bc.category, SUM(
+                    COALESCE(bc.amount_base, bc.amount)
+                    / COALESCE(
+                        NULLIF(
+                            (SELECT SUM(it2.qty_loaded) FROM import_trucks it2
+                             JOIN import_nominations inn2 ON inn2.id = it2.nomination_id
+                             WHERE inn2.purchase_id = bc.purchase_id AND it2.qty_loaded IS NOT NULL),
+                            0
+                        ),
+                        NULLIF(b.qty_received, 0),
+                        NULLIF(b.qty_purchased, 0)
+                    ) * ic_agg.qty_consumed
+                ) AS total
+                FROM batch_costs bc
+                JOIN batches b ON b.id = bc.batch_id AND b.company_id = ?
+                JOIN (
+                    SELECT batch_id, SUM(qty) AS qty_consumed
+                    FROM inventory_consumptions
+                    WHERE company_id = ? AND DATE(created_at) BETWEEN ? AND ?
+                    GROUP BY batch_id
+                ) ic_agg ON ic_agg.batch_id = b.id
+                WHERE bc.amount > 0
+                GROUP BY bc.category
+            ", [$cid, $cid, $from, $to]);
+
+            $glLandedLabels  = ['freight'=>'Freight & Transport','duty'=>'Customs & Duty','border_charge'=>'Border Charges','hospitality'=>'Hospitality','storage'=>'Storage','penalty'=>'Penalties','other'=>'Other Landed Costs'];
+            $glLandedMap     = collect($glCogsComponentsRaw)->keyBy('category');
+            $glLandedTotal   = collect($glCogsComponentsRaw)->sum('total');
+            $glPurchaseCost  = round($totalCogs - $glLandedTotal, 2);
+            $cogsBreakdown   = collect();
+            if ($glPurchaseCost > 0.005) {
+                $cogsBreakdown->push(['label' => 'Purchase Cost', 'amount' => $glPurchaseCost]);
+            }
+            foreach ($glLandedLabels as $key => $label) {
+                $amt = round((float) ($glLandedMap[$key]->total ?? 0), 2);
+                if ($amt > 0.005) $cogsBreakdown->push(['label' => $label, 'amount' => $amt]);
+            }
+
             return view('accounting.pl', compact(
                 'useGL', 'glRevenue', 'glCogs', 'glOpex',
                 'totalRevenue', 'totalCogs', 'totalOpex',
+                'cogsBreakdown',
                 'grossProfit', 'netProfit', 'grossMargin', 'netMargin',
                 'from', 'to', 'volumeUnit'
             ));
