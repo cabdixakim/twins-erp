@@ -188,7 +188,9 @@ class PurchaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('purchases.create', compact('suppliers', 'products', 'depots', 'transporters'));
+        $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
+
+        return view('purchases.create', compact('suppliers', 'products', 'depots', 'transporters', 'volumeUnit'));
     }
 
     public function store(Request $request)
@@ -1050,7 +1052,9 @@ public function receive(Purchase $purchase, InventoryLedger $ledger)
             ->orderBy('name')
             ->get();
 
-        return view('purchases.edit', compact('purchase', 'suppliers', 'products', 'depots', 'transporters'));
+        $volumeUnit = \App\Models\Company::find($cid)?->volume_unit ?? 'L';
+
+        return view('purchases.edit', compact('purchase', 'suppliers', 'products', 'depots', 'transporters', 'volumeUnit'));
     }
 
     /**

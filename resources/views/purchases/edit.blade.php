@@ -195,11 +195,16 @@
       @endif
 
       {{-- Quantity --}}
+      @php
+        $uomLabel = ($volumeUnit ?? 'L') === 'M3' ? 'M³' : 'L';
+        $uomLong  = ($volumeUnit ?? 'L') === 'M3' ? 'cubic metres (M³)' : 'litres (L)';
+      @endphp
       <div>
-        <label class="text-xs font-semibold {{ $muted }}">Quantity</label>
+        <label class="text-xs font-semibold {{ $muted }}">Quantity <span class="font-normal opacity-60">({{ $uomLabel }})</span></label>
         <input name="qty" value="{{ old('qty', $purchase->qty) }}" inputmode="decimal"
                class="{{ $fieldBase }} @error('qty') {{ $errBorder }} {{ $errBg }} {{ $errRing }} @enderror"
-               placeholder="e.g. 9000">
+               placeholder="e.g. 9 000 {{ $uomLabel }}">
+        <div class="mt-1 text-xs {{ $hintText ?? '' }}">Volume in {{ $uomLong }}.</div>
         @error('qty')
           <div class="mt-1 text-xs {{ $errText }}">{{ $message }}</div>
         @enderror
@@ -207,10 +212,10 @@
 
       {{-- Unit price --}}
       <div>
-        <label class="text-xs font-semibold {{ $muted }}">Unit price</label>
+        <label class="text-xs font-semibold {{ $muted }}">Unit price <span class="font-normal opacity-60">(per {{ $uomLabel }})</span></label>
         <input name="unit_price" value="{{ old('unit_price', $purchase->unit_price) }}" inputmode="decimal"
                class="{{ $fieldBase }} @error('unit_price') {{ $errBorder }} {{ $errBg }} {{ $errRing }} @enderror"
-               placeholder="e.g. 0.65">
+               placeholder="e.g. 0.65 per {{ $uomLabel }}">
         @error('unit_price')
           <div class="mt-1 text-xs {{ $errText }}">{{ $message }}</div>
         @enderror
