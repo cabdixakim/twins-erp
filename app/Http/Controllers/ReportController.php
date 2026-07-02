@@ -630,16 +630,42 @@ class ReportController extends Controller
             });
 
         // ── Live pipeline (current, not period-bound) ─────────────────────
-        // At shipper — qty remaining at source on active import purchases
-        $atShipperRaw = DB::table('purchases')
-            ->where('company_id', $cid)
-            ->whereIn('status', ['confirmed', 'nominated'])
-            ->where('type', 'import')
-            ->whereNotNull('shipper_remainder_qty')
-            ->where('shipper_remainder_qty', '>', 0)
-            ->selectRaw('product_id, SUM(shipper_remainder_qty) as qty, SUM(shipper_remainder_qty * unit_price) as value, COUNT(*) as n')
-            ->groupBy('product_id')
+        // At shipper — purchased qty not yet loaded onto a truck, on active import purchases.
+        // Mirrors the per-purchase "Remaining at shipper" calc: purchase.qty - SUM(qty_loaded)
+        // across trucks that have actually loaded (excludes 'nominated' and 'loading_failed' trucks,
+        // since loading_failed capacity is still sitting at the shipper).
+        $importPurchasesRaw = DB::table('purchases')
+            ->where('purchases.company_id', $cid)
+            ->whereIn('purchases.status', ['confirmed', 'nominated'])
+            ->where('purchases.type', 'import')
+            ->leftJoin('import_nominations', 'import_nominations.purchase_id', '=', 'purchases.id')
+            ->leftJoin('import_trucks', function ($j) {
+                $j->on('import_trucks.nomination_id', '=', 'import_nominations.id')
+                  ->whereNotIn('import_trucks.status', ['nominated', 'loading_failed']);
+            })
+            ->selectRaw('
+                purchases.id as purchase_id,
+                purchases.product_id,
+                purchases.qty as purchase_qty,
+                purchases.unit_price,
+                COALESCE(SUM(import_trucks.qty_loaded), 0) as qty_loaded
+            ')
+            ->groupBy('purchases.id', 'purchases.product_id', 'purchases.qty', 'purchases.unit_price')
             ->get();
+
+        $atShipperByProductRaw = [];
+        foreach ($importPurchasesRaw as $p) {
+            $remaining = max(0.0, (float) $p->purchase_qty - (float) $p->qty_loaded);
+            if ($remaining <= 0) continue;
+            $pid = $p->product_id;
+            if (!isset($atShipperByProductRaw[$pid])) {
+                $atShipperByProductRaw[$pid] = (object) ['product_id' => $pid, 'qty' => 0.0, 'value' => 0.0, 'n' => 0];
+            }
+            $atShipperByProductRaw[$pid]->qty   += $remaining;
+            $atShipperByProductRaw[$pid]->value += $remaining * (float) $p->unit_price;
+            $atShipperByProductRaw[$pid]->n     += 1;
+        }
+        $atShipperRaw = collect(array_values($atShipperByProductRaw));
 
         // In transit — trucks loaded/moving but not yet delivered
         $inTransitRaw = DB::table('import_trucks')
