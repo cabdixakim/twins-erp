@@ -458,6 +458,172 @@ class ReportController extends Controller
         return view('reports.throughput', compact('series', 'totals', 'months'));
     }
 
+    /** Stock Position — period movement summary + live pipeline */
+    public function stockPosition(Request $request)
+    {
+        $cid  = $this->cid();
+        $from = $request->input('from', now()->startOfMonth()->toDateString());
+        $to   = $request->input('to',   today()->toDateString());
+
+        // ── Period stock movement by product ─────────────────────────────
+        // Opening = cumulative net before $from
+        $openingRaw = DB::table('inventory_movements')
+            ->where('company_id', $cid)
+            ->whereDate('created_at', '<', $from)
+            ->selectRaw("
+                product_id,
+                SUM(CASE WHEN type='receipt'    THEN qty
+                         WHEN type='issue'      THEN -qty
+                         WHEN type='adjustment' THEN qty
+                         ELSE 0 END) as qty
+            ")
+            ->groupBy('product_id')
+            ->get()->keyBy('product_id');
+
+        // Movements within the period
+        $periodRaw = DB::table('inventory_movements')
+            ->where('company_id', $cid)
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->selectRaw("
+                product_id,
+                SUM(CASE WHEN type='receipt'    THEN qty ELSE 0 END) as receipts,
+                SUM(CASE WHEN type='issue'      THEN qty ELSE 0 END) as dispatched,
+                SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(qty) ELSE 0 END) as losses,
+                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN qty ELSE 0 END) as adjustments_in
+            ")
+            ->groupBy('product_id')
+            ->get()->keyBy('product_id');
+
+        // Product names
+        $products = DB::table('products')
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id');
+
+        // Collect all product ids that appear in any movement
+        $allProductIds = collect($openingRaw->keys())
+            ->merge($periodRaw->keys())
+            ->unique()->values();
+
+        $movementRows = [];
+        foreach ($allProductIds as $pid) {
+            $opening    = (float)($openingRaw[$pid]->qty ?? 0);
+            $receipts   = (float)($periodRaw[$pid]->receipts ?? 0);
+            $dispatched = (float)($periodRaw[$pid]->dispatched ?? 0);
+            $losses     = (float)($periodRaw[$pid]->losses ?? 0);
+            $adjIn      = (float)($periodRaw[$pid]->adjustments_in ?? 0);
+            $closing    = $opening + $receipts - $dispatched - $losses + $adjIn;
+            $movementRows[] = [
+                'product_id'  => $pid,
+                'product'     => $products[$pid] ?? "Product #$pid",
+                'opening'     => round($opening, 3),
+                'receipts'    => round($receipts, 3),
+                'dispatched'  => round($dispatched, 3),
+                'losses'      => round($losses, 3),
+                'adj_in'      => round($adjIn, 3),
+                'closing'     => round($closing, 3),
+            ];
+        }
+
+        // ── Live pipeline (current, not period-bound) ─────────────────────
+        // At shipper — qty remaining at source on active import purchases
+        $atShipperRaw = DB::table('purchases')
+            ->where('company_id', $cid)
+            ->whereIn('status', ['confirmed', 'nominated'])
+            ->where('type', 'import')
+            ->whereNotNull('shipper_remainder_qty')
+            ->where('shipper_remainder_qty', '>', 0)
+            ->selectRaw('product_id, SUM(shipper_remainder_qty) as qty, COUNT(*) as n')
+            ->groupBy('product_id')
+            ->get();
+
+        // In transit — trucks loaded/moving but not yet delivered
+        $inTransitRaw = DB::table('import_trucks')
+            ->join('import_nominations', 'import_nominations.id', '=', 'import_trucks.nomination_id')
+            ->join('purchases', 'purchases.id', '=', 'import_nominations.purchase_id')
+            ->where('import_trucks.company_id', $cid)
+            ->whereIn('import_trucks.status', ['loaded', 'in_transit', 'border_cleared'])
+            ->whereNotNull('import_trucks.qty_loaded')
+            ->selectRaw('purchases.product_id, SUM(import_trucks.qty_loaded) as qty, COUNT(import_trucks.id) as trucks')
+            ->groupBy('purchases.product_id')
+            ->get();
+
+        // In depots — current depot stock (exclude CROSS DOCK system depot)
+        $inDepotsRaw = DB::table('depot_stocks')
+            ->join('depots', 'depots.id', '=', 'depot_stocks.depot_id')
+            ->where('depot_stocks.company_id', $cid)
+            ->where('depots.is_system', false)
+            ->where('depot_stocks.qty', '>', 0)
+            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty) as qty')
+            ->groupBy('depot_stocks.product_id', 'depots.id', 'depots.name')
+            ->orderBy('depots.name')
+            ->get();
+
+        // Sold to clients (all time)
+        $soldRaw = DB::table('sales')
+            ->where('company_id', $cid)
+            ->where('status', 'posted')
+            ->selectRaw('product_id, SUM(qty) as qty, COUNT(*) as n')
+            ->groupBy('product_id')
+            ->get();
+
+        // Total losses ever (negative adjustments)
+        $lossesRaw = DB::table('inventory_movements')
+            ->where('company_id', $cid)
+            ->where('type', 'adjustment')
+            ->where('qty', '<', 0)
+            ->selectRaw('product_id, SUM(ABS(qty)) as qty')
+            ->groupBy('product_id')
+            ->get();
+
+        // Build pipeline summary per product
+        $pipelineProductIds = collect()
+            ->merge($atShipperRaw->pluck('product_id'))
+            ->merge($inTransitRaw->pluck('product_id'))
+            ->merge($inDepotsRaw->pluck('product_id'))
+            ->merge($soldRaw->pluck('product_id'))
+            ->unique()->values();
+
+        $atShipperByProduct  = $atShipperRaw->keyBy('product_id');
+        $inTransitByProduct  = $inTransitRaw->keyBy('product_id');
+        $inDepotsByProduct   = $inDepotsRaw->groupBy('product_id');
+        $soldByProduct       = $soldRaw->keyBy('product_id');
+        $lossesByProduct     = $lossesRaw->keyBy('product_id');
+
+        $pipelineRows = [];
+        foreach ($pipelineProductIds as $pid) {
+            $inDepotQty = $inDepotsByProduct->get($pid, collect())->sum('qty');
+            $pipelineRows[] = [
+                'product'    => $products[$pid] ?? "Product #$pid",
+                'at_shipper' => round((float)($atShipperByProduct[$pid]->qty ?? 0), 3),
+                'in_transit' => round((float)($inTransitByProduct[$pid]->qty ?? 0), 3),
+                'in_depots'  => round((float)$inDepotQty, 3),
+                'sold'       => round((float)($soldByProduct[$pid]->qty ?? 0), 3),
+                'losses'     => round((float)($lossesByProduct[$pid]->qty ?? 0), 3),
+            ];
+        }
+
+        // Pipeline totals
+        $pipelineTotals = [
+            'at_shipper' => collect($pipelineRows)->sum('at_shipper'),
+            'in_transit' => collect($pipelineRows)->sum('in_transit'),
+            'in_depots'  => collect($pipelineRows)->sum('in_depots'),
+            'sold'       => collect($pipelineRows)->sum('sold'),
+            'losses'     => collect($pipelineRows)->sum('losses'),
+        ];
+
+        // Depot breakdown (for "in depot" section)
+        $depotBreakdown = $inDepotsRaw;
+
+        return view('reports.stock-position', compact(
+            'from', 'to',
+            'movementRows', 'pipelineRows', 'pipelineTotals',
+            'depotBreakdown', 'products'
+        ));
+    }
+
     /* ------------------------------------------------------------------ */
     /*  CSV Exports                                                          */
     /* ------------------------------------------------------------------ */
