@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\ClientLedgerEntry;
 use App\Models\Invoice;
+use App\Services\JournalAutoPost;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -138,15 +140,45 @@ class InvoiceController extends Controller
             'paid_at'     => 'required|date',
         ]);
 
-        $newPaid = (float) $invoice->paid_amount + (float) $data['paid_amount'];
+        $amount  = (float) $data['paid_amount'];
+        $newPaid = (float) $invoice->paid_amount + $amount;
         $status  = $newPaid >= (float) $invoice->total ? 'paid' : 'sent';
+        $cid     = (int) auth()->user()->active_company_id;
 
-        $invoice->update([
-            'paid_amount' => min($newPaid, (float) $invoice->total),
-            'status'      => $status,
-            'paid_at'     => $status === 'paid' ? $data['paid_at'] : $invoice->paid_at,
-            'updated_by'  => auth()->id(),
-        ]);
+        DB::transaction(function () use ($invoice, $data, $amount, $newPaid, $status, $cid) {
+            $invoice->update([
+                'paid_amount' => min($newPaid, (float) $invoice->total),
+                'status'      => $status,
+                'paid_at'     => $status === 'paid' ? $data['paid_at'] : $invoice->paid_at,
+                'updated_by'  => auth()->id(),
+            ]);
+
+            // Post to client ledger
+            if ($invoice->client_id) {
+                $desc  = 'Payment received — ' . $invoice->invoice_number;
+                $entry = ClientLedgerEntry::create([
+                    'company_id'  => $cid,
+                    'client_id'   => $invoice->client_id,
+                    'type'        => 'payment',
+                    'amount'      => -$amount,
+                    'currency'    => $invoice->currency,
+                    'description' => $desc,
+                    'ref_type'    => Invoice::class,
+                    'ref_id'      => $invoice->id,
+                    'entry_date'  => $data['paid_at'],
+                    'created_by'  => auth()->id(),
+                ]);
+
+                JournalAutoPost::for($cid)->postClientPayment(
+                    ledgerEntryId: $entry->id,
+                    reference:     'PAY-INV-' . $invoice->id,
+                    amount:        $amount,
+                    currency:      $invoice->currency,
+                    description:   $desc,
+                    date:          $data['paid_at'],
+                );
+            }
+        });
 
         AuditLog::record(
             'paid',
@@ -185,7 +217,9 @@ class InvoiceController extends Controller
             return back()->with('error', 'Invoice is already fully paid or credited — no remaining balance to credit.');
         }
 
-        DB::transaction(function () use ($invoice, $data, $amount) {
+        $cid = (int) auth()->user()->active_company_id;
+
+        DB::transaction(function () use ($invoice, $data, $amount, $cid) {
             $company = $this->company();
 
             $seq = Invoice::where('company_id', $company->id)
@@ -223,6 +257,32 @@ class InvoiceController extends Controller
                 'status'      => $newStatus,
                 'updated_by'  => auth()->id(),
             ]);
+
+            // Post to client ledger
+            if ($invoice->client_id) {
+                $desc  = 'Credit note ' . $cnNumber . ' — ' . $invoice->invoice_number . ': ' . $data['reason'];
+                $entry = ClientLedgerEntry::create([
+                    'company_id'  => $cid,
+                    'client_id'   => $invoice->client_id,
+                    'type'        => 'credit_note',
+                    'amount'      => -$amount,
+                    'currency'    => $invoice->currency,
+                    'description' => $desc,
+                    'ref_type'    => Invoice::class,
+                    'ref_id'      => $cn->id,
+                    'entry_date'  => $data['issued_date'],
+                    'created_by'  => auth()->id(),
+                ]);
+
+                JournalAutoPost::for($cid)->postClientCreditNote(
+                    ledgerEntryId: $entry->id,
+                    reference:     $cnNumber,
+                    amount:        $amount,
+                    currency:      $invoice->currency,
+                    description:   $desc,
+                    date:          $data['issued_date'],
+                );
+            }
 
             AuditLog::record(
                 'credit_note',

@@ -394,6 +394,31 @@ class JournalAutoPost
         ], $date);
     }
 
+    // ── 13. Client payment received ──────────────────────────────────────────
+    // DR Bank / CR Accounts Receivable
+    // (cash in; AR drops — client has paid)
+
+    public function postClientPayment(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('client_payment', $ledgerEntryId)) return;
+
+        $ar   = $this->account('asset', ['Accounts Receivable', 'receivable']);
+        $bank = $this->account('asset', ['Main Bank', 'Bank', 'Petty Cash']);
+        if (!$ar || !$bank) return;
+
+        $this->post('client_payment', $ledgerEntryId, 'client_payment', $reference, $description, $currency, [
+            [$bank->id, $amount, 0,       $description],
+            [$ar->id,   0,       $amount, $description],
+        ], $date);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function alreadyPosted(string $refType, int $refId): bool
