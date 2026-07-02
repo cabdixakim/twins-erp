@@ -11,16 +11,21 @@
     $surface2= 'bg-[color:var(--tw-surface-2)]';
 @endphp
 
+{{-- Breadcrumb --}}
+<div class="flex items-center gap-2 text-xs {{ $muted }} mb-4">
+    <a href="{{ route('settings.hub') }}" class="hover:underline">Settings</a>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    <span>Customs Authorities</span>
+</div>
+
 <div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <div class="text-xs {{ $muted }} uppercase tracking-widest mb-1">Settings</div>
             <h1 class="text-xl font-bold {{ $fg }}">Customs Authorities</h1>
             <p class="text-sm {{ $muted }} mt-0.5">Manage the customs authorities you pay duty to on import shipments.</p>
         </div>
-        <a href="{{ route('settings.hub') }}" class="text-xs {{ $muted }} hover:underline">← Back to Settings</a>
     </div>
 
     @if(session('status'))
