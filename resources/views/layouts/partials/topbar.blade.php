@@ -190,6 +190,62 @@
 </div>
 
 {{-- POP: Search --}}
+@php
+    $__searchIndex = [];
+    $__addSearch = function ($label, $sub, $routeName, $keywords = '') use (&$__searchIndex) {
+        if (!\Illuminate\Support\Facades\Route::has($routeName)) return;
+        $__searchIndex[] = [
+            'label' => $label,
+            'sub' => $sub,
+            'href' => route($routeName),
+            'key' => strtolower($label.' '.$sub.' '.$keywords),
+        ];
+    };
+
+    $__addSearch('Dashboard', 'Summary', 'dashboard', 'home overview kpi');
+    $__addSearch('Depot Stock', 'Live stock by product', 'depot-stock.index', 'inventory ago pms fuel');
+    $__addSearch('Clearances', 'Border / customs clearances', 'clearances.index', 'customs border drc');
+    $__addSearch('Purchases', 'Local depot, cross-dock, import', 'purchases.index', 'buy order po receive');
+    $__addSearch('New purchase', 'Create a purchase order', 'purchases.create', 'buy order po new create');
+    $__addSearch('Sales', 'Sales orders', 'sales.index', 'sell order dispatch');
+    $__addSearch('Clients', 'Client master + dispatches', 'clients.index', 'customer buyer ar');
+    $__addSearch('Invoices', 'Sales invoices', 'invoices.index', 'billing receipt');
+    $__addSearch('Transporters', 'Transporter ledger', 'transporters.index', 'freight trucking haulage');
+    $__addSearch('Suppliers', 'Supplier ledger + payables', 'suppliers.index', 'vendor payable ap');
+    $__addSearch('Depots', 'Depot charges ledger', 'depots.index', 'storage throughput fees');
+    $__addSearch('Duties & Hospitality', 'Duty vendor charges', 'duties.index', 'customs duty hospitality vendor');
+    $__addSearch('Petty Cash', 'Cash float accounts', 'petty-cash.index', 'cash float advance');
+    $__addSearch('Banks', 'Bank accounts', 'banks.index', 'banking account reconciliation');
+    $__addSearch('Reports', 'Reporting hub', 'reports.index', 'analytics stats');
+    $__addSearch('Profit & Loss', 'P&L report', 'reports.pl', 'margin income statement');
+    $__addSearch('AR Aging', 'Accounts receivable aging', 'reports.ar-aging', 'client receivable overdue');
+    $__addSearch('AP Aging', 'Accounts payable aging', 'reports.ap-aging', 'supplier payable overdue');
+    $__addSearch('Throughput Report', 'Volume throughput', 'reports.throughput', 'volume litres fuel');
+    $__addSearch('Inventory Position', 'Stock position report', 'reports.inventory-position', 'stock movement ledger');
+    $__addSearch('Accounting', 'Accounting hub', 'accounting.index', 'gl ledger books');
+    $__addSearch('Chart of Accounts', 'G/L accounts', 'accounting.chart-of-accounts', 'gl accounts');
+    $__addSearch('Journals', 'Journal entries', 'accounting.journals', 'gl double entry');
+    $__addSearch('Trial Balance', 'Trial balance report', 'accounting.trial-balance', 'gl accounting');
+    $__addSearch('Balance Sheet', 'Balance sheet report', 'accounting.balance-sheet', 'gl assets liabilities');
+    $__addSearch('Documents', 'Document storage', 'documents.index', 'files uploads');
+    $__addSearch('Inventory Adjustments', 'Stock adjustments', 'inventory-adjustments.index', 'correction write-off');
+    $__addSearch('Alerts', 'Notifications', 'alerts.index', 'notifications warnings');
+    $__addSearch('Products', 'Product master', 'products.index', 'fuel ago pms items');
+    $__addSearch('Company Settings', 'Company profile', 'settings.company.edit', 'profile edit');
+    $__addSearch('Depot Settings', 'Manage depots', 'settings.depots.index', 'depot admin');
+    $__addSearch('Supplier Settings', 'Manage suppliers', 'settings.suppliers.index', 'supplier admin');
+    $__addSearch('Transporter Settings', 'Manage transporters', 'settings.transporters.index', 'transporter admin');
+    $__addSearch('Client Settings', 'Manage clients', 'settings.clients.index', 'client admin');
+    $__addSearch('Duty Vendor Settings', 'Manage duty vendors', 'settings.duty-vendors.index', 'duty admin');
+    $__addSearch('Duty Rate Settings', 'Manage duty rates', 'settings.duty-rates.index', 'duty admin rate');
+    $__addSearch('Inventory Settings', 'Costing method + periods', 'settings.inventory.index', 'costing period fifo weighted average');
+    $__addSearch('Settings', 'Settings hub', 'settings.hub', 'admin configuration');
+    $__addSearch('Roles', 'Role & permission management', 'admin.roles.index', 'admin rbac permissions');
+    $__addSearch('Users', 'User management', 'admin.users.index', 'admin team accounts');
+    $__addSearch('Audit Log', 'System audit trail', 'admin.audit-log', 'admin history log');
+    $__addSearch('My Profile', 'Password & security', 'profile', 'account security password');
+    $__addSearch('Switch Company', 'Change active workspace', 'companies.switcher', 'workspace tenant');
+@endphp
 <div id="pop-search" class="{{ str_replace('w-[22rem]', 'w-[24rem]', $popover) }}">
     <div class="p-3 border-b border-[color:var(--tw-border)]">
         <input id="twTopbarSearch"
@@ -198,22 +254,20 @@
                       text-[13px] text-[color:var(--tw-fg)]
                       placeholder:text-[color:var(--tw-muted)]
                       focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent-soft)]"
-               placeholder="Search…"
+               placeholder="Search pages…"
                autocomplete="off">
     </div>
-    <div id="twTopbarSearchList" class="p-2 grid gap-1">
-        <a data-key="dashboard summary" href="{{ route('dashboard') }}" class="tw-s-item {{ $popItem }}">
-            <div class="text-[13px] font-semibold">Dashboard</div>
-            <div class="text-[11px] tw-muted">Summary</div>
+    <div id="twTopbarSearchList" class="p-2 grid gap-1 max-h-[360px] overflow-y-auto">
+        @foreach($__searchIndex as $__item)
+        <a data-key="{{ $__item['key'] }}" href="{{ $__item['href'] }}" class="tw-s-item {{ $popItem }}">
+            <div class="text-[13px] font-semibold">{{ $__item['label'] }}</div>
+            <div class="text-[11px] tw-muted">{{ $__item['sub'] }}</div>
         </a>
-        <a data-key="depot stock ago" href="{{ route('depot-stock.index') }}" class="tw-s-item {{ $popItem }}">
-            <div class="text-[13px] font-semibold">Depot Stock</div>
-            <div class="text-[11px] tw-muted">Live AGO</div>
-        </a>
-        <a data-key="depots settings" href="{{ route('settings.depots.index') }}" class="tw-s-item {{ $popItem }}">
-            <div class="text-[13px] font-semibold">Depots</div>
-            <div class="text-[11px] tw-muted">Settings</div>
-        </a>
+        @endforeach
+        <div id="twTopbarSearchEmpty" class="hidden px-3 py-6 text-center">
+            <div class="text-[13px] font-semibold text-[color:var(--tw-fg)]">No matches</div>
+            <div class="text-[11px] tw-muted mt-1">Try a different search term.</div>
+        </div>
     </div>
 </div>
 
@@ -576,14 +630,35 @@
     --------------------------------*/
     const input = document.getElementById('twTopbarSearch');
     const list = document.getElementById('twTopbarSearchList');
+    const empty = document.getElementById('twTopbarSearchEmpty');
     if (input && list) {
-        input.addEventListener('input', () => {
+        const items = Array.from(list.querySelectorAll('.tw-s-item'));
+
+        function runFilter() {
             const q = (input.value || '').toLowerCase().trim();
-            list.querySelectorAll('.tw-s-item').forEach(a => {
+            let visible = 0;
+            items.forEach(a => {
                 const key = (a.getAttribute('data-key') || '').toLowerCase();
-                a.style.display = (!q || key.includes(q)) ? '' : 'none';
+                const match = !q || key.includes(q);
+                a.style.display = match ? '' : 'none';
+                if (match) visible++;
             });
+            if (empty) empty.classList.toggle('hidden', visible !== 0);
+        }
+
+        input.addEventListener('input', runFilter);
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const firstVisible = items.find(a => a.style.display !== 'none');
+                if (firstVisible) {
+                    e.preventDefault();
+                    firstVisible.click();
+                }
+            }
         });
+
+        runFilter();
     }
 })();
 </script>
