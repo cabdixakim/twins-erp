@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\ClientLedgerEntry;
 use App\Models\Invoice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -148,6 +149,20 @@ class InvoiceController extends Controller
             'updated_by'  => auth()->id(),
         ]);
 
+        // Mirror to client ledger so both AR views stay in sync
+        ClientLedgerEntry::firstOrCreate(
+            ['ref_type' => Invoice::class, 'ref_id' => $invoice->id, 'type' => 'payment',
+             'amount'   => -(float) $data['paid_amount']],
+            [
+                'company_id'  => $invoice->company_id,
+                'client_id'   => $invoice->client_id,
+                'currency'    => $invoice->currency,
+                'description' => 'Payment on invoice ' . $invoice->invoice_number,
+                'entry_date'  => $data['paid_at'],
+                'created_by'  => auth()->id(),
+            ]
+        );
+
         AuditLog::record(
             'paid',
             "Invoice {$invoice->invoice_number} marked " . ($status === 'paid' ? 'fully paid' : 'partially paid') . " — amount: {$data['paid_amount']} {$invoice->currency}",
@@ -223,6 +238,20 @@ class InvoiceController extends Controller
                 'status'      => $newStatus,
                 'updated_by'  => auth()->id(),
             ]);
+
+            // Mirror to client ledger so both AR views stay in sync
+            ClientLedgerEntry::firstOrCreate(
+                ['ref_type' => Invoice::class, 'ref_id' => $cn->id, 'type' => 'credit_note'],
+                [
+                    'company_id'  => $company->id,
+                    'client_id'   => $invoice->client_id,
+                    'amount'      => -$amount,
+                    'currency'    => $invoice->currency,
+                    'description' => 'Credit note ' . $cn->invoice_number . ' on ' . $invoice->invoice_number . ': ' . $data['reason'],
+                    'entry_date'  => $data['issued_date'],
+                    'created_by'  => auth()->id(),
+                ]
+            );
 
             AuditLog::record(
                 'credit_note',
