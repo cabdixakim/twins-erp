@@ -38,6 +38,19 @@ class ExportController extends Controller
         'petty_cash_transactions'    => 'Petty_Cash_Transactions',
         'bank_accounts'              => 'Bank_Accounts',
         'bank_transactions'          => 'Bank_Transactions',
+        'depot_charge_configs'       => 'Depot_Charge_Configs',
+        'duty_vendors'               => 'Duty_Vendors',
+        'duty_rates'                 => 'Duty_Rates',
+        'duty_ledger_entries'        => 'Duty_Ledger',
+        'hospitality_charges'        => 'Hospitality_Charges',
+        'inventory_adjustments'      => 'Inventory_Adjustments',
+        'chart_of_accounts'          => 'Chart_Of_Accounts',
+        'journals'                   => 'Journals',
+        'journal_entries'            => 'Journal_Entries',
+        'journal_entry_lines'        => 'Journal_Entry_Lines',
+        'nomination_advances'        => 'Nomination_Advances',
+        'import_jobs'                => 'Bulk_Import_Jobs',
+        'documents'                  => 'Documents',
         'audit_logs'                 => 'Audit_Log',
     ];
 
@@ -650,5 +663,257 @@ class ExportController extends Controller
     private function rowsAuditLogs(): array
     {
         return $this->plainRows('audit_logs');
+    }
+
+    private function rowsDepotChargeConfigs(): array
+    {
+        return DB::select("
+            SELECT
+                d.name                          AS depot,
+                dcc.category,
+                dcc.name,
+                dcc.rate,
+                dcc.rate_unit,
+                dcc.currency,
+                dcc.receipt_rule,
+                dcc.dispatch_rule,
+                dcc.paid_by_type,
+                dcc.paid_by_name,
+                dcc.effective_from,
+                dcc.effective_to,
+                CASE WHEN dcc.is_active THEN 'Yes' ELSE 'No' END AS is_active,
+                dcc.notes,
+                dcc.created_at
+            FROM depot_charge_configs dcc
+            LEFT JOIN depots d ON d.id = dcc.depot_id
+            WHERE dcc.company_id = ?
+            ORDER BY d.name, dcc.category
+        ", [$this->companyId]);
+    }
+
+    private function rowsDutyVendors(): array
+    {
+        return DB::select("
+            SELECT name, code, country, city, contact_person, phone,
+                   default_currency, is_active, notes, created_at
+            FROM duty_vendors WHERE company_id = ? ORDER BY name
+        ", [$this->companyId]);
+    }
+
+    private function rowsDutyRates(): array
+    {
+        return DB::select("
+            SELECT
+                prod.name                       AS product,
+                dr.rate_per_1000l,
+                dr.currency,
+                dr.effective_from,
+                dr.effective_to,
+                CASE WHEN dr.is_active THEN 'Yes' ELSE 'No' END AS is_active,
+                dr.notes,
+                dr.created_at
+            FROM duty_rates dr
+            LEFT JOIN products prod ON prod.id = dr.product_id
+            WHERE dr.company_id = ?
+            ORDER BY prod.name, dr.effective_from DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsDutyLedgerEntries(): array
+    {
+        return DB::select("
+            SELECT
+                dle.entry_date,
+                v.name                          AS duty_vendor,
+                dle.type,
+                dle.description,
+                dle.amount,
+                dle.currency,
+                dle.ref_type,
+                dle.created_at
+            FROM duty_ledger_entries dle
+            LEFT JOIN duty_vendors v ON v.id = dle.duty_vendor_id
+            WHERE dle.company_id = ?
+            ORDER BY dle.entry_date DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsHospitalityCharges(): array
+    {
+        return DB::select("
+            SELECT
+                p.reference                     AS purchase_reference,
+                hc.paid_to_type,
+                hc.paid_to_name,
+                hc.amount,
+                hc.currency,
+                hc.exchange_rate,
+                hc.amount_base,
+                hc.entry_date,
+                hc.description,
+                hc.created_at
+            FROM hospitality_charges hc
+            LEFT JOIN purchases p ON p.id = hc.purchase_id
+            WHERE hc.company_id = ?
+            ORDER BY hc.entry_date DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsInventoryAdjustments(): array
+    {
+        return DB::select("
+            SELECT
+                ip.name                         AS period,
+                prod.name                       AS product,
+                d.name                          AS depot,
+                b.code                          AS batch_code,
+                ia.reason_type,
+                ia.qty,
+                ia.unit_cost,
+                ia.total_value,
+                CASE WHEN ia.recoverable THEN 'Yes' ELSE 'No' END AS recoverable,
+                ia.notes,
+                ia.created_at
+            FROM inventory_adjustments ia
+            LEFT JOIN inventory_periods ip ON ip.id = ia.period_id
+            LEFT JOIN products          prod ON prod.id = ia.product_id
+            LEFT JOIN depots            d    ON d.id    = ia.depot_id
+            LEFT JOIN batches           b    ON b.id    = ia.batch_id
+            WHERE ia.company_id = ?
+            ORDER BY ia.created_at DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsChartOfAccounts(): array
+    {
+        return DB::select("
+            SELECT
+                coa.code,
+                coa.name,
+                coa.type,
+                coa.sub_type,
+                parent.name                     AS parent_account,
+                CASE WHEN coa.is_system THEN 'Yes' ELSE 'No' END AS system_account,
+                CASE WHEN coa.is_active THEN 'Yes' ELSE 'No' END AS is_active,
+                coa.created_at
+            FROM chart_of_accounts coa
+            LEFT JOIN chart_of_accounts parent ON parent.id = coa.parent_id
+            WHERE coa.company_id = ?
+            ORDER BY coa.code
+        ", [$this->companyId]);
+    }
+
+    private function rowsJournals(): array
+    {
+        return DB::select("
+            SELECT name, type, is_active, created_at
+            FROM journals WHERE company_id = ? ORDER BY name
+        ", [$this->companyId]);
+    }
+
+    private function rowsJournalEntries(): array
+    {
+        return DB::select("
+            SELECT
+                j.name                          AS journal,
+                je.reference,
+                je.description,
+                je.entry_date,
+                je.status,
+                je.ref_type,
+                je.posted_at,
+                je.reversed_at,
+                je.created_at
+            FROM journal_entries je
+            LEFT JOIN journals j ON j.id = je.journal_id
+            WHERE je.company_id = ?
+            ORDER BY je.entry_date DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsJournalEntryLines(): array
+    {
+        return DB::select("
+            SELECT
+                je.reference                    AS journal_entry_reference,
+                je.entry_date,
+                coa.code                        AS account_code,
+                coa.name                        AS account_name,
+                jel.description,
+                jel.debit,
+                jel.credit
+            FROM journal_entry_lines jel
+            LEFT JOIN journal_entries    je  ON je.id  = jel.entry_id
+            LEFT JOIN chart_of_accounts  coa ON coa.id = jel.account_id
+            WHERE jel.company_id = ?
+            ORDER BY je.entry_date DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsNominationAdvances(): array
+    {
+        return DB::select("
+            SELECT
+                p.reference                     AS purchase_reference,
+                t.name                          AS transporter,
+                na.amount,
+                na.currency,
+                na.advance_date,
+                na.note,
+                CASE WHEN na.voided_at IS NOT NULL THEN 'Yes' ELSE 'No' END AS voided,
+                na.created_at
+            FROM nomination_advances na
+            LEFT JOIN import_nominations n ON n.id = na.nomination_id
+            LEFT JOIN purchases          p ON p.id = n.purchase_id
+            LEFT JOIN transporters       t ON t.id = na.transporter_id
+            WHERE na.company_id = ?
+            ORDER BY na.advance_date DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsImportJobs(): array
+    {
+        return DB::select("
+            SELECT
+                ij.type,
+                ij.ref_type,
+                ij.filename,
+                ij.status,
+                ij.row_count,
+                ij.valid_count,
+                ij.error_count,
+                pu.name                         AS posted_by,
+                ij.posted_at,
+                cu.name                         AS created_by,
+                ij.created_at
+            FROM import_jobs ij
+            LEFT JOIN users pu ON pu.id = ij.posted_by
+            LEFT JOIN users cu ON cu.id = ij.created_by
+            WHERE ij.company_id = ?
+            ORDER BY ij.created_at DESC
+        ", [$this->companyId]);
+    }
+
+    private function rowsDocuments(): array
+    {
+        return DB::select("
+            SELECT
+                d.documentable_type,
+                d.documentable_id,
+                d.name,
+                d.original_name,
+                d.category,
+                d.mime_type,
+                ROUND((d.file_size / 1024.0)::numeric, 1) AS file_size_kb,
+                u.name                          AS uploaded_by,
+                d.valid_from,
+                d.valid_until,
+                d.notes,
+                d.created_at
+            FROM documents d
+            LEFT JOIN users u ON u.id = d.uploaded_by
+            WHERE d.company_id = ?
+            ORDER BY d.created_at DESC
+        ", [$this->companyId]);
     }
 }
