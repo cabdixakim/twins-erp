@@ -219,8 +219,9 @@ class InventoryLedger
             throw new \RuntimeException('Insufficient stock in depot for this product.');
         }
 
-        // Use the current depot+product weighted average cost
-        $avgUnitCost = $this->currentWeightedAverageCost($companyId, $productId, $fromDepotId);
+        // Use the current depot+product weighted average cost, rounded to 2 dp so that
+        // COGS always equals qty × displayed unit cost (no sub-cent display vs ledger drift).
+        $avgUnitCost = round($this->currentWeightedAverageCost($companyId, $productId, $fromDepotId), 2);
         $totalCost   = round($qtyRequested * $avgUnitCost, 2);
 
         $movement = InventoryMovement::create([

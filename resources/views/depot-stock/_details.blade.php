@@ -147,7 +147,7 @@
           </div>
           @if($avgCost > 0)
           <div class="mt-1.5 flex items-center gap-4 text-[11px] {{ $muted }}">
-            <span>Avg cost <strong class="{{ $fg }}">{{ number_format($avgCost, 4, '.', ',') }}</strong> / {{ $volLabel }}</span>
+            <span>Avg cost <strong class="{{ $fg }}">{{ $fmtM($avgCost) }}</strong> / {{ $volLabel }}</span>
             <span>·</span>
             <span>Stock value <strong class="{{ $fg }}">{{ $fmtM($totalVal) }}</strong></span>
           </div>
