@@ -46,10 +46,14 @@ class InventoryAdjustmentController extends Controller
                             ->where(fn($q) => $q->whereNull('is_system')->orWhere('is_system', 0))
                             ->orderBy('name')->get();
 
-        $totalValue = InventoryAdjustment::where('company_id', $cid)->sum('total_value');
-        $currency   = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
+        $totalValue           = InventoryAdjustment::where('company_id', $cid)->sum('total_value');
+        $recoverableValue     = InventoryAdjustment::where('company_id', $cid)->where('recoverable', true)->sum('total_value');
+        $nonRecoverableValue  = $totalValue - $recoverableValue;
+        $currency             = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
 
-        return view('inventory-adjustments.index', compact('adjustments', 'depots', 'totalValue', 'currency'));
+        return view('inventory-adjustments.index', compact(
+            'adjustments', 'depots', 'totalValue', 'recoverableValue', 'nonRecoverableValue', 'currency'
+        ));
     }
 
     public function create(Request $request)
@@ -88,6 +92,7 @@ class InventoryAdjustmentController extends Controller
             'depot_id'    => 'required|integer',
             'product_id'  => 'required|integer',
             'reason_type' => 'required|in:write_off,meter_variance,stock_count_correction,transit_loss',
+            'recoverable' => 'nullable|boolean',
             'qty'         => 'required|numeric|min:0.001',
             'notes'       => 'nullable|string|max:1000',
         ]);
@@ -121,6 +126,7 @@ class InventoryAdjustmentController extends Controller
                 'product_id'  => $productId,
                 'depot_id'    => $depotId,
                 'reason_type' => $data['reason_type'],
+                'recoverable' => (bool) ($data['recoverable'] ?? false),
                 'qty'         => $qty,
                 'notes'       => $data['notes'] ?? null,
                 'ref_type'    => 'manual',

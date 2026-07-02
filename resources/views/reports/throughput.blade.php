@@ -145,7 +145,7 @@
 
 <p class="text-[10px] {{ $muted }} mt-2">
     "Received" is net of depot shrinkage — the fuel that actually stayed in tank as sellable stock, not the raw contracted PO quantity.
-    Fuel still at the shipper or mid-transit shows on the <a href="{{ route('reports.stock-position') }}" class="underline hover:{{ $fg }}">Stock Position</a> report.
+    Fuel still at the shipper or mid-transit shows on the <a href="{{ route('reports.inventory-position') }}" class="underline hover:{{ $fg }}">Inventory Position</a> report.
 </p>
 
 {{-- Print button --}}

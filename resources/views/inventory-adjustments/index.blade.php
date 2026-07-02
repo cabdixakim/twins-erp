@@ -60,11 +60,23 @@
   </a>
 </div>
 
-{{-- Summary card --}}
-<div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 mb-4">
-  <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss value (all time)</div>
-  <div class="text-2xl font-bold s-rose">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
-  <div class="text-xs {{ $muted }} mt-1">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
+{{-- Summary cards --}}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss value (all time)</div>
+    <div class="text-2xl font-bold s-rose">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
+    <div class="text-xs {{ $muted }} mt-1">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
+  </div>
+  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Non-recoverable</div>
+    <div class="text-2xl font-bold" style="color:#f43f5e">{{ $currency }} {{ number_format($nonRecoverableValue, 2) }}</div>
+    <div class="text-xs {{ $muted }} mt-1">Absorbed as a straight loss</div>
+  </div>
+  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Recoverable</div>
+    <div class="text-2xl font-bold" style="color:#10b981">{{ $currency }} {{ number_format($recoverableValue, 2) }}</div>
+    <div class="text-xs {{ $muted }} mt-1">Claimable / chargeable to a third party</div>
+  </div>
 </div>
 
 {{-- Table --}}
@@ -87,6 +99,7 @@
             <th class="px-4 py-3 text-right text-[10px] font-bold {{ $muted }} uppercase tracking-wider">Qty lost</th>
             <th class="px-4 py-3 text-right text-[10px] font-bold {{ $muted }} uppercase tracking-wider">Unit cost</th>
             <th class="px-4 py-3 text-right text-[10px] font-bold {{ $muted }} uppercase tracking-wider">Loss value</th>
+            <th class="px-4 py-3 text-center text-[10px] font-bold {{ $muted }} uppercase tracking-wider">Recoverable</th>
             <th class="px-4 py-3 text-left text-[10px] font-bold {{ $muted }} uppercase tracking-wider">Notes</th>
           </tr>
         </thead>
@@ -108,6 +121,13 @@
               <td class="px-4 py-3 text-right font-mono text-xs {{ $fg }}">{{ number_format($adj->qty, 3) }}</td>
               <td class="px-4 py-3 text-right font-mono text-xs {{ $muted }}">{{ $currency }} {{ number_format($adj->unit_cost, 4) }}</td>
               <td class="px-4 py-3 text-right font-mono text-sm font-semibold s-rose">{{ $currency }} {{ number_format($adj->total_value, 2) }}</td>
+              <td class="px-4 py-3 text-center">
+                @if($adj->recoverable)
+                  <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:#10b981">Recoverable</span>
+                @else
+                  <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold" style="border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.1);color:#f43f5e">Non-recoverable</span>
+                @endif
+              </td>
               <td class="px-4 py-3 {{ $muted }} text-xs max-w-xs truncate">{{ $adj->notes ?: '—' }}</td>
             </tr>
           @endforeach

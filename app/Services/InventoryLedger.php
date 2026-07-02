@@ -467,6 +467,7 @@ class InventoryLedger
             $depotId   = (int) $data['depot_id'];
             $batchId   = isset($data['batch_id']) && $data['batch_id'] ? (int) $data['batch_id'] : null;
             $qty       = abs((float) $data['qty']);
+            $skipStock = !empty($data['skip_stock_reduction']);
 
             $period = $this->postingGate->assertCanPost($companyId);
 
@@ -483,6 +484,10 @@ class InventoryLedger
                             : $this->currentWeightedAverageCost($companyId, $productId, $depotId);
             $totalValue = round($qty * $unitCost, 4);
 
+            // skip_stock_reduction: used for losses that never physically entered a
+            // depot (e.g. transit shortfall before delivery) — no depot ever held this
+            // fuel, so from_depot_id stays null (keeps depot-scoped reports accurate)
+            // and depot_stock/batch are left untouched.
             $movement = InventoryMovement::create([
                 'company_id'    => $companyId,
                 'period_id'     => $period->id,
@@ -492,7 +497,7 @@ class InventoryLedger
                 'ref_id'        => $data['ref_id'] ?? null,
                 'reference'     => $data['reference'] ?? null,
                 'batch_id'      => $batchId,
-                'from_depot_id' => $depotId,
+                'from_depot_id' => $skipStock ? null : $depotId,
                 'to_depot_id'   => null,
                 'qty'           => -$qty,
                 'unit_cost'     => $unitCost,
@@ -503,7 +508,9 @@ class InventoryLedger
             ]);
 
             // Reduce depot stock (specific batch or proportional across all layers)
-            if ($batchId) {
+            if ($skipStock) {
+                // no-op — this loss never touched depot stock
+            } elseif ($batchId) {
                 DepotStock::query()
                     ->where('company_id', $companyId)
                     ->where('depot_id', $depotId)
@@ -552,7 +559,9 @@ class InventoryLedger
                 }
             }
 
-            // Financial loss record
+            // Financial loss record — depot_id is kept informational even when
+            // skip_stock_reduction is true (e.g. "destined for Depot X" for a
+            // transit loss that never actually reached the depot).
             \App\Models\InventoryAdjustment::create([
                 'company_id'            => $companyId,
                 'period_id'             => $period->id,
@@ -561,6 +570,7 @@ class InventoryLedger
                 'batch_id'              => $batchId,
                 'inventory_movement_id' => $movement->id,
                 'reason_type'           => $data['reason_type'] ?? 'write_off',
+                'recoverable'           => (bool) ($data['recoverable'] ?? false),
                 'qty'                   => $qty,
                 'unit_cost'             => $unitCost,
                 'total_value'           => $totalValue,
@@ -573,6 +583,70 @@ class InventoryLedger
 
             return $movement;
         });
+    }
+
+    /**
+     * Record transit shortfall (qty_loaded - qty_delivered on an import truck) as a
+     * financial loss WITHOUT touching depot stock — this fuel was never physically
+     * received (the receipt movement only ever posts qty_delivered), so there is no
+     * stock to reduce. Splits the shortfall into:
+     *   - non-recoverable portion (within the allowed loss tolerance — natural
+     *     evaporation, absorbed by the business)
+     *   - recoverable portion (excess beyond tolerance — billed back to the
+     *     transporter via the shortfall charge)
+     * Best-effort: swallows PostingGate failures so it never blocks the delivery flow.
+     */
+    public function transitLoss(array $data): void
+    {
+        $shortfallQty = round(abs((float) ($data['shortfall_qty'] ?? 0)), 4);
+        if ($shortfallQty < 0.0001) return;
+
+        $allowedLossQty = round(abs((float) ($data['allowed_loss_qty'] ?? 0)), 4);
+        $nonRecoverable = min($shortfallQty, $allowedLossQty);
+        $recoverable    = max(0, round($shortfallQty - $nonRecoverable, 4));
+
+        $refType   = $data['ref_type'] ?? 'import_truck';
+        $refId     = $data['ref_id'] ?? null;
+        $reference = $data['reference'] ?? ('transit-loss:' . $refType . ':' . $refId);
+
+        $base = [
+            'company_id'  => $data['company_id'],
+            'product_id'  => $data['product_id'],
+            'depot_id'    => $data['depot_id'],
+            'batch_id'    => $data['batch_id'] ?? null,
+            'unit_cost'   => $data['unit_cost'] ?? null,
+            'reason_type' => 'transit_loss',
+            'ref_type'    => $refType,
+            'ref_id'      => $refId,
+            'created_by'  => $data['created_by'] ?? null,
+            'skip_stock_reduction' => true,
+        ];
+
+        if ($nonRecoverable > 0.0001) {
+            try {
+                $this->adjustment(array_merge($base, [
+                    'qty'         => $nonRecoverable,
+                    'recoverable' => false,
+                    'reference'   => $reference . ':allowed',
+                    'notes'       => $data['notes'] ?? 'Transit loss within allowed tolerance — absorbed loss',
+                ]), ['type' => 'adjustment', 'reference' => $reference . ':allowed']);
+            } catch (\Throwable) {
+                // best-effort — never block the delivery flow
+            }
+        }
+
+        if ($recoverable > 0.0001) {
+            try {
+                $this->adjustment(array_merge($base, [
+                    'qty'         => $recoverable,
+                    'recoverable' => true,
+                    'reference'   => $reference . ':excess',
+                    'notes'       => $data['notes'] ?? 'Transit loss beyond tolerance — recoverable from transporter',
+                ]), ['type' => 'adjustment', 'reference' => $reference . ':excess']);
+            } catch (\Throwable) {
+                // best-effort — never block the delivery flow
+            }
+        }
     }
 
     /**

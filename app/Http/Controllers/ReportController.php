@@ -480,12 +480,14 @@ class ReportController extends Controller
         return view('reports.throughput', compact('series', 'totals', 'months'));
     }
 
-    /** Stock Position — period movement summary + live pipeline */
-    public function stockPosition(Request $request)
+    /** Inventory Position — period movement summary (with $ values) + live pipeline + loss reconciliation */
+    public function inventoryPosition(Request $request)
     {
         $cid  = $this->cid();
         $from = $request->input('from', now()->startOfMonth()->toDateString());
         $to   = $request->input('to',   today()->toDateString());
+
+        $currency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
 
         // ── Period stock movement by product ─────────────────────────────
         // Opening = cumulative net before $from
@@ -497,7 +499,11 @@ class ReportController extends Controller
                 SUM(CASE WHEN type='receipt'    THEN qty
                          WHEN type='issue'      THEN -qty
                          WHEN type='adjustment' THEN qty
-                         ELSE 0 END) as qty
+                         ELSE 0 END) as qty,
+                SUM(CASE WHEN type='receipt'    THEN COALESCE(total_cost, qty * unit_cost)
+                         WHEN type='issue'      THEN -COALESCE(total_cost, qty * unit_cost)
+                         WHEN type='adjustment' THEN COALESCE(total_cost, qty * unit_cost)
+                         ELSE 0 END) as value
             ")
             ->groupBy('product_id')
             ->get()->keyBy('product_id');
@@ -510,9 +516,29 @@ class ReportController extends Controller
             ->selectRaw("
                 product_id,
                 SUM(CASE WHEN type='receipt'    THEN qty ELSE 0 END) as receipts,
+                SUM(CASE WHEN type='receipt'    THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as receipts_value,
                 SUM(CASE WHEN type='issue'      THEN qty ELSE 0 END) as dispatched,
+                SUM(CASE WHEN type='issue'      THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as dispatched_value,
                 SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(qty) ELSE 0 END) as losses,
-                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN qty ELSE 0 END) as adjustments_in
+                SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(COALESCE(total_cost, qty * unit_cost)) ELSE 0 END) as losses_value,
+                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN qty ELSE 0 END) as adjustments_in,
+                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as adjustments_in_value
+            ")
+            ->groupBy('product_id')
+            ->get()->keyBy('product_id');
+
+        // Loss reconciliation from inventory_adjustments (authoritative loss ledger:
+        // recoverable vs non-recoverable), within the period
+        $lossAdjRaw = DB::table('inventory_adjustments')
+            ->where('company_id', $cid)
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->selectRaw("
+                product_id,
+                SUM(CASE WHEN recoverable THEN qty ELSE 0 END) as recoverable_qty,
+                SUM(CASE WHEN recoverable THEN total_value ELSE 0 END) as recoverable_value,
+                SUM(CASE WHEN NOT recoverable THEN qty ELSE 0 END) as non_recoverable_qty,
+                SUM(CASE WHEN NOT recoverable THEN total_value ELSE 0 END) as non_recoverable_value
             ")
             ->groupBy('product_id')
             ->get()->keyBy('product_id');
@@ -531,23 +557,75 @@ class ReportController extends Controller
 
         $movementRows = [];
         foreach ($allProductIds as $pid) {
-            $opening    = (float)($openingRaw[$pid]->qty ?? 0);
-            $receipts   = (float)($periodRaw[$pid]->receipts ?? 0);
-            $dispatched = (float)($periodRaw[$pid]->dispatched ?? 0);
-            $losses     = (float)($periodRaw[$pid]->losses ?? 0);
+            $opening       = (float)($openingRaw[$pid]->qty ?? 0);
+            $openingValue  = (float)($openingRaw[$pid]->value ?? 0);
+            $receipts      = (float)($periodRaw[$pid]->receipts ?? 0);
+            $receiptsValue = (float)($periodRaw[$pid]->receipts_value ?? 0);
+            $dispatched      = (float)($periodRaw[$pid]->dispatched ?? 0);
+            $dispatchedValue = (float)($periodRaw[$pid]->dispatched_value ?? 0);
+            $losses      = (float)($periodRaw[$pid]->losses ?? 0);
+            $lossesValue = (float)($periodRaw[$pid]->losses_value ?? 0);
             $adjIn      = (float)($periodRaw[$pid]->adjustments_in ?? 0);
-            $closing    = $opening + $receipts - $dispatched - $losses + $adjIn;
+            $adjInValue = (float)($periodRaw[$pid]->adjustments_in_value ?? 0);
+            $closing      = $opening + $receipts - $dispatched - $losses + $adjIn;
+            $closingValue = $openingValue + $receiptsValue - $dispatchedValue - $lossesValue + $adjInValue;
+
+            $recoverableQty      = (float)($lossAdjRaw[$pid]->recoverable_qty ?? 0);
+            $recoverableValue    = (float)($lossAdjRaw[$pid]->recoverable_value ?? 0);
+            $nonRecoverableQty   = (float)($lossAdjRaw[$pid]->non_recoverable_qty ?? 0);
+            $nonRecoverableValue = (float)($lossAdjRaw[$pid]->non_recoverable_value ?? 0);
+
             $movementRows[] = [
-                'product_id'  => $pid,
-                'product'     => $products[$pid] ?? "Product #$pid",
-                'opening'     => round($opening, 3),
-                'receipts'    => round($receipts, 3),
-                'dispatched'  => round($dispatched, 3),
-                'losses'      => round($losses, 3),
-                'adj_in'      => round($adjIn, 3),
-                'closing'     => round($closing, 3),
+                'product_id'    => $pid,
+                'product'       => $products[$pid] ?? "Product #$pid",
+                'opening'       => round($opening, 3),
+                'opening_value' => round($openingValue, 2),
+                'receipts'       => round($receipts, 3),
+                'receipts_value' => round($receiptsValue, 2),
+                'dispatched'       => round($dispatched, 3),
+                'dispatched_value' => round($dispatchedValue, 2),
+                'losses'       => round($losses, 3),
+                'losses_value' => round($lossesValue, 2),
+                'adj_in'       => round($adjIn, 3),
+                'adj_in_value' => round($adjInValue, 2),
+                'closing'       => round($closing, 3),
+                'closing_value' => round($closingValue, 2),
+                'recoverable_qty'        => round($recoverableQty, 3),
+                'recoverable_value'      => round($recoverableValue, 2),
+                'non_recoverable_qty'    => round($nonRecoverableQty, 3),
+                'non_recoverable_value'  => round($nonRecoverableValue, 2),
             ];
         }
+
+        // ── Per-purchase breakdown within the period ──────────────────────
+        // Every receipt movement in the period, joined back to its purchase
+        $purchaseBreakdown = DB::table('inventory_movements as m')
+            ->join('purchases as p', function ($j) {
+                $j->on('p.id', '=', 'm.ref_id')->where('m.ref_type', '=', 'purchase');
+            })
+            ->leftJoin('suppliers as s', 's.id', '=', 'p.supplier_id')
+            ->where('m.company_id', $cid)
+            ->where('m.type', 'receipt')
+            ->whereDate('m.created_at', '>=', $from)
+            ->whereDate('m.created_at', '<=', $to)
+            ->selectRaw("
+                p.id as purchase_id,
+                p.reference,
+                p.type as purchase_type,
+                s.name as supplier_name,
+                m.product_id,
+                m.created_at,
+                SUM(m.qty) as qty,
+                SUM(COALESCE(m.total_cost, m.qty * m.unit_cost)) as value,
+                AVG(m.unit_cost) as avg_unit_cost
+            ")
+            ->groupBy('p.id', 'p.reference', 'p.type', 's.name', 'm.product_id', 'm.created_at')
+            ->orderByDesc('m.created_at')
+            ->get()
+            ->map(function ($row) use ($products) {
+                $row->product_name = $products[$row->product_id] ?? "Product #{$row->product_id}";
+                return $row;
+            });
 
         // ── Live pipeline (current, not period-bound) ─────────────────────
         // At shipper — qty remaining at source on active import purchases
@@ -591,12 +669,18 @@ class ReportController extends Controller
             ->groupBy('product_id')
             ->get();
 
-        // Total losses ever (negative adjustments)
-        $lossesRaw = DB::table('inventory_movements')
+        // Total losses ever, from the authoritative loss ledger — split recoverable / non-recoverable
+        $lossesRaw = DB::table('inventory_adjustments')
             ->where('company_id', $cid)
-            ->where('type', 'adjustment')
-            ->where('qty', '<', 0)
-            ->selectRaw('product_id, SUM(ABS(qty)) as qty')
+            ->selectRaw('
+                product_id,
+                SUM(qty) as qty,
+                SUM(total_value) as value,
+                SUM(CASE WHEN recoverable THEN qty ELSE 0 END) as recoverable_qty,
+                SUM(CASE WHEN recoverable THEN total_value ELSE 0 END) as recoverable_value,
+                SUM(CASE WHEN NOT recoverable THEN qty ELSE 0 END) as non_recoverable_qty,
+                SUM(CASE WHEN NOT recoverable THEN total_value ELSE 0 END) as non_recoverable_value
+            ')
             ->groupBy('product_id')
             ->get();
 
@@ -606,6 +690,7 @@ class ReportController extends Controller
             ->merge($inTransitRaw->pluck('product_id'))
             ->merge($inDepotsRaw->pluck('product_id'))
             ->merge($soldRaw->pluck('product_id'))
+            ->merge($lossesRaw->pluck('product_id'))
             ->unique()->values();
 
         $atShipperByProduct  = $atShipperRaw->keyBy('product_id');
@@ -624,6 +709,11 @@ class ReportController extends Controller
                 'in_depots'  => round((float)$inDepotQty, 3),
                 'sold'       => round((float)($soldByProduct[$pid]->qty ?? 0), 3),
                 'losses'     => round((float)($lossesByProduct[$pid]->qty ?? 0), 3),
+                'losses_value'           => round((float)($lossesByProduct[$pid]->value ?? 0), 2),
+                'losses_recoverable'     => round((float)($lossesByProduct[$pid]->recoverable_qty ?? 0), 3),
+                'losses_recoverable_value' => round((float)($lossesByProduct[$pid]->recoverable_value ?? 0), 2),
+                'losses_non_recoverable' => round((float)($lossesByProduct[$pid]->non_recoverable_qty ?? 0), 3),
+                'losses_non_recoverable_value' => round((float)($lossesByProduct[$pid]->non_recoverable_value ?? 0), 2),
             ];
         }
 
@@ -634,15 +724,20 @@ class ReportController extends Controller
             'in_depots'  => collect($pipelineRows)->sum('in_depots'),
             'sold'       => collect($pipelineRows)->sum('sold'),
             'losses'     => collect($pipelineRows)->sum('losses'),
+            'losses_value'                 => collect($pipelineRows)->sum('losses_value'),
+            'losses_recoverable'           => collect($pipelineRows)->sum('losses_recoverable'),
+            'losses_recoverable_value'     => collect($pipelineRows)->sum('losses_recoverable_value'),
+            'losses_non_recoverable'       => collect($pipelineRows)->sum('losses_non_recoverable'),
+            'losses_non_recoverable_value' => collect($pipelineRows)->sum('losses_non_recoverable_value'),
         ];
 
         // Depot breakdown (for "in depot" section)
         $depotBreakdown = $inDepotsRaw;
 
-        return view('reports.stock-position', compact(
-            'from', 'to',
+        return view('reports.inventory-position', compact(
+            'from', 'to', 'currency',
             'movementRows', 'pipelineRows', 'pipelineTotals',
-            'depotBreakdown', 'products'
+            'depotBreakdown', 'products', 'purchaseBreakdown'
         ));
     }
 

@@ -70,8 +70,8 @@
     <p class="text-xs {{ $muted }} leading-relaxed">How many litres you bought and sold each month — with revenue totals.</p>
   </a>
 
-  {{-- Stock Position --}}
-  <a href="{{ route('reports.stock-position') }}"
+  {{-- Inventory Position --}}
+  <a href="{{ route('reports.inventory-position') }}"
      class="group rounded-2xl border {{ $border }} {{ $surface }} p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 block">
     <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
          style="background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.20)">
@@ -79,8 +79,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
       </svg>
     </div>
-    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Stock Position</h3>
-    <p class="text-xs {{ $muted }} leading-relaxed">Where every litre is — at shipper, in transit, in depots, sold — plus opening &amp; closing stock for any period.</p>
+    <h3 class="text-sm font-bold {{ $fg }} mb-1 group-hover:text-emerald-400 transition">Inventory Position</h3>
+    <p class="text-xs {{ $muted }} leading-relaxed">Full reconciliation — at shipper, in transit, in depots, sold, and losses (recoverable / non-recoverable) — with $ values and a per-purchase breakdown for any period.</p>
   </a>
 
   {{-- Stock on hand --}}

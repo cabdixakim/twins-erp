@@ -94,6 +94,16 @@
         <div class="text-[11px] {{ $muted }} mt-1">Depot shrinkage is auto-posted on receipt — do not record it manually.</div>
       </div>
 
+      {{-- Recoverable --}}
+      <div>
+        <label class="{{ $label }}">Is this value recoverable?</label>
+        <select name="recoverable" required class="{{ $input }}">
+          <option value="0" {{ old('recoverable', '0') === '0' ? 'selected' : '' }}>No — non-recoverable (absorbed as a straight loss)</option>
+          <option value="1" {{ old('recoverable') === '1' ? 'selected' : '' }}>Yes — recoverable (e.g. insurance claim, chargeable to a third party)</option>
+        </select>
+        <div class="text-[11px] {{ $muted }} mt-1">This classification drives the recoverable / non-recoverable split on the Inventory Position report.</div>
+      </div>
+
       {{-- Qty --}}
       <div>
         <label class="{{ $label }}">Quantity to write off</label>

@@ -585,6 +585,24 @@ class ImportNominationController extends Controller
             }
         }
 
+        // Record transit shortfall (qty_loaded - qty_delivered) as a loss — split
+        // recoverable (billed to transporter) vs non-recoverable (within tolerance)
+        if ($purchase->batch_id && $purchase->product_id) {
+            $ledger->transitLoss([
+                'company_id'       => $cid,
+                'product_id'       => (int) $purchase->product_id,
+                'depot_id'         => (int) $data['depot_id'],
+                'batch_id'         => (int) $purchase->batch_id,
+                'unit_cost'        => $unitCost,
+                'shortfall_qty'    => $shortfallQty,
+                'allowed_loss_qty' => $allowedLossQty,
+                'ref_type'         => 'import_truck',
+                'ref_id'           => (int) $truck->id,
+                'notes'            => "Transit shortfall — truck {$truck->truck_reg}",
+                'created_by'       => auth()->id(),
+            ]);
+        }
+
         // Resolve ledger currency once — transporter default_currency takes precedence over nomination currency
         $ledgerCurrency = $nomination->currency ?? 'USD';
         if ($nomination->transporter_id) {
@@ -827,6 +845,24 @@ class ImportNominationController extends Controller
             }
         }
 
+        // Record transit shortfall (qty_loaded - qty_delivered) as a loss — split
+        // recoverable (billed to transporter) vs non-recoverable (within tolerance)
+        if ($purchase->batch_id && $purchase->product_id) {
+            $ledger->transitLoss([
+                'company_id'       => $cid,
+                'product_id'       => (int) $purchase->product_id,
+                'depot_id'         => (int) $data['depot_id'],
+                'batch_id'         => (int) $purchase->batch_id,
+                'unit_cost'        => $unitCost,
+                'shortfall_qty'    => $shortfallQty,
+                'allowed_loss_qty' => $allowedLossQty,
+                'ref_type'         => 'import_truck',
+                'ref_id'           => (int) $truck->id,
+                'notes'            => "Transit shortfall — truck {$truck->truck_reg}",
+                'created_by'       => auth()->id(),
+            ]);
+        }
+
         // Resolve ledger currency once — transporter default_currency takes precedence over nomination currency
         $ledgerCurrency = $nomination->currency ?? 'USD';
         if ($nomination->transporter_id) {
@@ -1028,6 +1064,24 @@ class ImportNominationController extends Controller
                         }
                     }
                 }
+            }
+
+            // Record transit shortfall (qty_loaded - qty_delivered) as a loss — split
+            // recoverable (billed to transporter) vs non-recoverable (within tolerance)
+            if ($purchase->batch_id && $purchase->product_id) {
+                $ledger->transitLoss([
+                    'company_id'       => $cid,
+                    'product_id'       => (int) $purchase->product_id,
+                    'depot_id'         => $depotId,
+                    'batch_id'         => (int) $purchase->batch_id,
+                    'unit_cost'        => $unitCost,
+                    'shortfall_qty'    => $shortfallQty,
+                    'allowed_loss_qty' => $allowedLossQty,
+                    'ref_type'         => 'import_truck',
+                    'ref_id'           => (int) $truck->id,
+                    'notes'            => "Transit shortfall — truck {$truck->truck_reg}",
+                    'created_by'       => auth()->id(),
+                ]);
             }
 
             $ledgerCurrency = $nomination->currency ?? 'USD';
