@@ -49,10 +49,18 @@ class InventoryAdjustmentController extends Controller
         $totalValue           = InventoryAdjustment::where('company_id', $cid)->sum('total_value');
         $recoverableValue     = InventoryAdjustment::where('company_id', $cid)->where('recoverable', true)->sum('total_value');
         $nonRecoverableValue  = $totalValue - $recoverableValue;
+
+        $totalQty          = InventoryAdjustment::where('company_id', $cid)->sum('qty');
+        $recoverableQty    = InventoryAdjustment::where('company_id', $cid)->where('recoverable', true)->sum('qty');
+        $nonRecoverableQty = $totalQty - $recoverableQty;
+
         $currency             = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
 
         return view('inventory-adjustments.index', compact(
-            'adjustments', 'depots', 'totalValue', 'recoverableValue', 'nonRecoverableValue', 'currency'
+            'adjustments', 'depots',
+            'totalValue', 'recoverableValue', 'nonRecoverableValue',
+            'totalQty', 'recoverableQty', 'nonRecoverableQty',
+            'currency'
         ));
     }
 

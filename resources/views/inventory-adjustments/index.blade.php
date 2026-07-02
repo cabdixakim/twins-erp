@@ -63,18 +63,21 @@
 {{-- Summary cards --}}
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
   <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss value (all time)</div>
-    <div class="text-2xl font-bold s-rose">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
+    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss (all time)</div>
+    <div class="text-xl font-bold {{ $fg }}">{{ number_format($totalQty, 3) }} L</div>
+    <div class="text-lg font-bold s-rose mt-0.5">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
     <div class="text-xs {{ $muted }} mt-1">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
   </div>
   <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
     <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Non-recoverable</div>
-    <div class="text-2xl font-bold" style="color:#f43f5e">{{ $currency }} {{ number_format($nonRecoverableValue, 2) }}</div>
+    <div class="text-xl font-bold" style="color:#f43f5e">{{ number_format($nonRecoverableQty, 3) }} L</div>
+    <div class="text-lg font-bold mt-0.5" style="color:#f43f5e">{{ $currency }} {{ number_format($nonRecoverableValue, 2) }}</div>
     <div class="text-xs {{ $muted }} mt-1">Absorbed as a straight loss</div>
   </div>
   <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
     <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Recoverable</div>
-    <div class="text-2xl font-bold" style="color:#10b981">{{ $currency }} {{ number_format($recoverableValue, 2) }}</div>
+    <div class="text-xl font-bold" style="color:#10b981">{{ number_format($recoverableQty, 3) }} L</div>
+    <div class="text-lg font-bold mt-0.5" style="color:#10b981">{{ $currency }} {{ number_format($recoverableValue, 2) }}</div>
     <div class="text-xs {{ $muted }} mt-1">Claimable / chargeable to a third party</div>
   </div>
 </div>
