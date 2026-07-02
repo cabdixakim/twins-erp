@@ -22,16 +22,22 @@ class DepotStockController extends Controller
         $cid       = (int) (auth()->user()?->active_company_id ?? 0);
         $depotId   = (int) $request->query('depot_id', 0);
         $productId = (int) $request->query('product_id', 0);
+        $batchId   = $request->query('batch_id') ? (int) $request->query('batch_id') : null;
 
         if (!$cid || !$depotId || !$productId) {
             return response()->json(['available' => null]);
         }
 
-        $stocks = DepotStock::query()
+        $query = DepotStock::query()
             ->where('company_id', $cid)
             ->where('depot_id', $depotId)
-            ->where('product_id', $productId)
-            ->get(['qty_on_hand', 'qty_reserved', 'unit_cost']);
+            ->where('product_id', $productId);
+
+        if ($batchId) {
+            $query->where('batch_id', $batchId);
+        }
+
+        $stocks = $query->get(['qty_on_hand', 'qty_reserved', 'unit_cost']);
 
         $available = $stocks->sum(fn ($l) => max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved));
         $totalQty  = $stocks->sum('qty_on_hand');
@@ -41,7 +47,7 @@ class DepotStockController extends Controller
 
         return response()->json([
             'available' => round($available, 2),
-            'unit_cost' => $unitCost !== null ? round($unitCost, 6) : null,
+            'unit_cost' => $unitCost !== null ? round($unitCost, 2) : null,
         ]);
     }
 
