@@ -1881,7 +1881,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                 class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
       </div>
       <form method="POST"
-            action="{{ route('purchases.import-nomination.trucks.reverse-duty', [$purchase, $nomination, $truck]) }}">
+            action="{{ route('purchases.import-nomination.trucks.reverse-duty', [$purchase, $nom, $truck]) }}">
         @csrf
         <div class="p-5 space-y-4">
           <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">

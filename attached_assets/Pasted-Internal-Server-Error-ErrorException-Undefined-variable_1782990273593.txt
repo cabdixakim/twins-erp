@@ -1,0 +1,168 @@
+Internal Server Error
+
+ErrorException
+Undefined variable $nomination
+resources/views/purchases/_import_logistics.blade.php :1885
+        <button type="button" onclick="closeTruckModal('reverseDutyModal-{{ $truck->id }}')"
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
+      </div>
+      <form method="POST"
+            action="{{ route('purchases.import-nomination.trucks.reverse-duty', [$purchase, $nomination, $truck]) }}">
+        @csrf
+        <div class="p-5 space-y-4">
+          <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+            This will cancel the ledger entry and remove the duty from the batch's landed cost.
+            The truck will return to <strong>pending</strong> so you can re-post the correct amount.
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason for reversal <span class="text-rose-500">*</span></label>
+            <textarea name="reason" rows="3" required maxlength="500"
+                      placeholder="e.g. Wrong rate entered — should be 350 not 0.35"
+                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)] resize-none"></textarea>
+          </div>
+ 
+Request
+GET /purchases/1
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6Ik02VE1FdUlWcUxWa1JQaTIzWEQxZFE9PSIsInZhbHVlIjoiSksyRlhlNWxmRTRSaU84eFZJYVk5alVJdm5VbEREMW0xbU8zQXlXd2t1MDYxeVhrSHhDY0t2WmUxVXg1cUQ3NFl4L0JuOXMweSt6Slk3emxoVHV2TW1LQUNBTms5M1Awd3oydFlNT2RUUXZxUU1hNXFuSnJtRG5aZ0c3WTFIVGkiLCJtYWMiOiI3ODk4MDUzYmEyZWQ1MTJiNWQ2ODU4YjZiNjM3ODk5Njk5ZGY4MTU5MjA1ODcwOWM0YzdmN2Q0YzU2MjkxZjQyIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6InJTVTRvT0tqdk8vcTg2UnFOZkpMT2c9PSIsInZhbHVlIjoiSk5TNG5qM0hwc3ZHYm9uRktJbTVLZVpMbCtXUHM4clR1ZEZ2ck40K0JZV2JEQ0p0QU1KeUxybEZtcEl2dFRqd1dSM0FiVzJVRWo2WVU2NzFhSmNNb05Gcm5BTDNqZ1B2YUMxWVVubmszclNjai82WWU5Wk95dzNiNHhRWFN4amsiLCJtYWMiOiI1M2EwNTAxYzc0ZmVjZGFkNTk2NDFlMThlM2IxYjIxMTgzODdhYzdjMzFlZTk0NDJjODhlZGQ5Y2IzZGYwZDViIiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2Fpurchases%2F1&id=default-start-application
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+upgrade-insecure-requests
+1
+x-forwarded-for
+217.171.84.50, 10.83.16.75, 10.56.9.165, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\PurchaseController@show
+route name
+purchases.show
+middleware
+web, auth, company.setup, user.active, active.company, permission:purchases.view
+Routing Parameters
+{
+    "purchase": {
+        "id": 1,
+        "company_id": 1,
+        "type": "import",
+        "supplier_id": 2,
+        "product_id": 1,
+        "batch_id": 1,
+        "purchase_date": "2026-07-01T22:00:00.000000Z",
+        "qty": 500000,
+        "unit_price": 1.35,
+        "currency": "USD",
+        "status": "nominated",
+        "notes": null,
+        "created_by": 1,
+        "updated_by": 1,
+        "created_at": "2026-07-02T00:44:34.000000Z",
+        "updated_at": "2026-07-02T00:45:44.000000Z",
+        "depot_id": null,
+        "sequence_no": 1,
+        "reference": "PO-TW-2026-00001",
+        "actioned_at": null,
+        "actioned_by": null,
+        "action_note": null,
+        "vessel_name": null,
+        "voyage_no": null,
+        "loading_port": null,
+        "discharge_port": null,
+        "bl_number": null,
+        "bl_date": null,
+        "eta_date": null,
+        "qty_delivered": 0,
+        "client_id": null,
+        "transporter_id": null,
+        "freight_amount": null,
+        "freight_currency": "USD",
+        "shipper_remainder_resolution": null,
+        "shipper_remainder_qty": null,
+        "shipper_remainder_note": null
+    }
+}
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select * from "purchases" where "id" = '1' and "purchases"."company_id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql
+select * from "suppliers" where "suppliers"."id" in (2) and "suppliers"."company_id" = 1
+pgsql
+select * from "products" where "products"."id" in (1) and "products"."company_id" = 1
+pgsql
+select * from "batches" where "batches"."id" in (1) and "batches"."company_id" = 1
+pgsql
+select * from "users" where "users"."id" in (1)
+pgsql
+select * from "depots" where "company_id" = 1 and "is_active" = 1 and ("is_system" is null or "is_system" = 0) and "depots"."company_id" = 1 order by "name" asc
+pgsql
+select * from "inventory_movements" where "company_id" = 1 and "type" = 'receipt' and "ref_type" = 'purchase' and "ref_id" = 1 and "reference"::text like 'import-delivery:%' and "inventory_movements"."company_id" = 1 order by "id" asc
+pgsql
+select * from "clients" where "company_id" = 1 and "is_active" = 1 and "clients"."company_id" = 1 order by "name" asc
+pgsql
+select * from "import_nominations" where "import_nominations"."purchase_id" = 1 and "import_nominations"."purchase_id" is not null and "import_nominations"."company_id" = 1 limit 1
+pgsql
+select * from "transporters" where "transporters"."id" in (1) and "transporters"."company_id" = 1
+pgsql
+select * from "import_trucks" where "import_trucks"."nomination_id" in (1) and "import_trucks"."company_id" = 1 order by "id" asc
+pgsql
+select * from "depots" where "depots"."id" in (3) and "depots"."company_id" = 1
+pgsql
+select * from "duty_vendors" where "company_id" = 1 and "is_active" = 1 and "duty_vendors"."company_id" = 1 order by "name" asc
+pgsql
+select * from "suppliers" where "company_id" = 1 and "is_active" = 1 and "suppliers"."company_id" = 1 order by "name" asc
+pgsql
+select * from "nomination_advances" where "nomination_id" = 1 order by "advance_date" asc
+pgsql
+select * from "transporters" where "company_id" = 1 and "is_active" = 1 and "transporters"."company_id" = 1 order by "name" asc
+pgsql
+select * from "batch_costs" where "company_id" = 1 and "purchase_id" = 1 and "batch_costs"."company_id" = 1 order by "entry_date" asc
+pgsql
+select exists(select * from "import_trucks
