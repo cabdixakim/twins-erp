@@ -353,7 +353,7 @@ class InventoryLedger
             throw new \RuntimeException('Insufficient stock in the selected batch for this depot.');
         }
 
-        $unitCost  = (float) $layer->unit_cost;
+        $unitCost  = round((float) $layer->unit_cost, 2);
         $lineTotal = round($qtyRequested * $unitCost, 2);
 
         $movement = InventoryMovement::create([

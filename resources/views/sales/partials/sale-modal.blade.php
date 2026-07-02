@@ -553,6 +553,8 @@ window.selectedSale = @json($selected);
     }
   };
 
+  const batchSel = document.getElementById('f_batch_id');
+
   const fetchStock = () => {
     const depotId   = depotSel?.value;
     const productId = productSel?.value;
@@ -562,17 +564,18 @@ window.selectedSale = @json($selected);
       renderStockHint();
       return;
     }
-    fetch('/depot-stock/available?depot_id=' + depotId + '&product_id=' + productId, {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
+    let url = '/depot-stock/available?depot_id=' + depotId + '&product_id=' + productId;
+    if (batchSel?.value) url += '&batch_id=' + batchSel.value;
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(r => r.json())
       .then(d => { availableStock = d.available; stockUnitCost = d.unit_cost ?? null; renderStockHint(); })
       .catch(() => { availableStock = null; stockUnitCost = null; renderStockHint(); });
   };
 
-  on(depotSel,  'change', fetchStock);
+  on(depotSel,   'change', fetchStock);
   on(productSel, 'change', fetchStock);
-  on(qtyInput,  'input',  renderStockHint);
+  on(batchSel,   'change', fetchStock);
+  on(qtyInput,   'input',  renderStockHint);
   // ── end stock hint ───────────────────────────────────────────────────────
 
   // Bind buttons normally (no "arm" hacks)
