@@ -63,7 +63,7 @@
         <div class="text-[10px] {{ $muted }}">{{ $totals['sold_count'] }} sales</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Unsold</div>
+        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Remaining</div>
         @php $remaining = $totals['received_qty'] - $totals['sold_qty']; @endphp
         <div class="text-lg font-bold" style="color:#0ea5e9">{{ number_format(max(0, $remaining), 0) }} L</div>
         <div class="text-[10px] {{ $muted }}">not yet sold</div>
