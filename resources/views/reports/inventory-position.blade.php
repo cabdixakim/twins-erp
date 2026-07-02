@@ -242,7 +242,7 @@
 <div class="mb-6">
     <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-1">Period Inventory Movement</h2>
     <p class="text-xs {{ $muted }} mb-3">
-        Opening &amp; closing inventory (qty and value) based on actual depot receipts and issues
+        Opening &amp; closing inventory balance (qty and value) based on actual depot purchases and sales
         from <strong class="{{ $fg }}">{{ \Carbon\Carbon::parse($from)->format('d M Y') }}</strong>
         to <strong class="{{ $fg }}">{{ \Carbon\Carbon::parse($to)->format('d M Y') }}</strong>.
     </p>
@@ -253,11 +253,11 @@
             <thead>
                 <tr class="{{ $surface2 }} border-b {{ $border }}">
                     <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Product</th>
-                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Opening</th>
-                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#10b981">+ Receipts</th>
-                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#a855f7">− Dispatched</th>
+                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Opening Balance</th>
+                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#10b981">+ Purchases</th>
+                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#a855f7">− Sales</th>
                     <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#f43f5e">− Losses</th>
-                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Closing</th>
+                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Closing Balance</th>
                 </tr>
             </thead>
             <tbody>
@@ -296,6 +296,9 @@
                             {{ number_format($row['closing'], 0) }} L
                         </span>
                         <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['closing_value']) }}</div>
+                        @if($row['closing'] > 0.0005)
+                            <div class="text-[9px] {{ $muted }} mt-0.5">WAC: {{ $cfmt($row['closing_avg_cost']) }}/L</div>
+                        @endif
                     </td>
                 </tr>
                 @endforeach
@@ -312,6 +315,7 @@
                     $totLossesValue = collect($movementRows)->sum('losses_value');
                     $totClosing      = collect($movementRows)->sum('closing');
                     $totClosingValue = collect($movementRows)->sum('closing_value');
+                    $totClosingAvgCost = abs($totClosing) > 0.0005 ? $totClosingValue / $totClosing : 0.0;
                 @endphp
                 <tr class="{{ $surface2 }} border-t {{ $border }}">
                     <td class="px-4 py-3 font-bold text-[10px] uppercase tracking-wide {{ $muted }}">Total</td>
@@ -334,14 +338,17 @@
                     <td class="px-4 py-3 text-right font-bold text-[10px]" @if($totClosing > 0) style="color:#10b981" @endif>
                         {{ number_format($totClosing, 0) }} L
                         <div class="font-normal {{ $muted }}">{{ $cfmt($totClosingValue) }}</div>
+                        @if($totClosing > 0.0005)
+                            <div class="font-normal {{ $muted }}">WAC: {{ $cfmt($totClosingAvgCost) }}/L</div>
+                        @endif
                     </td>
                 </tr>
             </tfoot>
         </table>
     </div>
     <p class="text-[10px] {{ $muted }} mt-2">
-        Note: Opening &amp; closing stock reflect depot receipts and issues only. Fuel still in transit or at shipper does not affect these figures until it is physically received into a depot.
-        Values use each movement's recorded weighted-average unit cost.
+        Note: Opening &amp; closing balances reflect depot purchases and sales only. Fuel still in transit or at shipper does not affect these figures until it is physically received into a depot.
+        Values use each movement's recorded weighted-average unit cost; the closing balance's WAC/L is the blended cost of stock currently on hand.
     </p>
     @else
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-8 text-center {{ $muted }} text-sm">

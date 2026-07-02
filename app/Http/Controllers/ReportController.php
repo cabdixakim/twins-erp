@@ -569,6 +569,7 @@ class ReportController extends Controller
             $adjInValue = (float)($periodRaw[$pid]->adjustments_in_value ?? 0);
             $closing      = $opening + $receipts - $dispatched - $losses + $adjIn;
             $closingValue = $openingValue + $receiptsValue - $dispatchedValue - $lossesValue + $adjInValue;
+            $closingAvgCost = abs($closing) > 0.0005 ? $closingValue / $closing : 0.0;
 
             $recoverableQty      = (float)($lossAdjRaw[$pid]->recoverable_qty ?? 0);
             $recoverableValue    = (float)($lossAdjRaw[$pid]->recoverable_value ?? 0);
@@ -588,8 +589,9 @@ class ReportController extends Controller
                 'losses_value' => round($lossesValue, 2),
                 'adj_in'       => round($adjIn, 3),
                 'adj_in_value' => round($adjInValue, 2),
-                'closing'       => round($closing, 3),
-                'closing_value' => round($closingValue, 2),
+                'closing'         => round($closing, 3),
+                'closing_value'   => round($closingValue, 2),
+                'closing_avg_cost' => round($closingAvgCost, 4),
                 'recoverable_qty'        => round($recoverableQty, 3),
                 'recoverable_value'      => round($recoverableValue, 2),
                 'non_recoverable_qty'    => round($nonRecoverableQty, 3),
