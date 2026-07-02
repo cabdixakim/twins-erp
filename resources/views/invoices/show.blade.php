@@ -554,7 +554,7 @@
         @page { size: A4; margin: 18mm 14mm; }
         @media print {
             body { background: #fff; }
-            .action-bar, .flash-bar, .modal-overlay, .email-dropdown { display: none !important; }
+            .action-bar, .flash-bar, .modal-overlay, .email-dropdown, .no-print { display: none !important; }
             .page-wrap { padding: 0; }
             .inv {
                 border-radius: 0;
@@ -1052,7 +1052,7 @@
 
 {{-- ── Audit Trail ────────────────────────────────────────────────────────── --}}
 @if($auditLogs->isNotEmpty())
-<div class="page-wrap" style="padding-top:0">
+<div class="page-wrap no-print" style="padding-top:0">
     <div style="width:100%;max-width:820px">
         <div style="background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden">
             <div style="padding:18px 24px;border-bottom:1px solid #e2e8f0">
