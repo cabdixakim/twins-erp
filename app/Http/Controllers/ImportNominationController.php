@@ -798,6 +798,35 @@ class ImportNominationController extends Controller
             );
         }
 
+        // Auto-apply depot tank-loss shrinkage on receipt (best-effort — does not fail the delivery)
+        if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
+            $shrinkageDepot = \App\Models\Depot::find((int) $data['depot_id']);
+            $shrinkagePct   = (float) ($shrinkageDepot?->default_shrinkage_pct ?? 0);
+            if ($shrinkagePct > 0) {
+                $shrinkageQty = round($qtyDelivered * $shrinkagePct / 100, 4);
+                if ($shrinkageQty > 0.0001) {
+                    try {
+                        $ledger = app(\App\Services\InventoryLedger::class);
+                        $ledger->adjustment([
+                            'company_id'  => $cid,
+                            'product_id'  => (int) $purchase->product_id,
+                            'depot_id'    => (int) $data['depot_id'],
+                            'batch_id'    => (int) $purchase->batch_id,
+                            'reason_type' => 'depot_shrinkage',
+                            'qty'         => $shrinkageQty,
+                            'ref_type'    => 'import_truck',
+                            'ref_id'      => (int) $truck->id,
+                            'reference'   => 'shrinkage:truck:' . $truck->id,
+                            'notes'       => "Auto depot shrinkage ({$shrinkagePct}%) — truck {$truck->truck_reg}",
+                            'created_by'  => auth()->id(),
+                        ], ['type' => 'adjustment', 'reference' => 'shrinkage:truck:' . $truck->id]);
+                    } catch (\Throwable) {
+                        // best-effort: receipt succeeded; don't roll back delivery for shrinkage failure
+                    }
+                }
+            }
+        }
+
         // Resolve ledger currency once — transporter default_currency takes precedence over nomination currency
         $ledgerCurrency = $nomination->currency ?? 'USD';
         if ($nomination->transporter_id) {
@@ -971,6 +1000,34 @@ class ImportNominationController extends Controller
                     ],
                     ['type' => 'receipt', 'ref_type' => 'import_truck', 'ref_id' => (int) $truck->id]
                 );
+            }
+
+            // Auto-apply depot tank-loss shrinkage on receipt (best-effort)
+            if ($qtyDelivered > 0 && $purchase->batch_id && $purchase->product_id) {
+                $shrinkageDepot = \App\Models\Depot::find($depotId);
+                $shrinkagePct   = (float) ($shrinkageDepot?->default_shrinkage_pct ?? 0);
+                if ($shrinkagePct > 0) {
+                    $shrinkageQty = round($qtyDelivered * $shrinkagePct / 100, 4);
+                    if ($shrinkageQty > 0.0001) {
+                        try {
+                            $ledger->adjustment([
+                                'company_id'  => $cid,
+                                'product_id'  => (int) $purchase->product_id,
+                                'depot_id'    => $depotId,
+                                'batch_id'    => (int) $purchase->batch_id,
+                                'reason_type' => 'depot_shrinkage',
+                                'qty'         => $shrinkageQty,
+                                'ref_type'    => 'import_truck',
+                                'ref_id'      => (int) $truck->id,
+                                'reference'   => 'shrinkage:truck:' . $truck->id,
+                                'notes'       => "Auto depot shrinkage ({$shrinkagePct}%) — truck {$truck->truck_reg}",
+                                'created_by'  => auth()->id(),
+                            ], ['type' => 'adjustment', 'reference' => 'shrinkage:truck:' . $truck->id]);
+                        } catch (\Throwable) {
+                            // best-effort: don't fail the bulk post for shrinkage
+                        }
+                    }
+                }
             }
 
             $ledgerCurrency = $nomination->currency ?? 'USD';
