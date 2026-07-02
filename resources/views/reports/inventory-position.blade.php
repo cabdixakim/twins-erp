@@ -108,8 +108,8 @@
 
     {{-- Pipeline by product table --}}
     @if(count($pipelineRows) > 0)
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-        <table class="w-full text-xs">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">
+        <table class="w-full text-xs min-w-[860px]">
             <thead>
                 <tr class="{{ $surface2 }} border-b {{ $border }}">
                     <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Product</th>
@@ -202,8 +202,8 @@
 @if($depotBreakdown->count() > 0)
 <div class="mb-6">
     <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-3">Current Depot Stock</h2>
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-        <table class="w-full text-xs">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">
+        <table class="w-full text-xs min-w-[420px]">
             <thead>
                 <tr class="{{ $surface2 }} border-b {{ $border }}">
                     <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Depot</th>
@@ -248,8 +248,8 @@
     </p>
 
     @if(count($movementRows) > 0)
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-        <table class="w-full text-xs">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">
+        <table class="w-full text-xs min-w-[760px]">
             <thead>
                 <tr class="{{ $surface2 }} border-b {{ $border }}">
                     <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Product</th>
@@ -365,8 +365,8 @@
     <p class="text-xs {{ $muted }} mb-3">Individual purchase receipts that make up the "+ Receipts" figure above.</p>
 
     @if($purchaseBreakdown->count() > 0)
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden">
-        <table class="w-full text-xs">
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">
+        <table class="w-full text-xs min-w-[920px]">
             <thead>
                 <tr class="{{ $surface2 }} border-b {{ $border }}">
                     <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Date</th>
