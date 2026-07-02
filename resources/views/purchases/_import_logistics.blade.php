@@ -89,24 +89,26 @@
       @if($nom)
         <button type="button" id="btnEditNomination"
                 class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }}
-                       hover-tw-surface-2 transition">
+                       hover:bg-[color:var(--tw-surface-2)] transition">
           Edit nomination
         </button>
         <button type="button" id="btnImportTrucks"
                 class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }}
-                       hover-tw-surface-2 transition inline-flex items-center gap-1.5">
+                       hover:bg-[color:var(--tw-surface-2)] transition inline-flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Import
         </button>
         <button type="button" id="btnAddTruck"
-                class="h-8 px-3 rounded-xl tw-btn-accent-ghost text-xs font-semibold transition">
+                class="h-8 px-3 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10
+                       text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
           + Add truck
         </button>
       @else
         <button type="button" id="btnSetupNomination"
-                class="h-8 px-3 rounded-xl tw-btn-accent-ghost text-xs font-semibold transition">
+                class="h-8 px-3 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10
+                       text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
           Set up nomination
         </button>
       @endif
@@ -379,7 +381,7 @@
                     @if(in_array($truck->status, ['nominated', 'loading_failed']))
                       <button type="button"
                               onclick="openTruckModal('editTruckModal-{{ $truck->id }}')"
-                              class="h-7 px-2 rounded-lg border {{ $border }} text-[11px] {{ $fg }} hover-tw-surface-2 transition">
+                              class="h-7 px-2 rounded-lg border {{ $border }} text-[11px] {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
                         Edit
                       </button>
                     @endif
@@ -558,7 +560,7 @@
     </div>
     @if($nom->transporter_id)
     <button type="button" onclick="openAdvanceModal()"
-            class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover-tw-surface-2 transition inline-flex items-center gap-1.5">
+            class="h-8 px-3 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition inline-flex items-center gap-1.5">
       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
       </svg>
@@ -647,7 +649,7 @@
     <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
       <div class="text-base font-semibold {{ $fg }}">Record Advance Payment</div>
       <button type="button" onclick="closeAdvanceModal()"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition">✕</button>
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
     </div>
     <form method="POST"
           action="{{ route('purchases.import-nomination.advances.store', [$purchase, $nom]) }}"
@@ -658,12 +660,12 @@
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
           <input type="number" name="amount" step="0.01" min="0.01" required
                  placeholder="0.00"
-                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
         </div>
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
           <select name="currency"
-                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2">
+                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
             @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
               <option value="{{ $cur }}" {{ $nom->currency === $cur ? 'selected' : '' }}>{{ $cur }}</option>
             @endforeach
@@ -674,17 +676,17 @@
         <label class="block text-xs font-semibold {{ $fg }} mb-1">Date paid</label>
         <input type="date" name="advance_date" required
                value="{{ now()->toDateString() }}"
-               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
       </div>
       <div>
         <label class="block text-xs font-semibold {{ $fg }} mb-1">Note <span class="{{ $muted }} font-normal">(optional)</span></label>
         <input type="text" name="note" maxlength="500"
                placeholder="e.g. 50% upfront per contract"
-               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+               class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
       </div>
       <div class="flex gap-3 pt-1">
         <button type="button" onclick="closeAdvanceModal()"
-                class="flex-1 h-10 rounded-xl border {{ $border }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                class="flex-1 h-10 rounded-xl border {{ $border }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
         <button type="submit"
@@ -709,7 +711,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
     <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
       <div class="text-base font-semibold {{ $fg }}">{{ $nom ? 'Edit nomination' : 'Set up nomination' }}</div>
       <button type="button" onclick="closeTruckModal('nominationModal')"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
     </div>
     <form method="POST"
           action="{{ $nom
@@ -723,7 +725,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Transporter</label>
           <select name="transporter_id"
-                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2">
+                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
             <option value="">— none —</option>
             @foreach($transporters as $tp)
               <option value="{{ $tp->id }}" {{ ($nom && $nom->transporter_id == $tp->id) ? 'selected' : '' }}>
@@ -740,7 +742,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <span class="font-normal {{ $muted }}">— pre-fills delivery forms; depot charge configs auto-posted on delivery</span>
           </label>
           <select name="destination_depot_id"
-                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2">
+                  class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
             <option value="">— none —</option>
             @foreach($depots ?? [] as $dep)
               <option value="{{ $dep->id }}" {{ ($nom && $nom->destination_depot_id == $dep->id) ? 'selected' : '' }}>
@@ -755,7 +757,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Currency</label>
             <select name="currency"
-                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2">
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
               @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
                 <option value="{{ $cur }}" {{ ($nom ? $nom->currency : 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
               @endforeach
@@ -768,7 +770,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                    value="{{ $nom ? $nom->rate_per_1000l : '' }}"
                    data-original="{{ $nom ? $nom->rate_per_1000l : '' }}"
                    placeholder="0.00"
-                   class="w-full h-10 rounded-xl border {{ $errors->has('rate_per_1000l') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $errors->has('rate_per_1000l') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @error('rate_per_1000l')
               <p class="mt-1.5 text-xs text-rose-500 font-medium">⚠ {{ $message }}</p>
             @enderror
@@ -795,7 +797,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             </label>
             <input type="number" name="allowed_loss_pct" step="0.01" min="0" max="100" required
                    value="{{ $nom ? $nom->allowed_loss_pct : $defaultLossPct }}"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             <div class="mt-1 text-[10px] {{ $muted }}">
               Typical defaults: <strong>AGO 0.3%</strong> · <strong>PMS 0.5%</strong> — edit freely per shipment
             </div>
@@ -804,7 +806,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Short charge currency</label>
             <select name="short_charge_currency"
-                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2">
+                    class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40">
               @foreach(['USD','EUR','ZAR','CDF','ZMW'] as $cur)
                 <option value="{{ $cur }}" {{ ($nom ? $nom->short_charge_currency : 'USD') === $cur ? 'selected' : '' }}>{{ $cur }}</option>
               @endforeach
@@ -821,7 +823,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <input type="number" name="short_charge_rate" step="0.01" min="0" required
                  value="{{ $nom ? $nom->short_charge_rate : '' }}"
                  placeholder="e.g. 1.10"
-                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           <div class="mt-1 text-[10px] {{ $muted }}">
             Volume unit is <strong>{{ $unitLabel }}</strong> ({{ $rateLabel }}).
             To switch between Litres/M³ go to <em>Settings → Company → Volume unit</em>.
@@ -926,16 +928,16 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes <span class="{{ $muted }}">(optional)</span></label>
           <textarea name="notes" rows="2" placeholder="Any remarks about this nomination…"
-                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 resize-none">{{ $nom?->notes }}</textarea>
+                    class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40 resize-none">{{ $nom?->notes }}</textarea>
         </div>
       </div>
       <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
         <button type="button" onclick="closeTruckModal('nominationModal')"
-                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
         <button type="submit"
-                class="h-10 px-4 rounded-xl tw-btn-accent text-sm font-semibold transition">
+                class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition">
           {{ $nom ? 'Save changes' : 'Create nomination' }}
         </button>
       </div>
@@ -950,7 +952,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
     <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
       <div class="text-base font-semibold {{ $fg }}">Add truck</div>
       <button type="button" onclick="closeTruckModal('addTruckModal')"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
     </div>
     <form id="addTruckForm" method="POST" action="{{ route('purchases.import-nomination.trucks.store', [$purchase, $nom]) }}">
       @csrf
@@ -959,7 +961,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
             <input id="addTruckRegInput" type="text" name="truck_reg" value="{{ old('truck_reg') }}" placeholder="e.g. KCA 123A" maxlength="40"
-                   class="w-full h-10 rounded-xl border {{ $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @error('truck_reg')
               <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
             @enderror
@@ -968,7 +970,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
             <input id="addTrailerRegInput" type="text" name="trailer_reg" value="{{ old('trailer_reg') }}" placeholder="e.g. TRLR-001" maxlength="40"
-                   class="w-full h-10 rounded-xl border {{ $errors->has('trailer_reg') && !session('edit_error_truck_id') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $errors->has('trailer_reg') && !session('edit_error_truck_id') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             @if($errors->has('trailer_reg') && !session('edit_error_truck_id'))
               <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
             @endif
@@ -978,45 +980,45 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Capacity (litres) <span class="text-rose-400">*</span></label>
           <input type="number" name="capacity" value="{{ old('capacity') }}" step="0.001" min="1" required placeholder="e.g. 45000"
-                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver name</label>
             <input type="text" name="driver_name" value="{{ old('driver_name') }}" maxlength="150"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver phone</label>
             <input type="text" name="driver_phone" value="{{ old('driver_phone') }}" maxlength="30"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Passport #</label>
             <input type="text" name="driver_passport" value="{{ old('driver_passport') }}" maxlength="60"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">License #</label>
             <input type="text" name="driver_license" value="{{ old('driver_license') }}" maxlength="60"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes</label>
           <input type="text" name="notes" value="{{ old('notes') }}" maxlength="1000"
-                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                 class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
         </div>
       </div>
       <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
         <button type="button" onclick="closeTruckModal('addTruckModal')"
-                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
         <button id="addTruckSubmitBtn" type="submit"
-                class="h-10 px-4 rounded-xl tw-btn-accent text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
+                class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
           Add truck
         </button>
       </div>
@@ -1139,7 +1141,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">Edit truck — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('editTruckModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.update', [$purchase, $nom, $truck]) }}">
@@ -1149,7 +1151,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Truck registration</label>
               <input id="editTruckRegInput-{{ $truck->id }}" type="text" name="truck_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('truck_reg', $truck->truck_reg) : $truck->truck_reg }}" maxlength="40"
-                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
               @if(session('edit_error_truck_id') == $truck->id && $errors->has('truck_reg'))
                 <p class="mt-1 text-xs text-rose-400">{{ $errors->first('truck_reg') }}</p>
               @endif
@@ -1158,7 +1160,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Trailer registration</label>
               <input id="editTrailerRegInput-{{ $truck->id }}" type="text" name="trailer_reg" value="{{ session('edit_error_truck_id') == $truck->id ? old('trailer_reg', $truck->trailer_reg) : $truck->trailer_reg }}" maxlength="40"
-                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg') ? 'border-rose-400' : $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
               @if(session('edit_error_truck_id') == $truck->id && $errors->has('trailer_reg'))
                 <p class="mt-1 text-xs text-rose-400">{{ $errors->first('trailer_reg') }}</p>
               @endif
@@ -1168,36 +1170,36 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Capacity (litres) <span class="text-rose-400">*</span></label>
             <input type="number" name="capacity" step="0.001" min="1" required value="{{ $truck->capacity }}"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver name</label>
               <input type="text" name="driver_name" value="{{ $truck->driver_name }}" maxlength="150"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Driver phone</label>
               <input type="text" name="driver_phone" value="{{ $truck->driver_phone }}" maxlength="30"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Passport #</label>
               <input type="text" name="driver_passport" value="{{ $truck->driver_passport }}" maxlength="60"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">License #</label>
               <input type="text" name="driver_license" value="{{ $truck->driver_license }}" maxlength="60"
-                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
           </div>
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">Notes</label>
             <input type="text" name="notes" value="{{ $truck->notes }}" maxlength="1000"
-                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                   class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
           </div>
           <div class="rounded-xl border {{ $border }} {{ $surface2 }} p-3">
             <label class="block text-xs font-semibold {{ $fg }} mb-0.5">Short-charge rate override <span class="{{ $muted }} font-normal">(optional)</span></label>
@@ -1207,17 +1209,17 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <input type="number" name="short_charge_rate_override" step="0.01" min="0"
                      value="{{ $truck->short_charge_rate_override }}"
                      placeholder="e.g. {{ $nom->short_charge_rate }}"
-                     class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2" />
+                     class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
             </div>
           </div>
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('editTruckModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button id="editTruckSubmitBtn-{{ $truck->id }}" type="submit"
-                  class="h-10 px-4 rounded-xl tw-btn-accent text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  class="h-10 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)] text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
             Save
           </button>
         </div>
@@ -1233,7 +1235,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">Record loading — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('loadModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.record-load', [$purchase, $nom, $truck]) }}">
@@ -1268,7 +1270,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('loadModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1288,7 +1290,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">Mark loading failed — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('failLoadModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.fail-load', [$purchase, $nom, $truck]) }}">
@@ -1305,7 +1307,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('failLoadModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1328,7 +1330,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div class="text-xs {{ $muted }} mt-0.5">Stage this truck at a border crossing</div>
         </div>
         <button type="button" onclick="closeTruckModal('atBorderModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST"
             action="{{ route('purchases.import-nomination.trucks.mark-at-border', [$purchase, $nom, $truck]) }}">
@@ -1372,7 +1374,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">DRC border clearance — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('borderModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST" enctype="multipart/form-data" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.record-border', [$purchase, $nom, $truck]) }}">
@@ -1428,7 +1430,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                     <div class="flex items-center gap-2 min-w-0">
                       <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold s-purple">{{ strtoupper($doc->category) }}</span>
                       <a href="{{ route('documents.download', $doc) }}"
-                         class="tw-text-accent hover:underline truncate">{{ $doc->original_name }}</a>
+                         class="text-[color:var(--tw-accent)] hover:underline truncate">{{ $doc->original_name }}</a>
                     </div>
                     <form method="POST" action="{{ route('documents.destroy', $doc) }}" class="inline">
                       @csrf @method('DELETE')
@@ -1577,7 +1579,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                   Rate <span class="font-normal opacity-60">{{ $dutyRateLabel }}</span>
                   @if($purchase->product_id)
                   <button type="button" onclick="autoFillDutyRate({{ $truck->id }}, {{ $purchase->product_id }})"
-                          class="ml-1 text-[10px] tw-text-accent hover:underline font-normal">auto-fill</button>
+                          class="ml-1 text-[10px] text-[color:var(--tw-accent)] hover:underline font-normal">auto-fill</button>
                   @endif
                 </label>
                 <input type="number" name="duty_rate_per_1000l"
@@ -1628,7 +1630,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('borderModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1648,7 +1650,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
       <div class="flex-shrink-0 flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
         <div class="text-base font-semibold {{ $fg }}">Record delivery — {{ $truck->truck_reg }}</div>
         <button type="button" onclick="closeTruckModal('deliveryModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.record-delivery', [$purchase, $nom, $truck]) }}">
@@ -1699,7 +1701,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('deliveryModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1722,7 +1724,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div class="text-xs {{ $muted }} mt-0.5">Record duty that was not posted at border clearance</div>
         </div>
         <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.post-duty', [$purchase, $nom, $truck]) }}">
@@ -1843,7 +1845,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
 
         <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('postDutyModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1866,7 +1868,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <div class="text-xs {{ $muted }} mt-0.5">Record load + delivery in one step (skips transit & border stages)</div>
         </div>
         <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
-                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
       <form method="POST" class="flex flex-col flex-1 min-h-0"
             action="{{ route('purchases.import-nomination.trucks.quick-load-deliver', [$purchase, $nom, $truck]) }}">
@@ -1913,7 +1915,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="flex-shrink-0 px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
           <button type="button" onclick="closeTruckModal('quickDeliverModal-{{ $truck->id }}')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1947,7 +1949,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
       </div>
       <button type="button" onclick="closeTruckModal('bulkQuickPostModal')"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
     </div>
 
     {{-- Apply defaults bar --}}
@@ -2073,7 +2075,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
         </div>
         <div class="flex gap-2">
           <button type="button" onclick="closeTruckModal('bulkQuickPostModal')"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit" id="bqpSubmitBtn"
@@ -2179,7 +2181,7 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
       <div class="flex items-center gap-3">
         <span class="text-base font-semibold {{ $fg }}">Import trucks</span>
         <div class="flex items-center gap-1.5">
-          <span id="wiStepDot1" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center tw-bg-accent text-white">1</span>
+          <span id="wiStepDot1" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center bg-[color:var(--tw-accent)] text-white">1</span>
           <div class="w-5 h-px" style="background:var(--tw-border)"></div>
           <span id="wiStepDot2" class="h-5 w-5 rounded-full text-[10px] font-bold grid place-items-center border {{ $border }}" style="background:var(--tw-surface-2);color:var(--tw-muted)">2</span>
           <div class="w-5 h-px" style="background:var(--tw-border)"></div>
@@ -2187,7 +2189,7 @@ document.getElementById('bulkQuickPostForm')?.addEventListener('submit', functio
         </div>
       </div>
       <button type="button" id="btnCloseImportModal"
-              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+              class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
     </div>
 
     {{-- Step 1 — Upload --}}
@@ -3904,7 +3906,7 @@ function syncNomDutyId(type) {
 @endpush
 
 {{-- ── In-Transit Confirmation Modal (shared, JS-populated) ── --}}
-@php $border = $border ?? 'tw-border-color'; $surface = $surface ?? 'tw-bg-surface'; $surface2 = $surface2 ?? 'tw-bg-surface-2'; $fg = $fg ?? 'tw-fg'; $muted = $muted ?? 'tw-muted'; @endphp
+@php $border = $border ?? 'border-[color:var(--tw-border)]'; $surface = $surface ?? 'bg-[color:var(--tw-surface)]'; $surface2 = $surface2 ?? 'bg-[color:var(--tw-surface-2)]'; $fg = $fg ?? 'text-[color:var(--tw-fg)]'; $muted = $muted ?? 'text-[color:var(--tw-muted)]'; @endphp
 <div id="inTransitModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.6)">
   <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
     <div class="px-5 py-4 border-b {{ $border }}" style="background:rgba(245,158,11,.08)">

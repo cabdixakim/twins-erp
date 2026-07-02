@@ -459,7 +459,7 @@
                 </div>
               </div>
               @if($i < count($allStatuses) - 1)
-                <div class="flex-1 h-px mx-2 mb-4 {{ $i < ($currentIdx ?? -1) && !in_array($purchase->status, ['cancelled','voided']) ? 'bg-emerald-500' : '' }}" style="{{ $i < ($currentIdx ?? -1) && !in_array($purchase->status, ['cancelled','voided']) ? '' : 'background:var(--tw-border)' }}"></div>
+                <div class="flex-1 h-px mx-2 mb-4 {{ $i < ($currentIdx ?? -1) && !in_array($purchase->status, ['cancelled','voided']) ? 'bg-emerald-500' : 'bg-[color:var(--tw-border)]' }}"></div>
               @endif
             </div>
           @endforeach
@@ -522,22 +522,22 @@
      LANDED COSTS / BATCH COSTS
    ========================= --}}
 @if($purchase->status !== 'draft' && $purchase->batch_id)
-<div class="mt-6 rounded-2xl border tw-border-color tw-bg-surface overflow-hidden">
-  <div class="px-5 py-3 border-b tw-border-color tw-bg-surface-2 flex items-center justify-between">
-    <span class="text-xs font-semibold tw-fg">Landed Costs</span>
+<div class="mt-6 rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] overflow-hidden">
+  <div class="px-5 py-3 border-b border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] flex items-center justify-between">
+    <span class="text-xs font-semibold text-[color:var(--tw-fg)]">Landed Costs</span>
     <button type="button" onclick="document.getElementById('addCostModal').classList.remove('hidden')"
-            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border tw-border-color text-[10px] font-semibold tw-fg hover-tw-surface-2 transition">
+            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border border-[color:var(--tw-border)] text-[10px] font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
       <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       Add cost
     </button>
   </div>
   @if($batchCosts->isEmpty())
-    <div class="px-5 py-5 text-xs tw-text-muted">No landed costs recorded yet — freight, duty, border charges etc.</div>
+    <div class="px-5 py-5 text-xs text-[color:var(--tw-muted)]">No landed costs recorded yet — freight, duty, border charges etc.</div>
   @else
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="text-xs tw-text-muted border-b tw-border-color">
+          <tr class="text-xs text-[color:var(--tw-muted)] border-b border-[color:var(--tw-border)]">
             <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
             <th class="text-left py-2.5 pr-3 font-semibold">Category</th>
             <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
@@ -558,31 +558,31 @@
               };
               $catLabel = ucfirst(str_replace('_', ' ', $bc->category));
             @endphp
-            <tr class="border-b tw-border-color last:border-0 hover-tw-surface-2 transition-colors">
-              <td class="py-2.5 pl-5 pr-3 text-xs tw-text-muted whitespace-nowrap">{{ $bc->entry_date->format('d M Y') }}</td>
+            <tr class="border-b border-[color:var(--tw-border)] last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+              <td class="py-2.5 pl-5 pr-3 text-xs text-[color:var(--tw-muted)] whitespace-nowrap">{{ $bc->entry_date->format('d M Y') }}</td>
               <td class="py-2.5 pr-3">
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $catColor }}">{{ $catLabel }}</span>
                 @if($bc->auto_posted ?? false)
                   <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.25)">auto</span>
                 @endif
               </td>
-              <td class="py-2.5 pr-3 text-xs tw-fg">{{ $bc->description }}</td>
-              <td class="py-2.5 pr-3 text-right text-xs font-semibold tw-fg">
+              <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-fg)]">{{ $bc->description }}</td>
+              <td class="py-2.5 pr-3 text-right text-xs font-semibold text-[color:var(--tw-fg)]">
                 {{ number_format($bc->amount, 2) }} {{ $bc->currency }}
                 @if($bc->currency !== 'USD' && $bc->exchange_rate != 1)
-                  <span class="text-[10px] tw-text-muted ml-1">≈ {{ number_format($bc->amount_base, 2) }} base</span>
+                  <span class="text-[10px] text-[color:var(--tw-muted)] ml-1">≈ {{ number_format($bc->amount_base, 2) }} base</span>
                 @endif
               </td>
               <td class="py-2.5 pr-5 text-right">
                 @if($bc->auto_posted ?? false)
-                  <span class="text-[10px] tw-text-muted italic">system</span>
+                  <span class="text-[10px] text-[color:var(--tw-muted)] italic">system</span>
                 @else
                   <button type="button"
                           data-cost-id="{{ $bc->id }}"
                           data-cost-desc="{{ $bc->description }}"
                           data-cost-action="{{ route('purchases.batch-costs.destroy', [$purchase, $bc]) }}"
                           onclick="openDeleteCostModal(this)"
-                          class="tw-text-muted hover:text-rose-500 transition">
+                          class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
                     </svg>
@@ -593,9 +593,9 @@
           @endforeach
         </tbody>
         <tfoot>
-          <tr class="border-t tw-border-color tw-bg-surface-2">
-            <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold tw-text-muted">Total landed costs</td>
-            <td class="py-2.5 pr-3 text-right text-xs font-bold tw-fg">
+          <tr class="border-t border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)]">
+            <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold text-[color:var(--tw-muted)]">Total landed costs</td>
+            <td class="py-2.5 pr-3 text-right text-xs font-bold text-[color:var(--tw-fg)]">
               {{ number_format($batchCosts->sum('amount_base'), 2) }} (base)
             </td>
             <td></td>
@@ -609,16 +609,16 @@
 {{-- Add Cost Modal --}}
 <div id="addCostModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
      style="background:rgba(0,0,0,.55)">
-  <div class="w-full max-w-md rounded-2xl border tw-border-color tw-bg-surface shadow-2xl p-6"
+  <div class="w-full max-w-md rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] shadow-2xl p-6"
        onclick="event.stopPropagation()">
-    <h3 class="text-sm font-bold tw-fg mb-4">Add landed cost</h3>
+    <h3 class="text-sm font-bold text-[color:var(--tw-fg)] mb-4">Add landed cost</h3>
     <form method="POST" action="{{ route('purchases.batch-costs.store', $purchase) }}" class="space-y-4">
       @csrf
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs font-semibold tw-text-muted">Category</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Category</label>
           <select name="category" id="addCostCategory" onchange="toggleDutyVendorRow()" required
-                  class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                  class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
             <option value="freight">Freight</option>
             <option value="duty">Duty / Tax</option>
             <option value="border_charge">Border charge</option>
@@ -628,40 +628,40 @@
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold tw-text-muted">Date</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Date</label>
           <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
-                 class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
         </div>
       </div>
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Description</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Description</label>
         <input name="description" type="text" required
-               class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2"
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
                placeholder="e.g. Freight from Dar to Lubumbashi">
       </div>
       <div class="grid grid-cols-3 gap-3">
         <div class="col-span-2">
-          <label class="text-xs font-semibold tw-text-muted">Amount</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Amount</label>
           <input name="amount" type="number" step="0.01" min="0.01" required
-                 class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2"
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
                  placeholder="0.00">
         </div>
         <div>
-          <label class="text-xs font-semibold tw-text-muted">Currency</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Currency</label>
           <input name="currency" value="{{ $purchase->currency ?? 'USD' }}" maxlength="8" required
-                 class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
         </div>
       </div>
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Exchange rate to base (1 if same currency)</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Exchange rate to base (1 if same currency)</label>
         <input name="exchange_rate" type="number" step="0.000001" value="1"
-               class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
 
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Who paid this cost?</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Who paid this cost?</label>
         <select name="paid_by_type" id="costPaidByType" onchange="updatePaidByFields()"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
           <option value="self">We paid directly (no secondary payable)</option>
           <option value="depot">Depot fronted it (creates depot charge)</option>
           <option value="transporter">Clearing agent / transporter (creates advance entry)</option>
@@ -670,9 +670,9 @@
       </div>
 
       <div id="paidByDepotRow" class="hidden">
-        <label class="text-xs font-semibold tw-text-muted">Depot</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Depot</label>
         <select name="paid_by_id_depot"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
           <option value="">— select depot —</option>
           @foreach(\App\Models\Depot::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->where('is_system', false)->orderBy('name')->get() as $d)
             <option value="{{ $d->id }}">{{ $d->name }}</option>
@@ -681,9 +681,9 @@
       </div>
 
       <div id="paidByTransporterRow" class="hidden">
-        <label class="text-xs font-semibold tw-text-muted">Transporter / clearing agent</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Transporter / clearing agent</label>
         <select name="paid_by_id_transporter"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
           <option value="">— select transporter —</option>
           @foreach(\App\Models\Transporter::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get() as $t)
             <option value="{{ $t->id }}">{{ $t->name }}</option>
@@ -692,16 +692,16 @@
       </div>
 
       <div id="paidByOtherRow" class="hidden">
-        <label class="text-xs font-semibold tw-text-muted">Name of paying party</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Name of paying party</label>
         <input name="paid_by_name" type="text" maxlength="200" placeholder="e.g. DHL, local agent…"
-               class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
 
       {{-- Duty vendor — shown when category = duty; auto-posts to duty ledger --}}
       <div id="dutyVendorRow" class="hidden">
-        <label class="text-xs font-semibold tw-text-muted">Customs authority <span class="font-normal tw-text-muted">(auto-posts to their ledger)</span></label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Customs authority <span class="font-normal text-[color:var(--tw-muted)]">(auto-posts to their ledger)</span></label>
         <select name="duty_vendor_id"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
           <option value="">— select authority (optional) —</option>
           @foreach(\App\Models\DutyVendor::where('company_id', auth()->user()->active_company_id)->where('is_active', true)->orderBy('name')->get() as $dv)
             <option value="{{ $dv->id }}">{{ $dv->name }}</option>
@@ -711,11 +711,11 @@
 
       <div class="flex items-center gap-3 pt-2">
         <button type="button" onclick="document.getElementById('addCostModal').classList.add('hidden')"
-                class="flex-1 h-9 rounded-xl border tw-border-color text-xs font-semibold tw-fg hover-tw-surface-2 transition">
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
         <button type="submit"
-                class="flex-1 h-9 rounded-xl tw-btn-accent-ghost text-xs font-semibold transition">
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
           Save cost
         </button>
       </div>
@@ -738,22 +738,22 @@ function toggleDutyVendorRow() {
 
 {{-- Hospitality module hidden — replaced by per-truck "other border charges" on border clearance form --}}
 @if(false)
-<div class="mt-6 rounded-2xl border tw-border-color tw-bg-surface overflow-hidden">
-  <div class="px-5 py-3 border-b tw-border-color tw-bg-surface-2 flex items-center justify-between">
-    <span class="text-xs font-semibold tw-fg">Hospitality Charges</span>
+<div class="mt-6 rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] overflow-hidden">
+  <div class="px-5 py-3 border-b border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)] flex items-center justify-between">
+    <span class="text-xs font-semibold text-[color:var(--tw-fg)]">Hospitality Charges</span>
     <button type="button" onclick="document.getElementById('addHospitalityModal').classList.remove('hidden')"
-            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border tw-border-color text-[10px] font-semibold tw-fg hover-tw-surface-2 transition">
+            class="inline-flex items-center gap-1 h-7 px-3 rounded-lg border border-[color:var(--tw-border)] text-[10px] font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
       <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       Add charge
     </button>
   </div>
   @if($hospitalityCharges->isEmpty())
-    <div class="px-5 py-5 text-xs tw-text-muted">No hospitality charges yet. Includes agent fees, entertainment and facilitation costs.</div>
+    <div class="px-5 py-5 text-xs text-[color:var(--tw-muted)]">No hospitality charges yet. Includes agent fees, entertainment and facilitation costs.</div>
   @else
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
-        <tr class="text-xs tw-text-muted border-b tw-border-color">
+        <tr class="text-xs text-[color:var(--tw-muted)] border-b border-[color:var(--tw-border)]">
           <th class="text-left py-2.5 pl-5 pr-3 font-semibold">Date</th>
           <th class="text-left py-2.5 pr-3 font-semibold">Description</th>
           <th class="text-left py-2.5 pr-3 font-semibold">Paid to</th>
@@ -763,24 +763,24 @@ function toggleDutyVendorRow() {
       </thead>
       <tbody>
         @foreach($hospitalityCharges as $hc)
-        <tr class="border-b tw-border-color last:border-0 hover-tw-surface-2 transition-colors">
-          <td class="py-2.5 pl-5 pr-3 text-xs tw-text-muted whitespace-nowrap">{{ $hc->entry_date->format('d M Y') }}</td>
-          <td class="py-2.5 pr-3 text-xs tw-fg">{{ $hc->description }}</td>
-          <td class="py-2.5 pr-3 text-xs tw-text-muted">
+        <tr class="border-b border-[color:var(--tw-border)] last:border-0 hover:bg-[color:var(--tw-surface-2)] transition-colors">
+          <td class="py-2.5 pl-5 pr-3 text-xs text-[color:var(--tw-muted)] whitespace-nowrap">{{ $hc->entry_date->format('d M Y') }}</td>
+          <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-fg)]">{{ $hc->description }}</td>
+          <td class="py-2.5 pr-3 text-xs text-[color:var(--tw-muted)]">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border
               {{ $hc->paid_to_type === 'supplier' ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30' : 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30' }}">
               {{ ucfirst($hc->paid_to_type) }}
             </span>
             @if($hc->paid_to_name) <span class="ml-1">{{ $hc->paid_to_name }}</span> @endif
           </td>
-          <td class="py-2.5 pr-3 text-right text-xs font-semibold tw-fg">
+          <td class="py-2.5 pr-3 text-right text-xs font-semibold text-[color:var(--tw-fg)]">
             {{ number_format($hc->amount, 2) }} {{ $hc->currency }}
           </td>
           <td class="py-2.5 pr-5 text-right">
             <form method="POST" action="{{ route('purchases.hospitality.destroy', [$purchase, $hc]) }}"
                   onsubmit="return confirm('Remove this hospitality charge?')">
               @csrf @method('DELETE')
-              <button type="submit" class="tw-text-muted hover:text-rose-500 transition">
+              <button type="submit" class="text-[color:var(--tw-muted)] hover:text-rose-500 transition">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a1 1 0 011-1h6a1 1 0 011 1v2"/>
                 </svg>
@@ -791,9 +791,9 @@ function toggleDutyVendorRow() {
         @endforeach
       </tbody>
       <tfoot>
-        <tr class="border-t tw-border-color tw-bg-surface-2">
-          <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold tw-text-muted">Total hospitality</td>
-          <td class="py-2.5 pr-3 text-right text-xs font-bold tw-fg">
+        <tr class="border-t border-[color:var(--tw-border)] bg-[color:var(--tw-surface-2)]">
+          <td colspan="3" class="py-2.5 pl-5 text-xs font-semibold text-[color:var(--tw-muted)]">Total hospitality</td>
+          <td class="py-2.5 pr-3 text-right text-xs font-bold text-[color:var(--tw-fg)]">
             {{ number_format($hospitalityTotal, 2) }}
           </td>
           <td></td>
@@ -807,20 +807,20 @@ function toggleDutyVendorRow() {
 {{-- Add Hospitality Modal --}}
 <div id="addHospitalityModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
      style="background:rgba(0,0,0,.55)">
-  <div class="w-full max-w-md rounded-2xl border tw-border-color tw-bg-surface shadow-2xl p-6"
+  <div class="w-full max-w-md rounded-2xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] shadow-2xl p-6"
        onclick="event.stopPropagation()">
-    <h3 class="text-sm font-bold tw-fg mb-4">Add hospitality charge</h3>
+    <h3 class="text-sm font-bold text-[color:var(--tw-fg)] mb-4">Add hospitality charge</h3>
     <form method="POST" action="{{ route('purchases.hospitality.store', $purchase) }}" class="space-y-4">
       @csrf
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Description</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Description</label>
         <input name="description" type="text" placeholder="Agent fee, entertainment, facilitation…"
-               class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
       </div>
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Paid to</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Paid to</label>
         <select name="paid_to_type" id="hospPaidToType" onchange="toggleHospPaidTo()"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none focus:ring-2">
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
           @if($hSuppliers->isNotEmpty())
             <option value="supplier">Supplier / vendor</option>
           @endif
@@ -830,9 +830,9 @@ function toggleDutyVendorRow() {
         </select>
       </div>
       <div id="hospSupplierRow">
-        <label class="text-xs font-semibold tw-text-muted">Supplier</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Supplier</label>
         <select name="paid_to_id_supplier" id="hospSupplierSelect"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
                 onchange="syncHospId(this,'supplier')">
           <option value="">— select —</option>
           @foreach($hSuppliers as $hs)
@@ -841,9 +841,9 @@ function toggleDutyVendorRow() {
         </select>
       </div>
       <div id="hospPettyCashRow" class="hidden">
-        <label class="text-xs font-semibold tw-text-muted">Petty cash account</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Petty cash account</label>
         <select name="paid_to_id_petty_cash" id="hospPettyCashSelect"
-                class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none"
+                class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
                 onchange="syncHospId(this,'petty_cash')">
           <option value="">— select —</option>
           @foreach($hPettyCash as $hp)
@@ -854,29 +854,29 @@ function toggleDutyVendorRow() {
       <input type="hidden" name="paid_to_id" id="hospPaidToIdHidden" value="">
       <div class="grid grid-cols-3 gap-3">
         <div class="col-span-2">
-          <label class="text-xs font-semibold tw-text-muted">Amount</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Amount</label>
           <input name="amount" type="number" step="0.01" min="0.01" required
-                 class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none"
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none"
                  placeholder="0.00">
         </div>
         <div>
-          <label class="text-xs font-semibold tw-text-muted">Currency</label>
+          <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Currency</label>
           <input name="currency" value="{{ $purchase->currency ?? 'USD' }}" maxlength="8"
-                 class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none">
+                 class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
         </div>
       </div>
       <div>
-        <label class="text-xs font-semibold tw-text-muted">Date</label>
+        <label class="text-xs font-semibold text-[color:var(--tw-muted)]">Date</label>
         <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
-               class="mt-1 w-full rounded-xl border tw-border-color tw-bg-surface px-3 py-2 text-sm tw-fg focus:outline-none">
+               class="mt-1 w-full rounded-xl border border-[color:var(--tw-border)] bg-[color:var(--tw-surface)] px-3 py-2 text-sm text-[color:var(--tw-fg)] focus:outline-none">
       </div>
       <div class="flex items-center gap-3 pt-2">
         <button type="button" onclick="document.getElementById('addHospitalityModal').classList.add('hidden')"
-                class="flex-1 h-9 rounded-xl border tw-border-color text-xs font-semibold tw-fg hover-tw-surface-2 transition">
+                class="flex-1 h-9 rounded-xl border border-[color:var(--tw-border)] text-xs font-semibold text-[color:var(--tw-fg)] hover:bg-[color:var(--tw-surface-2)] transition">
           Cancel
         </button>
         <button type="submit"
-                class="flex-1 h-9 rounded-xl tw-btn-accent text-xs font-semibold transition">
+                class="flex-1 h-9 rounded-xl bg-[color:var(--tw-accent)] text-white text-xs font-semibold hover:opacity-90 transition">
           Save charge
         </button>
       </div>
@@ -912,7 +912,7 @@ function syncHospId(sel, type) {
     <div class="absolute inset-0 bg-black/60" data-close="confirm"></div>
 
     <div class="tw-modal-wrap">
-      <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
+      <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
         <div class="tw-modal-handle"></div>
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
@@ -924,7 +924,7 @@ function syncHospId(sel, type) {
             </div>
             <button type="button" data-close="confirm"
                     class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                           {{ $fg }} hover-tw-surface-2 transition"
+                           {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition"
                     aria-label="Close">✕</button>
           </div>
         </div>
@@ -978,7 +978,7 @@ function syncHospId(sel, type) {
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="confirm"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                         hover-tw-surface-2 transition">
+                         hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="button" id="confirmConfirm"
@@ -1000,7 +1000,7 @@ function syncHospId(sel, type) {
     <div class="absolute inset-0 bg-black/60" data-close="receive"></div>
 
     <div class="tw-modal-wrap">
-      <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
+      <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-xl overflow-hidden">
         <div class="tw-modal-handle"></div>
         <div class="p-5 border-b {{ $border }} {{ $surface2 }}">
           <div class="flex items-start justify-between gap-4">
@@ -1012,7 +1012,7 @@ function syncHospId(sel, type) {
             </div>
             <button type="button" data-close="receive"
                     class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                           {{ $fg }} hover-tw-surface-2 transition"
+                           {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition"
                     aria-label="Close">✕</button>
           </div>
         </div>
@@ -1056,12 +1056,12 @@ function syncHospId(sel, type) {
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="receive"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                         hover-tw-surface-2 transition">
+                         hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="button" id="confirmReceive"
-                  class="h-10 px-4 rounded-xl border border-emerald-500/30 text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition"
-                  style="background:var(--tw-accent-soft)">
+                  class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-[color:var(--tw-accent-soft)]
+                         text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition">
             Yes, receive
           </button>
         </div>
@@ -1075,7 +1075,7 @@ function syncHospId(sel, type) {
   <div id="undoReceiptModal" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/50"></div>
     <div class="tw-modal-wrap">
-    <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
       <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Undo depot receipt</div>
@@ -1100,7 +1100,7 @@ function syncHospId(sel, type) {
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="undo-receipt"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                         hover-tw-surface-2 transition">
+                         hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1122,14 +1122,14 @@ function syncHospId(sel, type) {
   <div id="nominateModal" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/60"></div>
     <div class="tw-modal-wrap">
-    <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-lg overflow-hidden">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-lg overflow-hidden">
       <div class="tw-modal-handle"></div>
       <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
         <div class="min-w-0">
           <div class="text-base font-semibold {{ $fg }}">Nominate vessel</div>
           <div class="mt-1 text-xs {{ $muted }}">Record shipping details. Status will move to <strong>Nominated</strong>.</div>
         </div>
-        <button type="button" data-close="nominate" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+        <button type="button" data-close="nominate" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
 
       <form method="POST" action="{{ route('purchases.nominate', $purchase) }}" id="nominateForm">
@@ -1181,7 +1181,7 @@ function syncHospId(sel, type) {
 
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="nominate"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1202,14 +1202,14 @@ function syncHospId(sel, type) {
   <div id="importDeliverModal" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/60"></div>
     <div class="tw-modal-wrap">
-    <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
       <div class="tw-modal-handle"></div>
       <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
         <div class="min-w-0">
           <div class="text-base font-semibold {{ $fg }}">Deliver to depot</div>
           <div class="mt-1 text-xs {{ $muted }}">Post a receipt movement into the selected depot. Repeatable for partial deliveries.</div>
         </div>
-        <button type="button" data-close="import-deliver" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">✕</button>
+        <button type="button" data-close="import-deliver" class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">✕</button>
       </div>
 
       <form method="POST" action="{{ route('purchases.import-deliver', $purchase) }}" id="importDeliverForm">
@@ -1246,12 +1246,11 @@ function syncHospId(sel, type) {
 
         <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="import-deliver"
-                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover-tw-surface-2 transition">
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
-                  class="h-10 px-4 rounded-xl border border-emerald-500/30 text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition"
-                  style="background:var(--tw-accent-soft)">
+                  class="h-10 px-4 rounded-xl border border-emerald-500/30 bg-[color:var(--tw-accent-soft)] text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-500/20 transition">
             Post delivery ↓
           </button>
         </div>
@@ -1266,7 +1265,7 @@ function syncHospId(sel, type) {
   <div id="crossDockTransferModal" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/50"></div>
     <div class="tw-modal-wrap">
-    <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
       <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Transfer to depot</div>
@@ -1307,7 +1306,7 @@ function syncHospId(sel, type) {
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="cross-dock-transfer"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                         hover-tw-surface-2 transition">
+                         hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1325,7 +1324,7 @@ function syncHospId(sel, type) {
   <div id="crossDockDispatchModal" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/50"></div>
     <div class="tw-modal-wrap">
-    <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+    <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
       <div class="tw-modal-handle"></div>
       <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}">
         <div class="text-base font-semibold {{ $fg }}">Dispatch straight out</div>
@@ -1339,7 +1338,7 @@ function syncHospId(sel, type) {
           <div>
             <label class="block text-xs font-semibold {{ $fg }} mb-1">
               Client
-              <span class="ml-1 text-[10px] font-normal {{ $muted }}">optional — <a href="{{ route('settings.clients.index') }}" class="underline hover:tw-text-accent" target="_blank">add client</a></span>
+              <span class="ml-1 text-[10px] font-normal {{ $muted }}">optional — <a href="{{ route('settings.clients.index') }}" class="underline hover:text-[color:var(--tw-accent)]" target="_blank">add client</a></span>
             </label>
             <select name="client_id"
                     class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }}
@@ -1369,7 +1368,7 @@ function syncHospId(sel, type) {
         <div class="p-5 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
           <button type="button" data-close="cross-dock-dispatch"
                   class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                         hover-tw-surface-2 transition">
+                         hover:bg-[color:var(--tw-surface-2)] transition">
             Cancel
           </button>
           <button type="submit"
@@ -1389,7 +1388,7 @@ function syncHospId(sel, type) {
 <div id="cancelModal" class="hidden fixed inset-0 z-50">
   <div class="absolute inset-0 bg-black/60"></div>
   <div class="tw-modal-wrap">
-  <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+  <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
     <div class="tw-modal-handle"></div>
     <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
       <div>
@@ -1404,7 +1403,7 @@ function syncHospId(sel, type) {
       </div>
       <button type="button" data-close="cancel-purchase"
               class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                     {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">
+                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -1442,7 +1441,7 @@ function syncHospId(sel, type) {
       <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
         <button type="button" data-close="cancel-purchase"
                 class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                       hover-tw-surface-2 transition">
+                       hover:bg-[color:var(--tw-surface-2)] transition">
           Go back
         </button>
         <button type="submit"
@@ -1462,7 +1461,7 @@ function syncHospId(sel, type) {
 <div id="voidModal" class="hidden fixed inset-0 z-50">
   <div class="absolute inset-0 bg-black/60"></div>
   <div class="tw-modal-wrap">
-  <div class="tw-modal-inner tw-bg-surface border-t tw-border-color sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
+  <div class="tw-modal-inner bg-[color:var(--tw-surface)] border-t border-[color:var(--tw-border)] sm:rounded-2xl sm:border sm:shadow-2xl sm:max-w-md overflow-hidden">
     <div class="tw-modal-handle"></div>
     <div class="flex items-start justify-between gap-4 px-5 py-4 border-b {{ $border }} {{ $surface2 }}">
       <div>
@@ -1473,7 +1472,7 @@ function syncHospId(sel, type) {
       </div>
       <button type="button" data-close="void-purchase"
               class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }}
-                     {{ $fg }} hover-tw-surface-2 transition" aria-label="Close">
+                     {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition" aria-label="Close">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -1515,7 +1514,7 @@ function syncHospId(sel, type) {
       <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex items-center justify-end gap-2">
         <button type="button" data-close="void-purchase"
                 class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }}
-                       hover-tw-surface-2 transition">
+                       hover:bg-[color:var(--tw-surface-2)] transition">
           Go back
         </button>
         <button type="submit"

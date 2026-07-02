@@ -122,22 +122,6 @@ textarea:focus {
 .tw-bg-surface-2 { background: var(--tw-surface-2); }
 .hover-tw-surface:hover   { background: var(--tw-surface); }
 .hover-tw-surface-2:hover { background: var(--tw-surface-2); }
-.tw-text-accent { color: var(--tw-accent); }
-.tw-bg-accent   { background: var(--tw-accent); }
-.tw-btn-accent  {
-  border: 1px solid color-mix(in srgb, var(--tw-accent) 40%, transparent);
-  background: var(--tw-accent);
-  color: #fff;
-}
-.tw-btn-accent:hover { opacity: .9; }
-.tw-btn-accent-ghost {
-  border: 1px solid color-mix(in srgb, var(--tw-accent) 40%, transparent);
-  background: color-mix(in srgb, var(--tw-accent) 10%, transparent);
-  color: var(--tw-accent);
-}
-.tw-btn-accent-ghost:hover {
-  background: color-mix(in srgb, var(--tw-accent) 20%, transparent);
-}
 
 /* =========================
    Surface utilities
