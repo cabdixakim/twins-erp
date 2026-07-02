@@ -29,3 +29,4 @@ html.dark .s-amber{background:rgba(245,158,11,.20);color:#fcd34d;border-color:rg
 html.dark .s-slate{background:rgba(100,116,139,.20);color:#cbd5e1;border-color:rgba(100,116,139,.35)}
 .s-rose{background:rgba(239,68,68,.12);color:#7f1d1d;border-color:rgba(239,68,68,.25)}
 html.dark .s-rose{background:rgba(239,68,68,.20);color:#fca5a5;border-color:rgba(239,68,68,.35)}
+.tw-text-accent{color:var(--tw-accent)}.tw-bg-accent{background:var(--tw-accent)}.tw-btn-accent{border:1px solid color-mix(in srgb,var(--tw-accent) 40%,transparent);background:var(--tw-accent);color:#fff}.tw-btn-accent:hover{opacity:.9}.tw-btn-accent-ghost{border:1px solid color-mix(in srgb,var(--tw-accent) 40%,transparent);background:color-mix(in srgb,var(--tw-accent) 10%,transparent);color:var(--tw-accent)}.tw-btn-accent-ghost:hover{background:color-mix(in srgb,var(--tw-accent) 20%,transparent)}
