@@ -8,3 +8,4 @@
 - [admin:create command](admin-create.md) — app/Console/Commands/CreateAdminUser.php; attaches user to all companies + grants all is_system roles; use --name/--email/--password flags or interactive prompts.
 - [Sale vs internal-transfer movement tagging](inventory-movement-sale-tagging.md) — cross-dock dispatch (real sale) vs cross-dock transfer (internal, not a sale) both post as issue movements; only `reference` prefix tells them apart.
 - [Prod Postgres restricted user](prod-postgres-restricted.md) — session_replication_role=replica is superuser-only; fails on prod. Use DELETE FROM in FK-safe order instead of TRUNCATE+CASCADE bypass.
+- [Custom Kernel lacks stock middleware aliases](custom-kernel-middleware-aliases.md) — `throttle`/`signed`/etc aren't auto-registered here; add to app/Http/Kernel.php $routeMiddleware or get a silent 500 only at request time.

@@ -52,5 +52,7 @@ class Kernel extends HttpKernel
 
         // Kick out deactivated users on every authenticated request
         'user.active'    => \App\Http\Middleware\EnsureUserIsActive::class,
+
+        'throttle'       => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     ];
 }
