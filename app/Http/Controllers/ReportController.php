@@ -385,7 +385,7 @@ class ReportController extends Controller
         ));
     }
 
-    /** Volume throughput — purchases contracted vs. sales posted by month */
+    /** Volume throughput — fuel received into depots (net of shrinkage) vs. sales posted, by month */
     public function throughput(Request $request)
     {
         $cid    = $this->cid();
@@ -394,15 +394,33 @@ class ReportController extends Controller
 
         $from = now()->startOfMonth()->subMonths($months - 1);
 
-        // Monthly purchases — total PO qty, bucketed by purchase_date (or created_at).
-        // This covers ALL fuel contracted: still at shipper, in transit, in depot, or sold.
-        // Excludes drafts and cancelled/voided orders only.
-        $purchasedRaw = DB::table('purchases')
-            ->where('company_id', $cid)
-            ->whereNotIn('status', ['draft', 'cancelled', 'voided'])
-            ->whereRaw("COALESCE(purchase_date, created_at::date) >= ?", [$from->toDateString()])
-            ->selectRaw("TO_CHAR(COALESCE(purchase_date, created_at::date), 'YYYY-MM') as month, SUM(qty) as qty, COUNT(*) as count")
-            ->groupByRaw("TO_CHAR(COALESCE(purchase_date, created_at::date), 'YYYY-MM')")
+        // Monthly receipts into REAL depots (excludes the virtual CROSS DOCK depot),
+        // bucketed by the movement date (when it actually landed), not the PO date.
+        $grossReceiptsRaw = DB::table('inventory_movements as im')
+            ->join('depots as d', 'd.id', '=', 'im.to_depot_id')
+            ->where('im.company_id', $cid)
+            ->where('im.type', 'receipt')
+            ->whereIn('im.ref_type', ['purchase', 'import_truck'])
+            ->where('d.is_system', false)
+            ->whereDate('im.created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(im.created_at, 'YYYY-MM') as month, SUM(im.qty) as qty, COUNT(DISTINCT im.ref_id) as count")
+            ->groupByRaw("TO_CHAR(im.created_at, 'YYYY-MM')")
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month');
+
+        // Shrinkage / loss adjustments applied against those same depot receipts
+        // (depot_shrinkage, write_off, meter_variance, stock_count_correction, transit_loss, etc.)
+        $shrinkageRaw = DB::table('inventory_movements as im')
+            ->join('depots as d', 'd.id', '=', 'im.from_depot_id')
+            ->where('im.company_id', $cid)
+            ->where('im.type', 'adjustment')
+            ->where('im.qty', '<', 0)
+            ->whereIn('im.ref_type', ['purchase', 'import_truck'])
+            ->where('d.is_system', false)
+            ->whereDate('im.created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(im.created_at, 'YYYY-MM') as month, SUM(ABS(im.qty)) as qty")
+            ->groupByRaw("TO_CHAR(im.created_at, 'YYYY-MM')")
             ->orderBy('month')
             ->get()
             ->keyBy('month');
@@ -433,13 +451,16 @@ class ReportController extends Controller
         // Build month series
         $series = [];
         for ($i = $months - 1; $i >= 0; $i--) {
-            $key    = now()->startOfMonth()->subMonths($i)->format('Y-m');
-            $label  = now()->startOfMonth()->subMonths($i)->format('M Y');
+            $key       = now()->startOfMonth()->subMonths($i)->format('Y-m');
+            $label     = now()->startOfMonth()->subMonths($i)->format('M Y');
+            $grossQty  = (float)($grossReceiptsRaw[$key]->qty ?? 0);
+            $shrinkage = (float)($shrinkageRaw[$key]->qty ?? 0);
             $series[] = [
                 'month'            => $key,
                 'label'            => $label,
-                'purchased_qty'    => round((float)($purchasedRaw[$key]->qty ?? 0), 0),
-                'purchased_count'  => (int)($purchasedRaw[$key]->count ?? 0),
+                'received_qty'     => round($grossQty - $shrinkage, 0),
+                'shrinkage_qty'    => round($shrinkage, 0),
+                'received_count'   => (int)($grossReceiptsRaw[$key]->count ?? 0),
                 'sold_qty'         => round((float)($salesRaw[$key]->qty ?? 0), 0),
                 'sold_count'       => (int)($salesRaw[$key]->count ?? 0),
                 'revenue'          => round((float)($revenueRaw[$key]->revenue ?? 0), 2),
@@ -448,10 +469,11 @@ class ReportController extends Controller
 
         // Summary totals
         $totals = [
-            'purchased_qty'   => array_sum(array_column($series, 'purchased_qty')),
+            'received_qty'    => array_sum(array_column($series, 'received_qty')),
+            'shrinkage_qty'   => array_sum(array_column($series, 'shrinkage_qty')),
             'sold_qty'        => array_sum(array_column($series, 'sold_qty')),
             'revenue'         => array_sum(array_column($series, 'revenue')),
-            'purchased_count' => array_sum(array_column($series, 'purchased_count')),
+            'received_count'  => array_sum(array_column($series, 'received_count')),
             'sold_count'      => array_sum(array_column($series, 'sold_count')),
         ];
 
@@ -876,11 +898,23 @@ class ReportController extends Controller
         $months = max(3, min($months, 24));
         $from   = now()->startOfMonth()->subMonths($months - 1);
 
-        $purchasedRaw = DB::table('inventory_movements')
-            ->where('company_id', $cid)->where('type', 'receipt')->where('ref_type', 'purchase')
-            ->whereDate('created_at', '>=', $from)
-            ->selectRaw("TO_CHAR(created_at,'YYYY-MM') as month, SUM(qty) as qty, COUNT(DISTINCT ref_id) as count")
-            ->groupByRaw("TO_CHAR(created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
+        $grossReceiptsRaw = DB::table('inventory_movements as im')
+            ->join('depots as d', 'd.id', '=', 'im.to_depot_id')
+            ->where('im.company_id', $cid)->where('im.type', 'receipt')
+            ->whereIn('im.ref_type', ['purchase', 'import_truck'])
+            ->where('d.is_system', false)
+            ->whereDate('im.created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(im.created_at,'YYYY-MM') as month, SUM(im.qty) as qty, COUNT(DISTINCT im.ref_id) as count")
+            ->groupByRaw("TO_CHAR(im.created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
+
+        $shrinkageRaw = DB::table('inventory_movements as im')
+            ->join('depots as d', 'd.id', '=', 'im.from_depot_id')
+            ->where('im.company_id', $cid)->where('im.type', 'adjustment')->where('im.qty', '<', 0)
+            ->whereIn('im.ref_type', ['purchase', 'import_truck'])
+            ->where('d.is_system', false)
+            ->whereDate('im.created_at', '>=', $from)
+            ->selectRaw("TO_CHAR(im.created_at,'YYYY-MM') as month, SUM(ABS(im.qty)) as qty")
+            ->groupByRaw("TO_CHAR(im.created_at,'YYYY-MM')")->orderBy('month')->get()->keyBy('month');
 
         $salesRaw = DB::table('inventory_movements')
             ->where('company_id', $cid)->where('type', 'issue')->where('ref_type', 'sale')
@@ -895,11 +929,14 @@ class ReportController extends Controller
 
         $series = [];
         for ($i = $months - 1; $i >= 0; $i--) {
-            $key   = now()->startOfMonth()->subMonths($i)->format('Y-m');
-            $label = now()->startOfMonth()->subMonths($i)->format('M Y');
+            $key       = now()->startOfMonth()->subMonths($i)->format('Y-m');
+            $label     = now()->startOfMonth()->subMonths($i)->format('M Y');
+            $grossQty  = (float)($grossReceiptsRaw[$key]->qty ?? 0);
+            $shrinkage = (float)($shrinkageRaw[$key]->qty ?? 0);
             $series[] = [
-                'month'   => $label,
-                'purchased_qty' => round((float)($purchasedRaw[$key]->qty ?? 0)),
+                'month'         => $label,
+                'received_qty'  => round($grossQty - $shrinkage),
+                'shrinkage_qty' => round($shrinkage),
                 'sold_qty'      => round((float)($salesRaw[$key]->qty ?? 0)),
                 'revenue'       => round((float)($revenueRaw[$key]->revenue ?? 0), 2),
             ];
@@ -909,18 +946,20 @@ class ReportController extends Controller
 
         return response()->streamDownload(function () use ($series) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Month', 'Purchased (L)', 'Sold (L)', 'Revenue']);
+            fputcsv($out, ['Month', 'Received net of shrinkage (L)', 'Shrinkage (L)', 'Sold (L)', 'Revenue']);
             foreach ($series as $row) {
                 fputcsv($out, [
                     $row['month'],
-                    number_format($row['purchased_qty'], 0, '.', ''),
+                    number_format($row['received_qty'], 0, '.', ''),
+                    number_format($row['shrinkage_qty'], 0, '.', ''),
                     number_format($row['sold_qty'], 0, '.', ''),
                     number_format($row['revenue'], 2, '.', ''),
                 ]);
             }
             fputcsv($out, []);
             fputcsv($out, ['TOTALS',
-                number_format(array_sum(array_column($series,'purchased_qty')), 0, '.', ''),
+                number_format(array_sum(array_column($series,'received_qty')), 0, '.', ''),
+                number_format(array_sum(array_column($series,'shrinkage_qty')), 0, '.', ''),
                 number_format(array_sum(array_column($series,'sold_qty')), 0, '.', ''),
                 number_format(array_sum(array_column($series,'revenue')), 2, '.', ''),
             ]);
