@@ -543,8 +543,9 @@ window.selectedSale = @json($selected);
     // COGS estimate
     if (cogsHint) {
       if (stockUnitCost && stockUnitCost > 0 && qty > 0) {
-        const cogs = qty * stockUnitCost;
-        cogsHint.textContent = 'Est. COGS: ' + cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (@ ' + stockUnitCost.toFixed(4) + ' / ' + SALE_VOL_UNIT + ')';
+        const unitCostRounded = Math.round(stockUnitCost * 100) / 100;
+        const cogs = qty * unitCostRounded;
+        cogsHint.textContent = 'Est. COGS: ' + cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (@ ' + unitCostRounded.toFixed(2) + ' / ' + SALE_VOL_UNIT + ')';
         cogsHint.style.cssText = 'color:#94a3b8';
       } else {
         cogsHint.textContent = '';
