@@ -395,10 +395,11 @@ class ReportController extends Controller
         $from = now()->startOfMonth()->subMonths($months - 1);
 
         // Monthly purchases received (qty)
+        // ref_type='purchase' for local_depot/cross_dock; 'import_truck' for import deliveries
         $purchasedRaw = DB::table('inventory_movements')
             ->where('company_id', $cid)
             ->where('type', 'receipt')
-            ->where('ref_type', 'purchase')
+            ->whereIn('ref_type', ['purchase', 'import_truck'])
             ->whereDate('created_at', '>=', $from)
             ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, SUM(qty) as qty, COUNT(DISTINCT ref_id) as count")
             ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM')")
