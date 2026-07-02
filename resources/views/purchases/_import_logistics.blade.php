@@ -918,7 +918,9 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
               <input type="number" name="default_duty_rate_per_1000l" step="0.0001" min="0"
                      value="{{ $nom?->default_duty_rate_per_1000l ?? '' }}"
                      placeholder="0.0000"
+                     oninput="checkDutyRateWarn(this.value,'nomDefaultDutyRateWarn')"
                      class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none" />
+              <div id="nomDefaultDutyRateWarn" class="hidden mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300"></div>
             </div>
             <div>
               <label class="block text-xs font-semibold {{ $fg }} mb-1">Default currency</label>
@@ -1594,9 +1596,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                        id="dutyRateInput-{{ $truck->id }}"
                        step="0.0001" min="0"
                        value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
-                       oninput="computeDutyAmount({{ $truck->id }})"
+                       oninput="computeDutyAmount({{ $truck->id }});checkDutyRateWarn(this.value,'dutyRateWarn-{{ $truck->id }}')"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
                        placeholder="0.0000" />
+                <div id="dutyRateWarn-{{ $truck->id }}" class="hidden mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300"></div>
               </div>
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty (L)</label>
@@ -1815,9 +1818,10 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
                 <input type="number" name="duty_rate_per_1000l" step="0.0001" min="0"
                        id="pdRate-{{ $truck->id }}"
                        value="{{ $truck->duty_rate_per_1000l ?? ($nom->default_duty_rate_per_1000l ?? '') }}"
-                       oninput="pdComputeAmount({{ $truck->id }})"
+                       oninput="pdComputeAmount({{ $truck->id }});checkDutyRateWarn(this.value,'pdRateWarn-{{ $truck->id }}')"
                        class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none"
                        placeholder="0.0000" />
+                <div id="pdRateWarn-{{ $truck->id }}" class="hidden mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300"></div>
               </div>
               <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Qty ({{ $unitLabel }})</label>
@@ -2785,6 +2789,23 @@ function autoFillDutyRate(truckId, productId) {
       }
     })
     .catch(() => {});
+}
+
+// Duty rate sanity warning (shown inline below any rate input)
+function checkDutyRateWarn(value, warnId) {
+  const el = document.getElementById(warnId);
+  if (!el) return;
+  const v = parseFloat(value);
+  if (!value || isNaN(v) || v === 0) { el.textContent = ''; el.classList.add('hidden'); return; }
+  if (v > 0 && v < 1) {
+    el.textContent = 'Looks like a per-litre rate. Enter rate per 1000 L (e.g. 350, not 0.35).';
+    el.classList.remove('hidden');
+  } else if (v > 5000) {
+    el.textContent = 'Rate seems unusually high — please double-check.';
+    el.classList.remove('hidden');
+  } else {
+    el.textContent = ''; el.classList.add('hidden');
+  }
 }
 
 // Computed duty amount display (reactive to rate/qty inputs)
