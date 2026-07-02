@@ -4,11 +4,11 @@
   /** @var \App\Models\Purchase $purchase */
   $purchase = $purchase;
 
-  $border   = 'tw-border-color';
-  $surface  = 'tw-bg-surface';
-  $surface2 = 'tw-bg-surface-2';
-  $fg       = 'tw-fg';
-  $muted    = 'tw-text-muted';
+  $border   = 'border-[color:var(--tw-border)]';
+  $surface  = 'bg-[color:var(--tw-surface)]';
+  $surface2 = 'bg-[color:var(--tw-surface-2)]';
+  $fg       = 'text-[color:var(--tw-fg)]';
+  $muted    = 'text-[color:var(--tw-muted)]';
   $volLabel = ($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L');
 
   $typeLabel = match($purchase->type) {
@@ -61,7 +61,7 @@
     <div class="flex flex-wrap items-center gap-2 min-w-0">
       <a href="{{ route('purchases.index') }}"
          class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border {{ $border }} {{ $surface2 }}
-                text-xs font-semibold {{ $muted }} hover-tw-surface transition shrink-0">
+                text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition shrink-0">
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
         </svg>
@@ -92,7 +92,7 @@
       @if($purchase->status === 'draft')
         <a href="{{ route('purchases.edit', $purchase) }}"
            class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface2 }}
-                  text-xs font-semibold {{ $fg }} hover-tw-surface transition">
+                  text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface)] transition">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
@@ -132,7 +132,7 @@
         @if($purchase->type === 'local_depot' && $purchase->status === 'received')
           <button type="button" id="btnUndoReceipt"
                   class="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border {{ $border }} {{ $surface2 }}
-                         text-xs font-semibold {{ $muted }} hover-tw-surface transition">
+                         text-xs font-semibold {{ $muted }} hover:bg-[color:var(--tw-surface)] transition">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
             </svg>

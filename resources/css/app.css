@@ -114,14 +114,9 @@ textarea:focus {
    (Use these instead of Tailwind arbitrary [color:var(--tw-*)] classes
     which do not compile in Tailwind 4 JIT builds)
    ========================= */
-.tw-fg          { color: var(--tw-fg); }
-.tw-text-muted  { color: var(--tw-muted); }
-.tw-bg          { background: var(--tw-bg); }
-.tw-border-color { border-color: var(--tw-border); }
-.tw-bg-surface  { background: var(--tw-surface); }
-.tw-bg-surface-2 { background: var(--tw-surface-2); }
-.hover-tw-surface:hover   { background: var(--tw-surface); }
-.hover-tw-surface-2:hover { background: var(--tw-surface-2); }
+.tw-fg        { color: var(--tw-fg); }
+.tw-text-muted { color: var(--tw-muted); }   /* alias — .tw-muted already exists below */
+.tw-bg        { background: var(--tw-bg); }
 
 /* =========================
    Surface utilities
