@@ -22,13 +22,13 @@
 
         .page { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,.12); overflow: hidden; }
 
-        .hdr { background: #0f172a; color: #fff; padding: 28px 40px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-        .doc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2.5px; color: #64748b; margin-bottom: 6px; }
-        .doc-title { font-size: 20px; font-weight: 800; color: #f8fafc; letter-spacing: -.3px; }
-        .doc-sub { font-size: 11px; color: #94a3b8; margin-top: 6px; }
+        .hdr { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 28px 40px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+        .doc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2.5px; color: #94a3b8; margin-bottom: 6px; }
+        .doc-title { font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -.3px; }
+        .doc-sub { font-size: 11px; color: #64748b; margin-top: 6px; }
         .hdr-right { text-align: right; flex-shrink: 0; }
-        .co-name { font-size: 16px; font-weight: 800; color: #f8fafc; }
-        .hdr-right .period { font-size: 11px; color: #94a3b8; margin-top: 6px; }
+        .co-name { font-size: 16px; font-weight: 800; color: #1e293b; }
+        .hdr-right .period { font-size: 11px; color: #64748b; margin-top: 6px; }
 
         .accent-stripe { height: 4px; background: linear-gradient(90deg,#0ea5e9 0%,#6366f1 50%,#10b981 100%); }
 
