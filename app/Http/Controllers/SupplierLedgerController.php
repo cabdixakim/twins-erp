@@ -187,7 +187,7 @@ class SupplierLedgerController extends Controller
 
         $currency = $data['currency'] ?: ($supplier->default_currency ?: 'USD');
 
-        SupplierLedgerEntry::create([
+        $entry = SupplierLedgerEntry::create([
             'company_id'  => $cid,
             'supplier_id' => $supplier->id,
             'type'        => 'credit_note',
@@ -197,6 +197,15 @@ class SupplierLedgerController extends Controller
             'entry_date'  => $data['entry_date'],
             'created_by'  => auth()->id(),
         ]);
+
+        \App\Services\JournalAutoPost::for($cid)->postSupplierCreditNote(
+            ledgerEntryId: $entry->id,
+            reference:     'CN-SUP-' . $entry->id,
+            amount:        (float) $data['amount'],
+            currency:      $currency,
+            description:   $data['description'] ?: 'Credit note — ' . $supplier->name,
+            date:          $data['entry_date'],
+        );
 
         return redirect()->route('suppliers.show', $supplier)
             ->with('status', 'Credit note of ' . number_format($data['amount'], 2) . ' ' . $currency . ' recorded.');

@@ -224,7 +224,7 @@ class ClientLedgerController extends Controller
 
         $currency = $client->currency ?: 'USD';
 
-        ClientLedgerEntry::create([
+        $entry = ClientLedgerEntry::create([
             'company_id'  => $cid,
             'client_id'   => $client->id,
             'type'        => 'credit_note',
@@ -234,6 +234,15 @@ class ClientLedgerController extends Controller
             'entry_date'  => $data['entry_date'],
             'created_by'  => auth()->id(),
         ]);
+
+        \App\Services\JournalAutoPost::for($cid)->postClientCreditNote(
+            ledgerEntryId: $entry->id,
+            reference:     'CN-CLT-' . $entry->id,
+            amount:        (float) $data['amount'],
+            currency:      $currency,
+            description:   $data['description'] . ' — ' . $client->name,
+            date:          $data['entry_date'],
+        );
 
         AuditLog::record(
             'adjusted',

@@ -344,6 +344,56 @@ class JournalAutoPost
         ], $date);
     }
 
+    // ── 11. Supplier credit note ─────────────────────────────────────────────
+    // DR Payables-Suppliers / CR Inventory
+    // (we owe them less; cost basis of inventory is reduced)
+
+    public function postSupplierCreditNote(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('supplier_credit_note', $ledgerEntryId)) return;
+
+        $payable   = $this->account('liability', ['Payables – Suppliers', 'Accounts Payable']);
+        $inventory = $this->account('asset',     ['Inventory']);
+        if (!$payable || !$inventory) return;
+
+        $this->post('supplier_credit_note', $ledgerEntryId, 'supplier_credit_note', $reference, $description, $currency, [
+            [$payable->id,   $amount, 0,      $description],
+            [$inventory->id, 0,       $amount, $description],
+        ], $date);
+    }
+
+    // ── 12. Client credit note ───────────────────────────────────────────────
+    // DR Revenue / CR Accounts Receivable
+    // (revenue is reduced; AR drops — client owes us less)
+
+    public function postClientCreditNote(
+        int    $ledgerEntryId,
+        string $reference,
+        float  $amount,
+        string $currency,
+        string $description,
+        string $date
+    ): void {
+        if (!$this->isEnabled()) return;
+        if ($this->alreadyPosted('client_credit_note', $ledgerEntryId)) return;
+
+        $revenue = $this->account('revenue', ['Revenue', 'Fuel Sales']);
+        $ar      = $this->account('asset',   ['Accounts Receivable', 'receivable']);
+        if (!$revenue || !$ar) return;
+
+        $this->post('client_credit_note', $ledgerEntryId, 'client_credit_note', $reference, $description, $currency, [
+            [$revenue->id, $amount, 0,      $description],
+            [$ar->id,      0,       $amount, $description],
+        ], $date);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function alreadyPosted(string $refType, int $refId): bool
