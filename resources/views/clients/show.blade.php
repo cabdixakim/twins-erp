@@ -296,15 +296,21 @@
 </div>
 
 {{-- ── Credit note modal ── --}}
-<div id="creditModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+<div id="creditModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)"
+     onclick="if(event.target===this)document.getElementById('creditModal').classList.add('hidden')">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} shadow-2xl overflow-hidden"
+         style="background:var(--tw-surface)"
+         onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between p-5 border-b {{ $border }}"
+             style="background:var(--tw-surface-2)">
             <div>
                 <div class="text-sm font-semibold {{ $fg }}">Issue credit note</div>
                 <div class="text-[10px] {{ $muted }}">Reduces the client's outstanding balance</div>
             </div>
             <button type="button" onclick="document.getElementById('creditModal').classList.add('hidden')"
-                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $fg }} transition"
+                    style="background:var(--tw-surface)">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -313,26 +319,31 @@
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
                 <div class="flex items-center gap-2">
-                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none">
+                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none"
+                          style="background:var(--tw-surface-2)">
                         {{ $sym($currency) }}{{ $currency }}
                     </span>
                     <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
-                           class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+                           class="flex-1 h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                           style="background:var(--tw-surface-2)" />
                 </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Date</label>
                 <input type="date" name="entry_date" required value="{{ date('Y-m-d') }}"
-                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+                       class="w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                       style="background:var(--tw-surface-2)" />
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason <span class="text-rose-400">*</span></label>
                 <input type="text" name="description" required placeholder="e.g. Short delivery on SO-2026-00012"
-                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
+                       class="w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                       style="background:var(--tw-surface-2)" />
             </div>
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="document.getElementById('creditModal').classList.add('hidden')"
-                        class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">Cancel</button>
+                        class="h-9 px-4 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} transition"
+                        style="background:var(--tw-surface)">Cancel</button>
                 <button type="submit"
                         class="h-9 px-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-xs font-semibold text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20 transition">
                     Issue credit note
@@ -343,15 +354,21 @@
 </div>
 
 {{-- ── Adjustment modal ── --}}
-<div id="adjustmentModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+<div id="adjustmentModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55)"
+     onclick="if(event.target===this)document.getElementById('adjustmentModal').classList.add('hidden')">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} shadow-2xl overflow-hidden"
+         style="background:var(--tw-surface)"
+         onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between p-5 border-b {{ $border }}"
+             style="background:var(--tw-surface-2)">
             <div>
                 <div class="text-sm font-semibold {{ $fg }}">Record adjustment</div>
                 <div class="text-[10px] {{ $muted }}">Debit = adds to what they owe · Credit = reduces it</div>
             </div>
             <button type="button" onclick="document.getElementById('adjustmentModal').classList.add('hidden')"
-                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+                    class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $fg }} transition"
+                    style="background:var(--tw-surface)">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -360,10 +377,12 @@
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Direction</label>
                 <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} cursor-pointer text-xs font-semibold {{ $fg }}">
+                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} cursor-pointer text-xs font-semibold {{ $fg }}"
+                           style="background:var(--tw-surface-2)">
                         <input type="radio" name="direction" value="debit" checked class="accent-amber-500"> Debit (owe more)
                     </label>
-                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} {{ $surface2 }} cursor-pointer text-xs font-semibold {{ $fg }}">
+                    <label class="flex items-center gap-2 h-10 px-3 rounded-xl border {{ $border }} cursor-pointer text-xs font-semibold {{ $fg }}"
+                           style="background:var(--tw-surface-2)">
                         <input type="radio" name="direction" value="credit" class="accent-emerald-500"> Credit (owe less)
                     </label>
                 </div>
@@ -371,26 +390,31 @@
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Amount</label>
                 <div class="flex items-center gap-2">
-                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} {{ $surface2 }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none">
+                    <span class="h-10 px-3 flex items-center rounded-xl border {{ $border }} text-sm font-semibold {{ $muted }} whitespace-nowrap select-none"
+                          style="background:var(--tw-surface-2)">
                         {{ $sym($currency) }}{{ $currency }}
                     </span>
                     <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00"
-                           class="flex-1 h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                           class="flex-1 h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                           style="background:var(--tw-surface-2)" />
                 </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Date</label>
                 <input type="date" name="entry_date" required value="{{ date('Y-m-d') }}"
-                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                       class="w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                       style="background:var(--tw-surface-2)" />
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason <span class="text-rose-400">*</span></label>
                 <input type="text" name="description" required placeholder="e.g. Pricing correction on SO-00010"
-                       class="w-full h-10 rounded-xl border {{ $border }} {{ $surface2 }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40" />
+                       class="w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                       style="background:var(--tw-surface-2)" />
             </div>
             <div class="flex justify-end gap-2 pt-1">
                 <button type="button" onclick="document.getElementById('adjustmentModal').classList.add('hidden')"
-                        class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">Cancel</button>
+                        class="h-9 px-4 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} transition"
+                        style="background:var(--tw-surface)">Cancel</button>
                 <button type="submit"
                         class="h-9 px-4 rounded-xl border border-[color:var(--tw-accent)]/40 bg-[color:var(--tw-accent)]/10 text-xs font-semibold text-[color:var(--tw-accent)] hover:bg-[color:var(--tw-accent)]/20 transition">
                     Save adjustment

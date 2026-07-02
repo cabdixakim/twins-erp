@@ -339,35 +339,50 @@
 
 {{-- Credit Note Modal --}}
 <div id="creditModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-     style="background:rgba(0,0,0,.55)">
-    <div class="w-full max-w-md rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl p-6"
+     style="background:rgba(0,0,0,.55)"
+     onclick="if(event.target===this)document.getElementById('creditModal').classList.add('hidden')">
+    <div class="w-full max-w-md rounded-2xl border {{ $border }} shadow-2xl overflow-hidden"
+         style="background:var(--tw-surface)"
          onclick="event.stopPropagation()">
-        <h3 class="text-sm font-bold {{ $fg }} mb-4">Record credit note from {{ $supplier->name }}</h3>
-        <form method="POST" action="{{ route('suppliers.credits.store', $supplier) }}" class="space-y-4">
+        <div class="flex items-center justify-between px-5 py-4 border-b {{ $border }}"
+             style="background:var(--tw-surface-2)">
+            <div class="text-sm font-bold {{ $fg }}">Record credit note — {{ $supplier->name }}</div>
+            <button type="button" onclick="document.getElementById('creditModal').classList.add('hidden')"
+                    class="h-8 w-8 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $fg }} hover:bg-[color:var(--tw-surface)] transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('suppliers.credits.store', $supplier) }}" class="p-5 space-y-4">
             @csrf
             <div>
                 <label class="text-xs font-semibold {{ $muted }}">Credit amount</label>
                 <div class="flex gap-2 mt-1">
                     <input name="amount" type="number" step="0.01" min="0.01" required
-                           class="flex-1 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           class="flex-1 h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                           style="background:var(--tw-surface)"
                            placeholder="0.00">
                     <input name="currency" value="{{ $supplier->default_currency ?: 'USD' }}"
-                           class="w-20 rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                           class="w-20 h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                           style="background:var(--tw-surface)"
                            maxlength="8">
                 </div>
             </div>
             <div>
                 <label class="text-xs font-semibold {{ $muted }}">Date</label>
                 <input name="entry_date" type="date" value="{{ now()->toDateString() }}" required
-                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]">
+                       class="mt-1 w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                       style="background:var(--tw-surface)">
             </div>
             <div>
-                <label class="text-xs font-semibold {{ $muted }}">Reason</label>
+                <label class="text-xs font-semibold {{ $muted }}">Reason <span class="font-normal opacity-60">(optional)</span></label>
                 <input name="description" type="text"
-                       class="mt-1 w-full rounded-xl border {{ $border }} {{ $surface }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]"
+                       class="mt-1 w-full h-10 rounded-xl border {{ $border }} px-3 text-sm {{ $fg }} focus:outline-none focus:ring-2 focus:ring-[color:var(--tw-accent)]/40"
+                       style="background:var(--tw-surface)"
                        placeholder="e.g. Short delivery adjustment">
             </div>
-            <div class="flex items-center gap-3 pt-2">
+            <div class="flex items-center gap-3 pt-1">
                 <button type="button" onclick="document.getElementById('creditModal').classList.add('hidden')"
                         class="flex-1 h-9 rounded-xl border {{ $border }} text-xs font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
                     Cancel
