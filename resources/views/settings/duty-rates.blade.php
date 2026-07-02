@@ -45,10 +45,15 @@
                 </select>
                 @error('product_id')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
             </div>
-            <div>
-                <label class="block text-xs font-semibold {{ $muted }} mb-1">Rate / 1000L *</label>
-                <input type="number" name="rate_per_1000l" value="{{ old('rate_per_1000l') }}" step="0.0001" min="0" required
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold {{ $muted }} mb-1">
+                    Rate per 1000 L *
+                    <span class="font-normal opacity-70 ml-1">(e.g. enter 350, not 0.35)</span>
+                </label>
+                <input type="number" name="rate_per_1000l" id="add_rate_input" value="{{ old('rate_per_1000l') }}" step="0.0001" min="0" required
+                    oninput="checkDutyRate(this, 'add_rate_warning')"
                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)]">
+                <div id="add_rate_warning" class="hidden mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"></div>
                 @error('rate_per_1000l')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
@@ -150,10 +155,15 @@
         <h3 class="text-sm font-bold {{ $fg }} mb-4">Edit duty rate</h3>
         <form id="editRateForm" method="POST" class="grid grid-cols-2 gap-4">
             @csrf @method('PATCH')
-            <div>
-                <label class="block text-xs font-semibold {{ $muted }} mb-1">Rate / 1000L *</label>
+            <div class="col-span-2">
+                <label class="block text-xs font-semibold {{ $muted }} mb-1">
+                    Rate per 1000 L *
+                    <span class="font-normal opacity-70 ml-1">(e.g. enter 350, not 0.35)</span>
+                </label>
                 <input type="number" name="rate_per_1000l" id="er_rate" step="0.0001" min="0" required
+                    oninput="checkDutyRate(this, 'edit_rate_warning')"
                     class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none">
+                <div id="edit_rate_warning" class="hidden mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"></div>
             </div>
             <div>
                 <label class="block text-xs font-semibold {{ $muted }} mb-1">Currency</label>
@@ -190,6 +200,29 @@
 </div>
 
 <script>
+function checkDutyRate(input, warningId) {
+    const val  = parseFloat(input.value);
+    const warn = document.getElementById(warningId);
+    if (!warn) return;
+
+    if (!input.value || isNaN(val)) {
+        warn.classList.add('hidden');
+        return;
+    }
+
+    if (val < 1) {
+        const suggested = Math.round(val * 1000 * 10000) / 10000;
+        warn.textContent = '⚠ This looks like a per-litre rate. Rates here are per 1000 L — did you mean ' + suggested + '? (multiply your per-litre rate by 1000)';
+        warn.classList.remove('hidden');
+    } else if (val > 5000) {
+        const suggested = Math.round(val / 1000 * 10000) / 10000;
+        warn.textContent = '⚠ This seems very high for a per-1000L rate. If you entered a per-litre rate × 1000 by mistake, the correct value would be ' + suggested + '.';
+        warn.classList.remove('hidden');
+    } else {
+        warn.classList.add('hidden');
+    }
+}
+
 function openEditRate(id, rate, currency, from, to, notes) {
     document.getElementById('er_rate').value     = rate;
     document.getElementById('er_currency').value = currency;
@@ -198,6 +231,8 @@ function openEditRate(id, rate, currency, from, to, notes) {
     document.getElementById('er_notes').value    = notes;
     document.getElementById('editRateForm').action = '/settings/duty-rates/' + id;
     document.getElementById('editRateModal').classList.remove('hidden');
+    // Trigger warning check when modal opens with existing value
+    checkDutyRate(document.getElementById('er_rate'), 'edit_rate_warning');
 }
 </script>
 @endsection
