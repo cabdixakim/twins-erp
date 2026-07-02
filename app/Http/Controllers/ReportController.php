@@ -577,8 +577,8 @@ class ReportController extends Controller
             ->join('depots', 'depots.id', '=', 'depot_stocks.depot_id')
             ->where('depot_stocks.company_id', $cid)
             ->where('depots.is_system', false)
-            ->where('depot_stocks.qty', '>', 0)
-            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty) as qty')
+            ->where('depot_stocks.qty_on_hand', '>', 0)
+            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as qty')
             ->groupBy('depot_stocks.product_id', 'depots.id', 'depots.name')
             ->orderBy('depots.name')
             ->get();

@@ -1,0 +1,113 @@
+Internal Server Error
+
+QueryException
+SQLSTATE[42703]: Undefined column: 7 ERROR: column depot_stocks.qty does not exist LINE 1: ...stocks.product_id, depots.name as depot_name, SUM(depot_stoc... ^ (Connection: pgsql, SQL: select depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty) as qty from "depot_stocks" inner join "depots" on "depots"."id" = "depot_stocks"."depot_id" where "depot_stocks"."company_id" = 1 and "depots"."is_system" = 0 and "depot_stocks"."qty" > 0 group by "depot_stocks"."product_id", "depots"."id", "depots"."name" order by "depots"."name" asc)
+app/Http/Controllers/ReportController.php :584
+            ->where('depots.is_system', false)
+            ->where('depot_stocks.qty', '>', 0)
+            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty) as qty')
+            ->groupBy('depot_stocks.product_id', 'depots.id', 'depots.name')
+            ->orderBy('depots.name')
+            ->get();
+ 
+        // Sold to clients (all time)
+        $soldRaw = DB::table('sales')
+            ->where('company_id', $cid)
+            ->where('status', 'posted')
+            ->selectRaw('product_id, SUM(qty) as qty, COUNT(*) as n')
+            ->groupBy('product_id')
+            ->get();
+ 
+        // Total losses ever (negative adjustments)
+        $lossesRaw = DB::table('inventory_movements')
+Request
+GET /reports/stock-position
+Headers
+host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding
+identity, gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+cookie
+remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6InBFQWlYNU1zTUc5ZUd0NFZLZ3RWakE9PSIsInZhbHVlIjoiaEtPdENnbERQY1h5S1B5b3duazlObVg0TFk2UUVWbVNPajUxNHFWQ1dTS1ZITUgwNG80WE9OSDV1Ni9EYVRhak1Fa0pnUE9iNTd5cWo3SldNVEFKWndXTzVEZWtlSHF0QU9BeWFXaFk0NlA1eXUreTh4dTB4c0VqRVJISGpoRmVCOWxzRXJsVFJ2TmhMdTFjSEdDdHdpSW5wM055b0h0N2hsMUpMVGtDVE42QUZIdFpPTEJjdEI1bVpjT0Z6TTlmV05xMS8raWtBVFhZYnFOcGtzaGh3NXpHdklBNzd4clcxTUlPY2RWWGNERT0iLCJtYWMiOiIwMTcyNzg5NDI2MzdiZTQ0MmJiZTIzNGU5YTFjNjkyMGJkMzNmOTVmNTc3ZjA2MGFkMjUxMWZkNzNkMTYzNGM4IiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6IkpGei9ydnh6MGhRaDVBdUV1RzVtbHc9PSIsInZhbHVlIjoiclZuOGJhN0hvcW9vOHI4eTdZN2pmZ0t3dGNla2lpb2ZKUjNTRlVBZ0hKMUhxRUpJQzZFNmQyOFZVNWtJSFRZWTNBK0RJWEhDbnozVU5WV0x5M0NBVzVQTWdRYkNoQmV0VExkWWRyNll3cytkWEZDbnhTeUtrd3VwQjRERi83SloiLCJtYWMiOiI4NTYwM2QwNjRkZjNlMWE5ZGJjYWEyN2ExMjU4MzIwOWY5ZTA3OGFiMzdjOTNjYWI1ODE2Y2MxYzMxMWZjN2EyIiwidGFnIjoiIn0%3D; kim_session=eyJpdiI6IjlHZTE0bFdPa0FXQkYwQlRQR3ljYkE9PSIsInZhbHVlIjoiVHdnM1RqZzFweTZjcHQvL2FrcFNvQTVSN0k4MDJaVmxuV1BnRHRScy9GcndkcEFaMTN6RGZVenRVU0xsL2tOeCtFcmxpK3ZLNFIxK2FuNVphS3NManpsT1l6Tm1kUDdVbFFRUXp1NElEOThNU3JiU3ExZXZqaUtadkFEYmtJSEQiLCJtYWMiOiI5OWJjZjBlMTg2ZDY1ZmYzNTU5Y2IzMTdlYWEzMjE2ZWJmMWIwOWMyNWJhYmFmZmFkM2UxNTkyNmNiYzk1ZWE4IiwidGFnIjoiIn0%3D
+referer
+https://69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev/reports
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+iframe
+sec-fetch-mode
+navigate
+sec-fetch-site
+same-origin
+sec-fetch-storage-access
+active
+sec-fetch-user
+?1
+upgrade-insecure-requests
+1
+x-forwarded-for
+102.129.255.168, 10.83.11.33, 10.56.7.33, 127.0.0.1
+x-forwarded-host
+69510ab2-c19f-49b2-98f1-6661f224df40-00-386c24hbb66ux.worf.replit.dev
+x-forwarded-proto
+https
+x-replit-user-bio
+x-replit-user-id
+x-replit-user-name
+x-replit-user-profile-image
+x-replit-user-roles
+x-replit-user-teams
+x-replit-user-url
+Body
+No body data
+Application
+Routing
+controller
+App\Http\Controllers\ReportController@stockPosition
+route name
+reports.stock-position
+middleware
+web, auth, company.setup, active.company, user.active, permission:reports.export
+Database Queries
+pgsql
+select * from "users" where "id" = 1 limit 1
+pgsql
+select count(*) as aggregate from "companies"
+pgsql
+select count(*) as aggregate from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1
+pgsql
+select exists(select * from "companies" inner join "company_user" on "companies"."id" = "company_user"."company_id" where "company_user"."user_id" = 1 and "companies"."id" = 1) as "exists"
+pgsql
+select * from "roles" where "roles"."id" = 1 limit 1
+pgsql
+select 
+                product_id,
+                SUM(CASE WHEN type='receipt'    THEN qty
+                         WHEN type='issue'      THEN -qty
+                         WHEN type='adjustment' THEN qty
+                         ELSE 0 END) as qty
+             from "inventory_movements" where "company_id" = 1 and "created_at"::date < '2026-07-01' group by "product_id"
+pgsql
+select 
+                product_id,
+                SUM(CASE WHEN type='receipt'    THEN qty ELSE 0 END) as receipts,
+                SUM(CASE WHEN type='issue'      THEN qty ELSE 0 END) as dispatched,
+                SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(qty) ELSE 0 END) as losses,
+                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN qty ELSE 0 END) as adjustments_in
+             from "inventory_movements" where "company_id" = 1 and "created_at"::date >= '2026-07-01' and "created_at"::date <= '2026-07-02' group by "product_id"
+pgsql
+select "name", "id" from "products" where "company_id" = 1 and "is_active" = 1 order by "name" asc
+pgsql
+select product_id, SUM(shipper_remainder_qty) as qty, COUNT(*) as n from "purchases" where "company_id" = 1 and "status" in ('confirmed', 'nominated') and "type" = 'import' and "shipper_remainder_qty" is not null and "shipper_remainder_qty" > 0 group by "product_id"
+pgsql
+select purchases.product_id, SUM(import_trucks
