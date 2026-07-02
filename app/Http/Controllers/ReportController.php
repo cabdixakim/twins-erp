@@ -635,7 +635,7 @@ class ReportController extends Controller
             ->where('type', 'import')
             ->whereNotNull('shipper_remainder_qty')
             ->where('shipper_remainder_qty', '>', 0)
-            ->selectRaw('product_id, SUM(shipper_remainder_qty) as qty, COUNT(*) as n')
+            ->selectRaw('product_id, SUM(shipper_remainder_qty) as qty, SUM(shipper_remainder_qty * unit_price) as value, COUNT(*) as n')
             ->groupBy('product_id')
             ->get();
 
@@ -646,7 +646,7 @@ class ReportController extends Controller
             ->where('import_trucks.company_id', $cid)
             ->whereIn('import_trucks.status', ['loaded', 'in_transit', 'border_cleared'])
             ->whereNotNull('import_trucks.qty_loaded')
-            ->selectRaw('purchases.product_id, SUM(import_trucks.qty_loaded) as qty, COUNT(import_trucks.id) as trucks')
+            ->selectRaw('purchases.product_id, SUM(import_trucks.qty_loaded) as qty, SUM(import_trucks.qty_loaded * purchases.unit_price) as value, COUNT(import_trucks.id) as trucks')
             ->groupBy('purchases.product_id')
             ->get();
 
@@ -656,7 +656,7 @@ class ReportController extends Controller
             ->where('depot_stocks.company_id', $cid)
             ->where('depots.is_system', false)
             ->where('depot_stocks.qty_on_hand', '>', 0)
-            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as qty')
+            ->selectRaw('depot_stocks.product_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as qty, SUM(depot_stocks.qty_on_hand * depot_stocks.unit_cost) as value')
             ->groupBy('depot_stocks.product_id', 'depots.id', 'depots.name')
             ->orderBy('depots.name')
             ->get();
@@ -665,7 +665,7 @@ class ReportController extends Controller
         $soldRaw = DB::table('sales')
             ->where('company_id', $cid)
             ->where('status', 'posted')
-            ->selectRaw('product_id, SUM(qty) as qty, COUNT(*) as n')
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(total) as value, COUNT(*) as n')
             ->groupBy('product_id')
             ->get();
 
@@ -701,13 +701,18 @@ class ReportController extends Controller
 
         $pipelineRows = [];
         foreach ($pipelineProductIds as $pid) {
-            $inDepotQty = $inDepotsByProduct->get($pid, collect())->sum('qty');
+            $inDepotQty   = $inDepotsByProduct->get($pid, collect())->sum('qty');
+            $inDepotValue = $inDepotsByProduct->get($pid, collect())->sum('value');
             $pipelineRows[] = [
                 'product'    => $products[$pid] ?? "Product #$pid",
-                'at_shipper' => round((float)($atShipperByProduct[$pid]->qty ?? 0), 3),
-                'in_transit' => round((float)($inTransitByProduct[$pid]->qty ?? 0), 3),
-                'in_depots'  => round((float)$inDepotQty, 3),
-                'sold'       => round((float)($soldByProduct[$pid]->qty ?? 0), 3),
+                'at_shipper'       => round((float)($atShipperByProduct[$pid]->qty ?? 0), 3),
+                'at_shipper_value' => round((float)($atShipperByProduct[$pid]->value ?? 0), 2),
+                'in_transit'       => round((float)($inTransitByProduct[$pid]->qty ?? 0), 3),
+                'in_transit_value' => round((float)($inTransitByProduct[$pid]->value ?? 0), 2),
+                'in_depots'        => round((float)$inDepotQty, 3),
+                'in_depots_value'  => round((float)$inDepotValue, 2),
+                'sold'             => round((float)($soldByProduct[$pid]->qty ?? 0), 3),
+                'sold_value'       => round((float)($soldByProduct[$pid]->value ?? 0), 2),
                 'losses'     => round((float)($lossesByProduct[$pid]->qty ?? 0), 3),
                 'losses_value'           => round((float)($lossesByProduct[$pid]->value ?? 0), 2),
                 'losses_recoverable'     => round((float)($lossesByProduct[$pid]->recoverable_qty ?? 0), 3),
@@ -719,10 +724,14 @@ class ReportController extends Controller
 
         // Pipeline totals
         $pipelineTotals = [
-            'at_shipper' => collect($pipelineRows)->sum('at_shipper'),
-            'in_transit' => collect($pipelineRows)->sum('in_transit'),
-            'in_depots'  => collect($pipelineRows)->sum('in_depots'),
-            'sold'       => collect($pipelineRows)->sum('sold'),
+            'at_shipper'       => collect($pipelineRows)->sum('at_shipper'),
+            'at_shipper_value' => collect($pipelineRows)->sum('at_shipper_value'),
+            'in_transit'       => collect($pipelineRows)->sum('in_transit'),
+            'in_transit_value' => collect($pipelineRows)->sum('in_transit_value'),
+            'in_depots'        => collect($pipelineRows)->sum('in_depots'),
+            'in_depots_value'  => collect($pipelineRows)->sum('in_depots_value'),
+            'sold'             => collect($pipelineRows)->sum('sold'),
+            'sold_value'       => collect($pipelineRows)->sum('sold_value'),
             'losses'     => collect($pipelineRows)->sum('losses'),
             'losses_value'                 => collect($pipelineRows)->sum('losses_value'),
             'losses_recoverable'           => collect($pipelineRows)->sum('losses_recoverable'),

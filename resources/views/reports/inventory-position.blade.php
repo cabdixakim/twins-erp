@@ -62,7 +62,7 @@
                 <span class="text-[10px] uppercase tracking-wide {{ $muted }}">At Shipper</span>
             </div>
             <div class="text-xl font-bold" style="color:#f59e0b">{{ number_format($pipelineTotals['at_shipper'], 0) }} L</div>
-            <div class="text-[10px] {{ $muted }} mt-0.5">loaded / waiting dispatch</div>
+            <div class="text-[10px] {{ $muted }} mt-0.5">{{ $cfmt($pipelineTotals['at_shipper_value']) }} · loaded / waiting dispatch</div>
         </div>
         <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -70,7 +70,7 @@
                 <span class="text-[10px] uppercase tracking-wide {{ $muted }}">In Transit</span>
             </div>
             <div class="text-xl font-bold" style="color:#0ea5e9">{{ number_format($pipelineTotals['in_transit'], 0) }} L</div>
-            <div class="text-[10px] {{ $muted }} mt-0.5">trucks on the road</div>
+            <div class="text-[10px] {{ $muted }} mt-0.5">{{ $cfmt($pipelineTotals['in_transit_value']) }} · trucks on the road</div>
         </div>
         <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -78,7 +78,7 @@
                 <span class="text-[10px] uppercase tracking-wide {{ $muted }}">In Depots</span>
             </div>
             <div class="text-xl font-bold" style="color:#10b981">{{ number_format($pipelineTotals['in_depots'], 0) }} L</div>
-            <div class="text-[10px] {{ $muted }} mt-0.5">physically in storage</div>
+            <div class="text-[10px] {{ $muted }} mt-0.5">{{ $cfmt($pipelineTotals['in_depots_value']) }} · physically in storage</div>
         </div>
         <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -86,7 +86,7 @@
                 <span class="text-[10px] uppercase tracking-wide {{ $muted }}">Sold to Clients</span>
             </div>
             <div class="text-xl font-bold" style="color:#a855f7">{{ number_format($pipelineTotals['sold'], 0) }} L</div>
-            <div class="text-[10px] {{ $muted }} mt-0.5">all time dispatched</div>
+            <div class="text-[10px] {{ $muted }} mt-0.5">{{ $cfmt($pipelineTotals['sold_value']) }} · all time dispatched</div>
         </div>
         <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -126,16 +126,28 @@
                 <tr class="border-b {{ $border }} last:border-0 hover:{{ $surface2 }} transition">
                     <td class="px-4 py-3 font-semibold {{ $fg }}">{{ $row['product'] }}</td>
                     <td class="px-4 py-3 text-right">
-                        @if($row['at_shipper'] > 0)<span style="color:#f59e0b">{{ number_format($row['at_shipper'], 0) }} L</span>@else<span class="{{ $muted }}">—</span>@endif
+                        @if($row['at_shipper'] > 0)
+                            <span style="color:#f59e0b">{{ number_format($row['at_shipper'], 0) }} L</span>
+                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['at_shipper_value']) }}</div>
+                        @else<span class="{{ $muted }}">—</span>@endif
                     </td>
                     <td class="px-4 py-3 text-right">
-                        @if($row['in_transit'] > 0)<span style="color:#0ea5e9">{{ number_format($row['in_transit'], 0) }} L</span>@else<span class="{{ $muted }}">—</span>@endif
+                        @if($row['in_transit'] > 0)
+                            <span style="color:#0ea5e9">{{ number_format($row['in_transit'], 0) }} L</span>
+                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['in_transit_value']) }}</div>
+                        @else<span class="{{ $muted }}">—</span>@endif
                     </td>
                     <td class="px-4 py-3 text-right">
-                        @if($row['in_depots'] > 0)<span style="color:#10b981">{{ number_format($row['in_depots'], 0) }} L</span>@else<span class="{{ $muted }}">—</span>@endif
+                        @if($row['in_depots'] > 0)
+                            <span style="color:#10b981">{{ number_format($row['in_depots'], 0) }} L</span>
+                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['in_depots_value']) }}</div>
+                        @else<span class="{{ $muted }}">—</span>@endif
                     </td>
                     <td class="px-4 py-3 text-right">
-                        @if($row['sold'] > 0)<span style="color:#a855f7">{{ number_format($row['sold'], 0) }} L</span>@else<span class="{{ $muted }}">—</span>@endif
+                        @if($row['sold'] > 0)
+                            <span style="color:#a855f7">{{ number_format($row['sold'], 0) }} L</span>
+                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['sold_value']) }}</div>
+                        @else<span class="{{ $muted }}">—</span>@endif
                     </td>
                     <td class="px-4 py-3 text-right">
                         @if($row['losses_non_recoverable'] > 0)
@@ -155,10 +167,22 @@
             <tfoot>
                 <tr class="{{ $surface2 }} border-t {{ $border }}">
                     <td class="px-4 py-3 font-bold text-[10px] uppercase tracking-wide {{ $muted }}">Total</td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#f59e0b">{{ number_format($pipelineTotals['at_shipper'], 0) }} L</td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#0ea5e9">{{ number_format($pipelineTotals['in_transit'], 0) }} L</td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#10b981">{{ number_format($pipelineTotals['in_depots'], 0) }} L</td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#a855f7">{{ number_format($pipelineTotals['sold'], 0) }} L</td>
+                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#f59e0b">
+                        {{ number_format($pipelineTotals['at_shipper'], 0) }} L
+                        <div class="font-normal {{ $muted }}">{{ $cfmt($pipelineTotals['at_shipper_value']) }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#0ea5e9">
+                        {{ number_format($pipelineTotals['in_transit'], 0) }} L
+                        <div class="font-normal {{ $muted }}">{{ $cfmt($pipelineTotals['in_transit_value']) }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#10b981">
+                        {{ number_format($pipelineTotals['in_depots'], 0) }} L
+                        <div class="font-normal {{ $muted }}">{{ $cfmt($pipelineTotals['in_depots_value']) }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#a855f7">
+                        {{ number_format($pipelineTotals['sold'], 0) }} L
+                        <div class="font-normal {{ $muted }}">{{ $cfmt($pipelineTotals['sold_value']) }}</div>
+                    </td>
                     <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#f43f5e">{{ number_format($pipelineTotals['losses_non_recoverable'], 0) }} L</td>
                     <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#fb923c">{{ number_format($pipelineTotals['losses_recoverable'], 0) }} L</td>
                 </tr>
