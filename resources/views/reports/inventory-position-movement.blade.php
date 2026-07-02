@@ -11,9 +11,7 @@
         .sub { color: #94a3b8; font-size: 11px; margin-bottom: 20px; }
         .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 24px; }
         .header-right { text-align: right; font-size: 11px; color: #64748b; white-space: nowrap; }
-        .header-right .company { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 2px; }
-        .header-right .meta-line { display: flex; justify-content: flex-end; gap: 8px; align-items: baseline; }
-        .header-right .meta-line .period { font-weight: 600; color: #d97706; }
+        .header-right .company { font-weight: 700; font-size: 15px; color: #1e293b; }
         .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
         .toolbar select, .toolbar input[type="date"] {
@@ -75,14 +73,6 @@
     </div>
     <div class="header-right">
         <div class="company">{{ auth()->user()?->activeCompany?->name ?? config('app.name') }}</div>
-        <div class="meta-line">
-            <span class="period">{{ \Carbon\Carbon::parse($from)->format('d M Y') }} — {{ \Carbon\Carbon::parse($to)->format('d M Y') }}</span>
-            <span>·</span>
-            <span>{{ $currency }}</span>
-        </div>
-        <div class="meta-line">
-            <span>Printed {{ now()->format('d M Y H:i') }}</span>
-        </div>
     </div>
 </div>
 
