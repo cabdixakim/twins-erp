@@ -7,14 +7,13 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; color: #1e293b; background: #fff; padding: 32px; }
-        h1 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
-        .sub { color: #64748b; font-size: 12px; margin-bottom: 24px; }
-        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 24px; }
-        .header-right { display: flex; align-items: center; gap: 20px; font-size: 12px; color: #475569; white-space: nowrap; }
-        .header-right .meta-item { display: flex; flex-direction: column; align-items: flex-end; }
-        .header-right .meta-item .label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; }
-        .header-right .meta-item .val { font-weight: 600; color: #1e293b; }
-        .header-right .company { font-weight: 700; font-size: 16px; color: #1e293b; }
+        h1 { font-size: 16px; font-weight: 700; margin-bottom: 1px; }
+        .sub { color: #94a3b8; font-size: 11px; margin-bottom: 20px; }
+        .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 24px; }
+        .header-right { text-align: right; font-size: 11px; color: #64748b; white-space: nowrap; }
+        .header-right .company { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 2px; }
+        .header-right .meta-line { display: flex; justify-content: flex-end; gap: 8px; align-items: baseline; }
+        .header-right .meta-line .period { font-weight: 600; color: #d97706; }
         .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .toolbar label { font-size: 12px; font-weight: 600; color: #475569; }
         .toolbar select, .toolbar input[type="date"] {
@@ -71,23 +70,18 @@
 
 <div class="header-row">
     <div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Inventory Report</div>
         <h1>Period Inventory Movement</h1>
-        <div class="sub">Opening balance + purchases − sales − losses = closing balance, per product</div>
+        <div class="sub">Opening + purchases − sales − losses = closing, per product</div>
     </div>
     <div class="header-right">
         <div class="company">{{ auth()->user()?->activeCompany?->name ?? config('app.name') }}</div>
-        <div class="meta-item">
-            <span class="label">Printed</span>
-            <span class="val">{{ now()->format('d M Y H:i') }}</span>
+        <div class="meta-line">
+            <span class="period">{{ \Carbon\Carbon::parse($from)->format('d M Y') }} — {{ \Carbon\Carbon::parse($to)->format('d M Y') }}</span>
+            <span>·</span>
+            <span>{{ $currency }}</span>
         </div>
-        <div class="meta-item">
-            <span class="label">Period</span>
-            <span class="val" style="color:#d97706;">{{ \Carbon\Carbon::parse($from)->format('d M Y') }} — {{ \Carbon\Carbon::parse($to)->format('d M Y') }}</span>
-        </div>
-        <div class="meta-item">
-            <span class="label">Currency</span>
-            <span class="val">{{ $currency }}</span>
+        <div class="meta-line">
+            <span>Printed {{ now()->format('d M Y H:i') }}</span>
         </div>
     </div>
 </div>
