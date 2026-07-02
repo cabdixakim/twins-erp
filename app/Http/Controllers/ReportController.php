@@ -385,7 +385,7 @@ class ReportController extends Controller
         ));
     }
 
-    /** Volume throughput — purchases received vs. sales posted by month */
+    /** Volume throughput — purchases contracted vs. sales posted by month */
     public function throughput(Request $request)
     {
         $cid    = $this->cid();
@@ -394,15 +394,15 @@ class ReportController extends Controller
 
         $from = now()->startOfMonth()->subMonths($months - 1);
 
-        // Monthly purchases received (qty)
-        // ref_type='purchase' for local_depot/cross_dock; 'import_truck' for import deliveries
-        $purchasedRaw = DB::table('inventory_movements')
+        // Monthly purchases — total PO qty, bucketed by purchase_date (or created_at).
+        // This covers ALL fuel contracted: still at shipper, in transit, in depot, or sold.
+        // Excludes drafts and cancelled/voided orders only.
+        $purchasedRaw = DB::table('purchases')
             ->where('company_id', $cid)
-            ->where('type', 'receipt')
-            ->whereIn('ref_type', ['purchase', 'import_truck'])
-            ->whereDate('created_at', '>=', $from)
-            ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, SUM(qty) as qty, COUNT(DISTINCT ref_id) as count")
-            ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM')")
+            ->whereNotIn('status', ['draft', 'cancelled', 'voided'])
+            ->whereRaw("COALESCE(purchase_date, created_at::date) >= ?", [$from->toDateString()])
+            ->selectRaw("TO_CHAR(COALESCE(purchase_date, created_at::date), 'YYYY-MM') as month, SUM(qty) as qty, COUNT(*) as count")
+            ->groupByRaw("TO_CHAR(COALESCE(purchase_date, created_at::date), 'YYYY-MM')")
             ->orderBy('month')
             ->get()
             ->keyBy('month');

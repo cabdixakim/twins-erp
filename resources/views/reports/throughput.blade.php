@@ -55,7 +55,7 @@
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4 sm:col-span-1">
         <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Purchased</div>
         <div class="text-lg font-bold {{ $fg }}">{{ number_format($totals['purchased_qty'], 0) }} L</div>
-        <div class="text-[10px] {{ $muted }}">{{ $totals['purchased_count'] }} orders</div>
+        <div class="text-[10px] {{ $muted }}">{{ $totals['purchased_count'] }} {{ $totals['purchased_count'] == 1 ? 'purchase' : 'purchases' }}</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Sold</div>
@@ -63,10 +63,10 @@
         <div class="text-[10px] {{ $muted }}">{{ $totals['sold_count'] }} sales</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Remaining</div>
+        <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Unsold</div>
         @php $remaining = $totals['purchased_qty'] - $totals['sold_qty']; @endphp
         <div class="text-lg font-bold" style="color:#0ea5e9">{{ number_format(max(0, $remaining), 0) }} L</div>
-        <div class="text-[10px] {{ $muted }}">in period</div>
+        <div class="text-[10px] {{ $muted }}">not yet sold</div>
     </div>
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
         <div class="text-[10px] uppercase tracking-wide {{ $muted }} mb-1">Revenue</div>
