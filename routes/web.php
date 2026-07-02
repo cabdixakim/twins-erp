@@ -32,6 +32,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AccountRecoveryController;
+use App\Http\Controllers\MaintenanceRecoveryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,6 +86,20 @@ Route::get('/account-recovery', [AccountRecoveryController::class, 'show'])
     ->name('account-recovery');
 Route::post('/account-recovery', [AccountRecoveryController::class, 'recover'])
     ->name('account-recovery.recover');
+
+/*
+|--------------------------------------------------------------------------
+| Maintainer Recovery — public, but gated by MAINTENANCE_RECOVERY_KEY env
+| secret. 404s entirely unless that secret is configured. Use only when an
+| owner has lost BOTH their password and their self-service recovery code.
+|--------------------------------------------------------------------------
+*/
+Route::get('/maintenance/recover-owner', [MaintenanceRecoveryController::class, 'show'])
+    ->middleware('throttle:6,1')
+    ->name('maintenance-recovery');
+Route::post('/maintenance/recover-owner', [MaintenanceRecoveryController::class, 'recover'])
+    ->middleware('throttle:6,1')
+    ->name('maintenance-recovery.recover');
 
 /*
 |--------------------------------------------------------------------------

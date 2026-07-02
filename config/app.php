@@ -5,6 +5,8 @@ return [
     'debug' => (bool) env('APP_DEBUG', true),
     'url' => env('APP_URL', 'http://127.0.0.1:8000'),
     'asset_url' => env('ASSET_URL', ''),
+
+    'maintenance_recovery_key' => env('MAINTENANCE_RECOVERY_KEY'),
     'timezone' => env('TIMEZONE', 'Africa/Lubumbashi'),
     'locale' => 'en',
     'fallback_locale' => 'en',
