@@ -242,9 +242,12 @@ class InventoryLedger
             'updated_by'    => $data['updated_by'] ?? ($data['created_by'] ?? null),
         ]);
 
-        // Deduct qty_on_hand across layers and record one consumption per layer touched
-        $remaining = $qtyRequested;
-        $cogsTotal = 0.0;
+        // Deduct qty_on_hand across layers and record one consumption per layer touched.
+        // Use $totalCost (computed once from full qty) as the authoritative COGS figure
+        // so that per-layer rounding never causes cumulative drift vs the movement total.
+        $remaining      = $qtyRequested;
+        $allocatedCost  = 0.0;
+        $layerRecords   = [];
 
         foreach ($layers as $layer) {
             if ($remaining <= 0) break;
@@ -252,8 +255,22 @@ class InventoryLedger
             $layerAvailable = max(0, (float) $layer->qty_on_hand - (float) $layer->qty_reserved);
             if ($layerAvailable <= 0) continue;
 
-            $take      = min($remaining, $layerAvailable);
-            $lineTotal = round($take * $avgUnitCost, 2);
+            $take = min($remaining, $layerAvailable);
+            $layerRecords[] = ['layer' => $layer, 'take' => $take];
+            $remaining -= $take;
+        }
+
+        $lastIdx = count($layerRecords) - 1;
+        foreach ($layerRecords as $i => $rec) {
+            $layer = $rec['layer'];
+            $take  = $rec['take'];
+
+            // Last layer absorbs any penny difference so sum of lines == $totalCost exactly
+            if ($i === $lastIdx) {
+                $lineTotal = round($totalCost - $allocatedCost, 2);
+            } else {
+                $lineTotal = round($take * $avgUnitCost, 2);
+            }
 
             InventoryConsumption::create([
                 'company_id'            => $companyId,
@@ -283,7 +300,6 @@ class InventoryLedger
                     'updated_at'  => now(),
                 ]);
 
-            // Keep batch qty_remaining in sync when the layer has a batch
             if ($layer->batch_id) {
                 Batch::query()
                     ->where('company_id', $companyId)
@@ -295,14 +311,11 @@ class InventoryLedger
                     ]);
             }
 
-            $cogsTotal += $lineTotal;
-            $remaining -= $take;
+            $allocatedCost += $lineTotal;
         }
 
-        $movement->total_cost = round($cogsTotal, 2);
-        $movement->save();
-
-        return ['movement' => $movement, 'cogs_total' => (float) $movement->total_cost];
+        // movement->total_cost was already set to $totalCost; no need to overwrite.
+        return ['movement' => $movement, 'cogs_total' => $totalCost];
     }
 
     // -------------------------------------------------------------------------
