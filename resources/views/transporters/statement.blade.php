@@ -33,14 +33,14 @@ a{text-decoration:none}
 .page{max-width:840px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.12);overflow:hidden}
 
 /* ── Header band ── */
-.hdr{background:#0f172a;color:#fff;padding:28px 40px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.hdr{background:#fff;border-bottom:1px solid #e5e7eb;padding:28px 40px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .hdr-left{}
-.co-name{font-size:20px;font-weight:800;letter-spacing:-.4px;color:#f8fafc}
-.co-tagline{font-size:10.5px;color:#94a3b8;margin-top:3px;letter-spacing:.2px}
+.co-name{font-size:20px;font-weight:800;letter-spacing:-.4px;color:#111827}
+.co-tagline{font-size:10.5px;color:#9ca3af;margin-top:3px;letter-spacing:.2px}
 .hdr-right{text-align:right;flex-shrink:0}
-.doc-label{font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#64748b;margin-bottom:4px}
-.doc-title{font-size:18px;font-weight:800;color:#f8fafc;letter-spacing:-.3px}
-.doc-date{font-size:11px;color:#64748b;margin-top:5px}
+.doc-label{font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#9ca3af;margin-bottom:4px}
+.doc-title{font-size:18px;font-weight:800;color:#111827;letter-spacing:-.3px}
+.doc-date{font-size:11px;color:#6b7280;margin-top:5px}
 
 /* ── Accent stripe (thin color bar under header) ── */
 .accent-stripe{height:4px;background:linear-gradient(90deg,#0ea5e9 0%,#6366f1 50%,#10b981 100%)}
