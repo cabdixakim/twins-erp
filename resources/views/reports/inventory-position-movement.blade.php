@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Period Inventory Movement — {{ \Carbon\Carbon::parse($from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($to)->format('d M Y') }}</title>
+    <title>Inventory Movement — {{ \Carbon\Carbon::parse($from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($to)->format('d M Y') }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; color: #1e293b; background: #fff; padding: 32px; }
-        h1 { font-size: 16px; font-weight: 700; margin-bottom: 1px; }
+        h1 { font-size: 16px; font-weight: 700; margin-bottom: 1px; color: #475569; }
         .sub { color: #94a3b8; font-size: 11px; margin-bottom: 20px; }
         .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 24px; }
         .header-right { text-align: right; font-size: 11px; color: #64748b; white-space: nowrap; }
@@ -70,7 +70,7 @@
 
 <div class="header-row">
     <div>
-        <h1>Period Inventory Movement</h1>
+        <h1>Inventory Movement</h1>
         <div class="sub">Opening + purchases − sales − losses = closing, per product</div>
     </div>
     <div class="header-right">
