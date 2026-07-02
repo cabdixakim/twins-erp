@@ -56,16 +56,52 @@ class DashboardController extends Controller {
             ->groupBy('status')
             ->pluck('cnt', 'status');
 
+        // ── Costing method ────────────────────────────────────────
+        $costingMethod = DB::table('companies')->where('id', $cid)->value('costing_method') ?? 'weighted_average';
+
         // ── Stock on hand ─────────────────────────────────────────
         $depotStockRows = DepotStock::where('depot_stocks.company_id', $cid)
             ->join('depots', 'depots.id', '=', 'depot_stocks.depot_id')
             ->where('depots.is_system', false)
-            ->selectRaw('depots.id as depot_id, depots.name as depot_name, SUM(depot_stocks.qty_on_hand) as total_qty')
+            ->selectRaw('
+                depots.id   AS depot_id,
+                depots.name AS depot_name,
+                SUM(depot_stocks.qty_on_hand) AS total_qty,
+                SUM(depot_stocks.qty_on_hand * depot_stocks.unit_cost) / NULLIF(SUM(depot_stocks.qty_on_hand), 0) AS avg_unit_cost,
+                SUM(depot_stocks.qty_on_hand * depot_stocks.unit_cost) AS total_value
+            ')
             ->groupBy('depots.id', 'depots.name')
             ->orderBy('depots.name')
             ->get();
 
         $totalStockOnHand = $depotStockRows->sum('total_qty');
+        $totalStockValue  = $depotStockRows->sum('total_value');
+
+        // ── Batch breakdown (specific_lot mode only) ──────────────
+        $batchStockRows = collect();
+        if ($costingMethod === 'specific_lot') {
+            $batchStockRows = DB::table('depot_stocks as ds')
+                ->join('depots', 'depots.id', '=', 'ds.depot_id')
+                ->join('products', 'products.id', '=', 'ds.product_id')
+                ->leftJoin('batches', 'batches.id', '=', 'ds.batch_id')
+                ->where('ds.company_id', $cid)
+                ->where('depots.is_system', false)
+                ->where('ds.qty_on_hand', '>', 0)
+                ->selectRaw('
+                    batches.id   AS batch_id,
+                    batches.code AS batch_code,
+                    products.id   AS product_id,
+                    products.name AS product_name,
+                    depots.id   AS depot_id,
+                    depots.name AS depot_name,
+                    ds.qty_on_hand,
+                    ds.qty_reserved,
+                    ds.unit_cost
+                ')
+                ->orderBy('products.name')
+                ->orderBy('batches.code')
+                ->get();
+        }
 
         // ── Supplier payables ─────────────────────────────────────
         $supplierBalances = SupplierLedgerEntry::where('company_id', $cid)
@@ -257,6 +293,9 @@ class DashboardController extends Controller {
             'pettyCashTotal',
             'depotStockRows',
             'totalStockOnHand',
+            'totalStockValue',
+            'costingMethod',
+            'batchStockRows',
             'supplierByCurrency',
             'topSuppliers',
             'supplierPayableTotal',

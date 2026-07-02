@@ -27,14 +27,22 @@ class DepotStockController extends Controller
             return response()->json(['available' => null]);
         }
 
-        $available = DepotStock::query()
+        $stocks = DepotStock::query()
             ->where('company_id', $cid)
             ->where('depot_id', $depotId)
             ->where('product_id', $productId)
-            ->get()
-            ->sum(fn ($l) => max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved));
+            ->get(['qty_on_hand', 'qty_reserved', 'unit_cost']);
 
-        return response()->json(['available' => round($available, 2)]);
+        $available = $stocks->sum(fn ($l) => max(0, (float) $l->qty_on_hand - (float) $l->qty_reserved));
+        $totalQty  = $stocks->sum('qty_on_hand');
+        $unitCost  = $totalQty > 0
+            ? $stocks->sum(fn ($l) => (float) $l->qty_on_hand * (float) $l->unit_cost) / $totalQty
+            : null;
+
+        return response()->json([
+            'available' => round($available, 2),
+            'unit_cost' => $unitCost !== null ? round($unitCost, 6) : null,
+        ]);
     }
 
     public function index(Request $request)
@@ -87,10 +95,14 @@ class DepotStockController extends Controller
 
             $stats['net'] = $stats['total_in'] - $stats['total_out'] - $stats['total_losses'];
 
-            // Current balance from depot_stocks, aggregated per product (no batch breakdown)
+            // Current balance from depot_stocks, aggregated per product
             $balance = DepotStock::where('company_id', $cid)
                 ->where('depot_id', $currentDepot->id)
-                ->selectRaw('product_id, SUM(qty_on_hand) as total_on_hand, SUM(qty_reserved) as total_reserved')
+                ->selectRaw('product_id,
+                    SUM(qty_on_hand) as total_on_hand,
+                    SUM(qty_reserved) as total_reserved,
+                    SUM(qty_on_hand * unit_cost) / NULLIF(SUM(qty_on_hand), 0) AS avg_unit_cost,
+                    SUM(qty_on_hand * unit_cost) AS total_value')
                 ->groupBy('product_id')
                 ->with('product:id,name')
                 ->get();
@@ -120,10 +132,24 @@ class DepotStockController extends Controller
             $movements = $q->paginate(50)->withQueryString();
         }
 
-        $volumeUnit = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+        $volumeUnit    = DB::table('companies')->where('id', $cid)->value('volume_unit') ?? 'L';
+        $costingMethod = DB::table('companies')->where('id', $cid)->value('costing_method') ?? 'weighted_average';
+
+        // Batch-level breakdown (only for specific_lot mode)
+        $balanceByBatch = collect();
+        if ($costingMethod === 'specific_lot' && $currentDepot) {
+            $balanceByBatch = DepotStock::where('company_id', $cid)
+                ->where('depot_id', $currentDepot->id)
+                ->where('qty_on_hand', '>', 0)
+                ->with(['product:id,name', 'batch:id,code'])
+                ->orderBy('product_id')
+                ->orderBy('batch_id')
+                ->get();
+        }
 
         return view('depot-stock.index', compact(
-            'depots', 'currentDepot', 'movements', 'balance', 'stats', 'products', 'volumeUnit'
+            'depots', 'currentDepot', 'movements', 'balance', 'stats', 'products',
+            'volumeUnit', 'costingMethod', 'balanceByBatch'
         ));
     }
 

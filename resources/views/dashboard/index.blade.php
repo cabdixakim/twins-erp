@@ -367,7 +367,13 @@
         </div>
         <div>
           <p class="text-sm font-bold tw-fg">Fuel by Depot</p>
-          <p class="text-[10px] tw-muted">{{ $fmtVol($totalStockOnHand) }} {{ $volLabel }} total across all depots — click to see full breakdown</p>
+          <p class="text-[10px] tw-muted">
+              {{ $fmtVol($totalStockOnHand) }} {{ $volLabel }} total
+              @if(($totalStockValue ?? 0) > 0)
+                · est. value {{ number_format($totalStockValue, 0) }} {{ $baseCurrency }}
+              @endif
+              — click to see full breakdown
+            </p>
         </div>
       </div>
       <svg class="w-4 h-4 tw-muted opacity-40 group-hover:opacity-80 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -376,7 +382,10 @@
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       @foreach($depotStockRows as $row)
-      @php $pct = $totalStockOnHand > 0 ? ($row->total_qty / $totalStockOnHand * 100) : 0; @endphp
+      @php
+        $pct     = $totalStockOnHand > 0 ? ($row->total_qty / $totalStockOnHand * 100) : 0;
+        $avgCost = (float)($row->avg_unit_cost ?? 0);
+      @endphp
       <div class="rounded-xl p-3" style="background:var(--tw-surface-2)">
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs font-semibold tw-fg truncate max-w-[60%]">{{ $row->depot_name }}</span>
@@ -385,11 +394,67 @@
         <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--tw-border)">
           <div class="h-full rounded-full" style="width:{{ round($pct) }}%; background:#0ea5e9"></div>
         </div>
-        <p class="text-[10px] tw-muted mt-1">{{ round($pct) }}% of total</p>
+        <div class="flex items-center justify-between mt-1">
+          <p class="text-[10px] tw-muted">{{ round($pct) }}% of total</p>
+          @if($avgCost > 0)
+          <p class="text-[10px]" style="color:#0ea5e9;opacity:.8">avg {{ number_format($avgCost, 4) }} / {{ $volLabel }}</p>
+          @endif
+        </div>
       </div>
       @endforeach
     </div>
   </a>
+  @endif
+
+  {{-- ══ Batch stock breakdown (specific_lot mode only) ══ --}}
+  @if($dCan['inventory.view'] && ($costingMethod ?? '') === 'specific_lot' && isset($batchStockRows) && $batchStockRows->isNotEmpty())
+  <div class="tw-card rounded-2xl p-5">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+           style="background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.20)">
+        <svg style="color:#f59e0b;width:1.1rem;height:1.1rem" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-bold tw-fg">Batch Stock Breakdown</p>
+        <p class="text-[10px] tw-muted">Available qty and avg landed cost per batch — Specific Lot mode</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto -mx-5 px-5">
+      <table class="w-full text-xs min-w-[480px]">
+        <thead>
+          <tr class="text-left" style="border-bottom:1px solid var(--tw-border)">
+            <th class="pb-2 font-semibold tw-muted">Batch</th>
+            <th class="pb-2 font-semibold tw-muted">Product</th>
+            <th class="pb-2 font-semibold tw-muted">Depot</th>
+            <th class="pb-2 font-semibold tw-muted text-right">Available</th>
+            <th class="pb-2 font-semibold tw-muted text-right">Avg cost / {{ $volLabel }}</th>
+            <th class="pb-2 font-semibold tw-muted text-right">Est. value</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($batchStockRows as $b)
+          @php
+            $bAvail = max(0, (float)$b->qty_on_hand - (float)($b->qty_reserved ?? 0));
+            $bCost  = (float)($b->unit_cost ?? 0);
+            $bVal   = (float)$b->qty_on_hand * $bCost;
+          @endphp
+          <tr style="border-bottom:1px solid var(--tw-border)">
+            <td class="py-2 pr-3 font-mono font-semibold tw-fg">{{ $b->batch_code ?? '—' }}</td>
+            <td class="py-2 pr-3 tw-fg">{{ $b->product_name }}</td>
+            <td class="py-2 pr-3 tw-muted">{{ $b->depot_name }}</td>
+            <td class="py-2 pr-3 text-right font-semibold" style="color:#10b981">
+              {{ $fmtVol($bAvail) }} {{ $volLabel }}
+            </td>
+            <td class="py-2 pr-3 text-right tw-fg">{{ $bCost > 0 ? number_format($bCost, 4) : '—' }}</td>
+            <td class="py-2 text-right font-semibold tw-fg">{{ $bCost > 0 ? number_format($bVal, 2) : '—' }}</td>
+          </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+  </div>
   @endif
 
   {{-- ══ Who you owe — detail cards ══ --}}

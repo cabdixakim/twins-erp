@@ -101,12 +101,20 @@
     </div>
   </div>
 
-  {{-- Product balance (compact, no batches) --}}
+  {{-- Product balance --}}
   @if($balance->isNotEmpty())
   <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-4">
-    <div class="px-4 py-3 border-b {{ $border }} {{ $surface2 }}">
-      <div class="text-sm font-semibold {{ $fg }}">Stock on hand</div>
-      <div class="mt-0.5 text-xs {{ $muted }}">Current depot stock by product</div>
+    <div class="px-4 py-3 border-b {{ $border }} {{ $surface2 }} flex items-center justify-between gap-2">
+      <div>
+        <div class="text-sm font-semibold {{ $fg }}">Stock on hand</div>
+        <div class="mt-0.5 text-xs {{ $muted }}">Current depot stock by product
+          @if(($costingMethod ?? 'weighted_average') === 'weighted_average')
+            · weighted avg cost shown
+          @else
+            · specific lot mode
+          @endif
+        </div>
+      </div>
     </div>
     <div class="divide-y {{ $border }}">
       @foreach($balance as $row)
@@ -114,27 +122,82 @@
           $onHand    = (float)($row->total_on_hand ?? 0);
           $reserved  = (float)($row->total_reserved ?? 0);
           $available = max(0, $onHand - $reserved);
+          $avgCost   = (float)($row->avg_unit_cost ?? 0);
+          $totalVal  = (float)($row->total_value ?? 0);
         @endphp
-        <div class="px-4 py-3 flex items-center justify-between gap-4">
-          <div class="font-semibold text-sm {{ $fg }}">{{ $row->product?->name ?? ('Product #' . $row->product_id) }}</div>
-          <div class="flex items-center gap-4 text-sm">
-            <div class="text-right">
-              <div class="font-semibold {{ $fg }}">{{ $fmtL($onHand) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
-              <div class="text-[10px] {{ $muted }}">on hand</div>
-            </div>
-            @if($reserved > 0)
-            <div class="text-right">
-              <div class="font-semibold text-amber-500">{{ $fmtL($reserved) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
-              <div class="text-[10px] {{ $muted }}">reserved</div>
-            </div>
-            @endif
-            <div class="text-right">
-              <div class="font-semibold text-emerald-500">{{ $fmtL($available) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
-              <div class="text-[10px] {{ $muted }}">available</div>
+        <div class="px-4 py-3">
+          <div class="flex items-center justify-between gap-4">
+            <div class="font-semibold text-sm {{ $fg }}">{{ $row->product?->name ?? ('Product #' . $row->product_id) }}</div>
+            <div class="flex items-center gap-4 text-sm">
+              <div class="text-right">
+                <div class="font-semibold {{ $fg }}">{{ $fmtL($onHand) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
+                <div class="text-[10px] {{ $muted }}">on hand</div>
+              </div>
+              @if($reserved > 0)
+              <div class="text-right">
+                <div class="font-semibold text-amber-500">{{ $fmtL($reserved) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
+                <div class="text-[10px] {{ $muted }}">reserved</div>
+              </div>
+              @endif
+              <div class="text-right">
+                <div class="font-semibold text-emerald-500">{{ $fmtL($available) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span></div>
+                <div class="text-[10px] {{ $muted }}">available</div>
+              </div>
             </div>
           </div>
+          @if($avgCost > 0)
+          <div class="mt-1.5 flex items-center gap-4 text-[11px] {{ $muted }}">
+            <span>Avg cost <strong class="{{ $fg }}">{{ $fmtM($avgCost) }}</strong> / {{ $volLabel }}</span>
+            <span>·</span>
+            <span>Stock value <strong class="{{ $fg }}">{{ $fmtM($totalVal) }}</strong></span>
+          </div>
+          @endif
         </div>
       @endforeach
+    </div>
+  </div>
+  @endif
+
+  {{-- Batch breakdown (specific_lot mode only) --}}
+  @if(($costingMethod ?? '') === 'specific_lot' && isset($balanceByBatch) && $balanceByBatch->isNotEmpty())
+  <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-hidden mb-4">
+    <div class="px-4 py-3 border-b {{ $border }} {{ $surface2 }}">
+      <div class="text-sm font-semibold {{ $fg }}">Batch stock detail</div>
+      <div class="mt-0.5 text-xs {{ $muted }}">Available qty and avg landed cost per batch</div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="{{ $surface2 }} border-b {{ $border }}">
+          <tr class="text-left">
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }}">Batch</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }}">Product</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }} text-right">On hand</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }} text-right">Available</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }} text-right">Avg cost / {{ $volLabel }}</th>
+            <th class="px-4 py-2.5 text-[11px] font-semibold {{ $muted }} text-right">Stock value</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y {{ $border }}">
+          @foreach($balanceByBatch as $b)
+          @php
+            $bOnHand = (float)$b->qty_on_hand;
+            $bAvail  = max(0, $bOnHand - (float)($b->qty_reserved ?? 0));
+            $bCost   = (float)($b->unit_cost ?? 0);
+            $bVal    = $bOnHand * $bCost;
+          @endphp
+          <tr class="hover:bg-[color:var(--tw-surface-2)]/60">
+            <td class="px-4 py-2.5 font-mono text-xs font-semibold {{ $fg }}">
+              {{ $b->batch?->code ?? '—' }}
+            </td>
+            <td class="px-4 py-2.5 {{ $fg }}">{{ $b->product?->name ?? '—' }}</td>
+            <td class="px-4 py-2.5 text-right {{ $muted }}">{{ $fmtL($bOnHand) }}</td>
+            <td class="px-4 py-2.5 text-right font-semibold text-emerald-500">{{ $fmtL($bAvail) }}</td>
+            <td class="px-4 py-2.5 text-right {{ $fg }}">{{ $bCost > 0 ? $fmtM($bCost) : '—' }}</td>
+            <td class="px-4 py-2.5 text-right font-semibold {{ $fg }}">{{ $bCost > 0 ? $fmtM($bVal) : '—' }}</td>
+          </tr>
+          @endforeach
+        </tbody>
+      </table>
     </div>
   </div>
   @endif

@@ -119,6 +119,7 @@
                      placeholder="e.g. 20000" />
               @error('qty') <div class="{{ $errText }}">{{ $message }}</div> @enderror
               <div id="saleStockHint" class="mt-1 text-[11px]"></div>
+              <div id="saleCOGSHint" class="mt-1 text-[11px]"></div>
             </div>
 
             <div>
@@ -514,7 +515,9 @@ window.selectedSale = @json($selected);
   const depotSel   = document.getElementById('f_depot_id');
   const qtyInput   = document.getElementById('f_qty');
   const stockHint  = document.getElementById('saleStockHint');
+  const cogsHint   = document.getElementById('saleCOGSHint');
   let   availableStock = null;
+  let   stockUnitCost  = null;
   const SALE_VOL_UNIT  = @json(($volumeUnit ?? 'L') === 'M3' ? 'm³' : ($volumeUnit ?? 'L'));
   const SALE_VOL_DECS  = @json(($volumeUnit ?? 'L') === 'M3' ? 3 : 0);
 
@@ -522,6 +525,7 @@ window.selectedSale = @json($selected);
     if (!stockHint) return;
     if (availableStock === null) {
       stockHint.textContent = '';
+      if (cogsHint) cogsHint.textContent = '';
       return;
     }
     const qty = parseFloat(qtyInput?.value?.replace(/,/g, '')) || 0;
@@ -536,6 +540,16 @@ window.selectedSale = @json($selected);
       stockHint.textContent = 'Available: ' + fmt + ' ' + SALE_VOL_UNIT;
       stockHint.style.cssText = 'color:#34d399';
     }
+    // COGS estimate
+    if (cogsHint) {
+      if (stockUnitCost && stockUnitCost > 0 && qty > 0) {
+        const cogs = qty * stockUnitCost;
+        cogsHint.textContent = 'Est. COGS: ' + cogs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (@ ' + stockUnitCost.toFixed(4) + ' / ' + SALE_VOL_UNIT + ')';
+        cogsHint.style.cssText = 'color:#94a3b8';
+      } else {
+        cogsHint.textContent = '';
+      }
+    }
   };
 
   const fetchStock = () => {
@@ -543,6 +557,7 @@ window.selectedSale = @json($selected);
     const productId = productSel?.value;
     if (!depotId || !productId) {
       availableStock = null;
+      stockUnitCost  = null;
       renderStockHint();
       return;
     }
@@ -550,8 +565,8 @@ window.selectedSale = @json($selected);
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
       .then(r => r.json())
-      .then(d => { availableStock = d.available; renderStockHint(); })
-      .catch(() => { availableStock = null; renderStockHint(); });
+      .then(d => { availableStock = d.available; stockUnitCost = d.unit_cost ?? null; renderStockHint(); })
+      .catch(() => { availableStock = null; stockUnitCost = null; renderStockHint(); });
   };
 
   on(depotSel,  'change', fetchStock);
