@@ -21,10 +21,18 @@
 @section('content')
 
 {{-- Breadcrumb --}}
-<div class="no-print flex items-center gap-2 text-xs {{ $muted }} mb-4">
-    <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
-    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-    <span>Inventory Position</span>
+<div class="no-print flex items-center justify-between gap-4 flex-wrap mb-4">
+    <div class="flex items-center gap-2 text-xs {{ $muted }}">
+        <a href="{{ route('reports.index') }}" class="hover:underline">Reports</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>Inventory Position</span>
+    </div>
+    <a href="{{ route('reports.inventory-position.movement') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white shrink-0"
+       style="background:#10b981;">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+        View Movement Statement
+    </a>
 </div>
 
 {{-- Date filter --}}
@@ -235,27 +243,6 @@
     </div>
 </div>
 @endif
-
-{{-- ══════════════════════════════════════════════════════════════════ --}}
-{{-- SECTION 3: PERIOD INVENTORY MOVEMENT — moved to dedicated page    --}}
-{{-- ══════════════════════════════════════════════════════════════════ --}}
-<div class="mb-6">
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5 flex items-center justify-between gap-4 flex-wrap">
-        <div>
-            <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-1">Period Inventory Movement</h2>
-            <p class="text-xs {{ $muted }}">
-                Opening balance + purchases − sales − losses = closing balance, per product, with average cost. Now on its own
-                printable page with month/quarter/year presets.
-            </p>
-        </div>
-        <a href="{{ route('reports.inventory-position.movement') }}"
-           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shrink-0"
-           style="background:#10b981;">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
-            View Movement Statement
-        </a>
-    </div>
-</div>
 
 {{-- ══════════════════════════════════════════════════════════════════ --}}
 {{-- SECTION 4: PURCHASES RECEIVED WITHIN THE PERIOD                   --}}
