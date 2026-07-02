@@ -383,8 +383,8 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       @foreach($depotStockRows as $row)
       @php
-        $pct     = $totalStockOnHand > 0 ? ($row->total_qty / $totalStockOnHand * 100) : 0;
-        $avgCost = (float)($row->avg_unit_cost ?? 0);
+        $pct      = $totalStockOnHand > 0 ? ($row->total_qty / $totalStockOnHand * 100) : 0;
+        $depotVal = (float)($row->total_value ?? 0);
       @endphp
       <div class="rounded-xl p-3" style="background:var(--tw-surface-2)">
         <div class="flex items-center justify-between mb-2">
@@ -396,8 +396,8 @@
         </div>
         <div class="flex items-center justify-between mt-1">
           <p class="text-[10px] tw-muted">{{ round($pct) }}% of total</p>
-          @if($avgCost > 0)
-          <p class="text-[10px]" style="color:#0ea5e9;opacity:.8">avg {{ number_format($avgCost, 4) }} / {{ $volLabel }}</p>
+          @if($depotVal > 0)
+          <p class="text-[10px]" style="color:#0ea5e9;opacity:.8">{{ number_format($depotVal, 0) }} {{ $baseCurrency }}</p>
           @endif
         </div>
       </div>
