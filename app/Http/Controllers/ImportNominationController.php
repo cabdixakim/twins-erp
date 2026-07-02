@@ -1479,6 +1479,36 @@ class ImportNominationController extends Controller
         return back()->with('status', $msg ?? "Duty posted for {$truck->truck_reg}.");
     }
 
+    // ── Reverse posted duty ───────────────────────────────────────────────────
+
+    public function reversePostedDuty(Request $request, Purchase $purchase, ImportNomination $nomination, ImportTruck $truck)
+    {
+        $cid = $this->authorise($purchase);
+        abort_if((int) $truck->nomination_id !== $nomination->id, 403);
+        abort_if($truck->duty_status !== 'posted', 422, 'Only a posted duty can be reversed.');
+
+        $data = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            $msg = DutyPostingService::reverseForTruck($truck, $data['reason'], (int) auth()->id());
+        } catch (\Throwable $e) {
+            return back()->with('error', "Reversal failed: {$e->getMessage()}");
+        }
+
+        \App\Models\AuditLog::record(
+            'updated',
+            "Duty reversed for truck {$truck->truck_reg} · {$purchase->reference}. Reason: {$data['reason']}",
+            $truck, "Truck {$truck->truck_reg} · {$purchase->reference}",
+            severity: 'warning',
+            before: ['duty_status' => 'posted', 'duty_amount' => $truck->duty_amount, 'duty_currency' => $truck->duty_currency],
+            after:  ['duty_status' => 'pending', 'reason' => $data['reason']],
+        );
+
+        return back()->with('status', $msg);
+    }
+
     // ── Record advance payment ────────────────────────────────────────────────
 
     public function storeAdvance(Request $request, Purchase $purchase, ImportNomination $nomination)

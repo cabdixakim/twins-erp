@@ -231,6 +231,116 @@ class DutyPostingService
     }
 
     /**
+     * Reverse a previously posted duty for a truck.
+     * Creates reversing AP ledger entries, removes the batch cost, resets the truck
+     * to 'pending' so the correct duty can be re-posted cleanly.
+     */
+    public static function reverseForTruck(ImportTruck $truck, string $reason, int $userId): string
+    {
+        if ($truck->duty_status !== 'posted') {
+            throw new \RuntimeException("Cannot reverse — duty for truck {$truck->truck_reg} is not posted (status: {$truck->duty_status}).");
+        }
+
+        $vendorType = $truck->duty_vendor_type;
+        $vendorId   = (int) ($truck->duty_vendor_id ?? 0);
+        $amount     = (float) ($truck->duty_amount ?? 0);
+        $currency   = $truck->duty_currency ?: 'USD';
+        $cid        = (int) $truck->company_id;
+        $date       = now()->toDateString();
+        $nomination = $truck->nomination;
+        $purchase   = $nomination?->purchase;
+        $desc       = "Reversal of duty — truck {$truck->truck_reg}" . ($purchase ? " — PO {$purchase->reference}" : '') . ". Reason: {$reason}";
+
+        DB::transaction(function () use (
+            $truck, $vendorType, $vendorId, $amount, $currency,
+            $cid, $date, $desc, $userId, $purchase, $nomination
+        ) {
+            // Reverse the AP ledger entry
+            if ($vendorType === 'customs_authority' && $vendorId) {
+                DutyLedgerEntry::create([
+                    'company_id'     => $cid,
+                    'duty_vendor_id' => $vendorId,
+                    'type'           => 'duty_reversal',
+                    'amount'         => -$amount,
+                    'currency'       => $currency,
+                    'description'    => $desc,
+                    'entry_date'     => $date,
+                    'ref_type'       => ImportTruck::class . ':reversal',
+                    'ref_id'         => $truck->id,
+                    'created_by'     => $userId,
+                ]);
+            } elseif ($vendorType === 'supplier' && $vendorId) {
+                $supplierCurrency = DB::table('suppliers')->where('id', $vendorId)->value('default_currency') ?? $currency;
+                SupplierLedgerEntry::create([
+                    'company_id'  => $cid,
+                    'supplier_id' => $vendorId,
+                    'type'        => 'credit_note',
+                    'amount'      => -$amount,
+                    'currency'    => $supplierCurrency,
+                    'description' => $desc,
+                    'entry_date'  => $date,
+                    'ref_type'    => ImportTruck::class . ':duty:reversal',
+                    'ref_id'      => $truck->id,
+                    'created_by'  => $userId,
+                ]);
+            } elseif ($vendorType === 'depot' && $vendorId) {
+                DB::table('depot_ledger_entries')->insert([
+                    'company_id'  => $cid,
+                    'depot_id'    => $vendorId,
+                    'type'        => 'adjustment',
+                    'amount'      => -$amount,
+                    'currency'    => $currency,
+                    'description' => $desc,
+                    'entry_date'  => $date,
+                    'ref_type'    => ImportTruck::class . ':duty:reversal',
+                    'ref_id'      => $truck->id,
+                    'created_by'  => $userId,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            } elseif ($vendorType === 'transporter' && $vendorId) {
+                DB::table('transporter_ledger_entries')->insert([
+                    'company_id'     => $cid,
+                    'transporter_id' => $vendorId,
+                    'type'           => 'adjustment',
+                    'amount'         => -$amount,
+                    'currency'       => $currency,
+                    'description'    => $desc,
+                    'entry_date'     => $date,
+                    'ref_type'       => ImportTruck::class . ':duty:reversal',
+                    'ref_id'         => $truck->id,
+                    'created_by'     => $userId,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+            }
+
+            // Remove the auto-posted batch cost so the correct one can be re-created on re-post
+            if ($purchase) {
+                DB::table('batch_costs')
+                    ->where('truck_id', $truck->id)
+                    ->where('category', 'duty')
+                    ->where('purchase_id', $purchase->id)
+                    ->where('auto_posted', true)
+                    ->delete();
+            }
+
+            // Reset truck duty status to pending
+            $truck->update([
+                'duty_status'    => 'pending',
+                'duty_posted_at' => null,
+            ]);
+        });
+
+        // Recompute landed cost after removing the duty batch cost
+        if ($purchase) {
+            InventoryLedger::recomputeUnitCostAfterBatchCostChange($purchase);
+        }
+
+        return "Duty reversal posted for {$truck->truck_reg}. Duty is now pending — re-post the correct amount.";
+    }
+
+    /**
      * Resolve the vendor display name for a truck's duty vendor.
      */
     public static function vendorName(ImportTruck $truck): string

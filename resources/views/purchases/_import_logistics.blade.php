@@ -445,6 +445,14 @@
                       </button>
                     @endif
 
+                    @if($truck->status === 'delivered' && ($truck->duty_status ?? '') === 'posted')
+                      <button type="button"
+                              onclick="openTruckModal('reverseDutyModal-{{ $truck->id }}')"
+                              class="h-7 px-2.5 rounded-lg border text-[11px] font-semibold transition border-rose-400/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 cursor-pointer">
+                        Reverse duty
+                      </button>
+                    @endif
+
                   </div>
                 </td>
               </tr>
@@ -1851,6 +1859,50 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeAdvanceMod
           <button type="submit"
                   class="h-10 px-4 rounded-xl border border-blue-500/40 bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 transition">
             Post duty
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  @endif
+
+  {{-- ── Reverse posted duty ── --}}
+  @if($truck->status === 'delivered' && ($truck->duty_status ?? '') === 'posted')
+  <div id="reverseDutyModal-{{ $truck->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div class="w-full max-w-sm rounded-2xl border {{ $border }} {{ $surface }} shadow-2xl">
+      <div class="flex items-center justify-between p-5 border-b {{ $border }} {{ $surface2 }}">
+        <div>
+          <div class="text-base font-semibold {{ $fg }}">Reverse duty — {{ $truck->truck_reg }}</div>
+          <div class="text-xs {{ $muted }} mt-0.5">
+            {{ $truck->duty_currency }} {{ number_format((float)$truck->duty_amount, 2) }} posted duty will be reversed
+          </div>
+        </div>
+        <button type="button" onclick="closeTruckModal('reverseDutyModal-{{ $truck->id }}')"
+                class="h-9 w-9 inline-flex items-center justify-center rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">✕</button>
+      </div>
+      <form method="POST"
+            action="{{ route('purchases.import-nomination.trucks.reverse-duty', [$purchase, $nomination, $truck]) }}">
+        @csrf
+        <div class="p-5 space-y-4">
+          <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+            This will cancel the ledger entry and remove the duty from the batch's landed cost.
+            The truck will return to <strong>pending</strong> so you can re-post the correct amount.
+          </div>
+          <div>
+            <label class="block text-xs font-semibold {{ $fg }} mb-1">Reason for reversal <span class="text-rose-500">*</span></label>
+            <textarea name="reason" rows="3" required maxlength="500"
+                      placeholder="e.g. Wrong rate entered — should be 350 not 0.35"
+                      class="w-full rounded-xl border {{ $border }} {{ $surface2 }} px-3 py-2 text-sm {{ $fg }} focus:outline-none focus:border-[color:var(--tw-accent)] resize-none"></textarea>
+          </div>
+        </div>
+        <div class="px-5 py-4 border-t {{ $border }} {{ $surface2 }} flex justify-end gap-2">
+          <button type="button" onclick="closeTruckModal('reverseDutyModal-{{ $truck->id }}')"
+                  class="h-10 px-4 rounded-xl border {{ $border }} {{ $surface }} text-sm font-semibold {{ $fg }} hover:bg-[color:var(--tw-surface-2)] transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="h-10 px-4 rounded-xl border border-rose-500/40 bg-rose-600 text-sm font-semibold text-white hover:bg-rose-500 transition">
+            Confirm reversal
           </button>
         </div>
       </form>

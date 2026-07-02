@@ -424,6 +424,11 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
             ->middleware('permission:purchases.import-nominations')
             ->name('purchases.import-nomination.trucks.post-duty');
 
+        Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/{truck}/reverse-duty',
+            [ImportNominationController::class, 'reversePostedDuty'])
+            ->middleware('permission:purchases.import-nominations')
+            ->name('purchases.import-nomination.trucks.reverse-duty');
+
         Route::post('/purchases/{purchase}/import-nomination/{nomination}/trucks/bulk-in-transit',
             [ImportNominationController::class, 'bulkMarkInTransit'])
             ->middleware('permission:purchases.import-nominations')
