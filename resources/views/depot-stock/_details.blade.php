@@ -67,7 +67,7 @@
   </div>
 
   {{-- Stats --}}
-  <div class="grid sm:grid-cols-3 gap-3 mb-4">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
       <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Total received</div>
       <div class="mt-1 text-xl font-semibold text-emerald-500">
@@ -81,7 +81,15 @@
       <div class="mt-1 text-xl font-semibold text-rose-500">
         {{ $fmtL($stats['total_out'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
       </div>
-      <div class="mt-1 text-[11px] {{ $muted }}">All issues from this depot</div>
+      <div class="mt-1 text-[11px] {{ $muted }}">Sales &amp; dispatches out</div>
+    </div>
+
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
+      <div class="text-[11px] uppercase tracking-wide {{ $muted }}">Losses / Shrinkage</div>
+      <div class="mt-1 text-xl font-semibold text-amber-500">
+        {{ $fmtL($stats['total_losses'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
+      </div>
+      <div class="mt-1 text-[11px] {{ $muted }}">Depot shrinkage &amp; adjustments</div>
     </div>
 
     <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
@@ -89,7 +97,7 @@
       <div class="mt-1 text-xl font-semibold {{ $fg }}">
         {{ $fmtL($stats['net'] ?? 0) }} <span class="text-xs {{ $muted }}">{{ $volLabel }}</span>
       </div>
-      <div class="mt-1 text-[11px] {{ $muted }}">In − Out (all time)</div>
+      <div class="mt-1 text-[11px] {{ $muted }}">In − Issued − Losses</div>
     </div>
   </div>
 

@@ -59,7 +59,7 @@ class DepotStockController extends Controller
         $movements = collect();
         $balance   = collect();
         $products  = collect();
-        $stats     = ['total_in' => 0, 'total_out' => 0, 'net' => 0, 'count' => 0];
+        $stats     = ['total_in' => 0, 'total_out' => 0, 'total_losses' => 0, 'net' => 0, 'count' => 0];
 
         if ($currentDepot) {
             $products = Product::where('company_id', $cid)
@@ -68,13 +68,24 @@ class DepotStockController extends Controller
                 ->get(['id', 'name']);
 
             // All-time summary (ignores filters — always the full picture)
+            // total_in: sum of receipt qty (stored positive)
             $stats['total_in']  = (float) InventoryMovement::where('company_id', $cid)
                 ->where('to_depot_id', $currentDepot->id)
                 ->sum('qty');
-            $stats['total_out'] = (float) InventoryMovement::where('company_id', $cid)
+
+            // total_out: issues only (qty stored negative → abs for display)
+            $stats['total_out'] = abs((float) InventoryMovement::where('company_id', $cid)
                 ->where('from_depot_id', $currentDepot->id)
-                ->sum('qty');
-            $stats['net'] = $stats['total_in'] - $stats['total_out'];
+                ->where('type', 'issue')
+                ->sum('qty'));
+
+            // total_losses: shrinkage / write-offs / adjustments (qty stored negative → abs for display)
+            $stats['total_losses'] = abs((float) InventoryMovement::where('company_id', $cid)
+                ->where('from_depot_id', $currentDepot->id)
+                ->where('type', 'adjustment')
+                ->sum('qty'));
+
+            $stats['net'] = $stats['total_in'] - $stats['total_out'] - $stats['total_losses'];
 
             // Current balance from depot_stocks, aggregated per product (no batch breakdown)
             $balance = DepotStock::where('company_id', $cid)
