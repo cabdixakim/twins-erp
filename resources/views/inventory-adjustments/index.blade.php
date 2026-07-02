@@ -51,34 +51,73 @@
       @endif
     </form>
   </div>
-  <a href="{{ route('inventory-adjustments.create') }}"
-     class="h-9 px-4 rounded-xl border border-rose-600 bg-rose-500 text-white text-sm font-semibold flex items-center gap-2 hover:bg-rose-600 transition">
-    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    Record write-off
-  </a>
+  <div class="flex items-center gap-2">
+    <a href="{{ route('inventory-adjustments.export', request()->query()) }}"
+       class="h-9 px-4 rounded-xl border {{ $border }} {{ $surface }} {{ $fg }} text-sm font-semibold flex items-center gap-2 hover:opacity-70 transition">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+      </svg>
+      Export CSV
+    </a>
+    <a href="{{ route('inventory-adjustments.create') }}"
+       class="h-9 px-4 rounded-xl border border-rose-600 bg-rose-500 text-white text-sm font-semibold flex items-center gap-2 hover:bg-rose-600 transition">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Record write-off
+    </a>
+  </div>
 </div>
 
 {{-- Summary cards --}}
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Total loss (all time)</div>
-    <div class="text-xl font-bold {{ $fg }}">{{ number_format($totalQty, 3) }} L</div>
-    <div class="text-lg font-bold s-rose mt-0.5">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
-    <div class="text-xs {{ $muted }} mt-1">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
+  <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="absolute inset-0 opacity-[0.06]" style="background:linear-gradient(135deg,#f43f5e,transparent 60%)"></div>
+    <div class="relative flex items-start justify-between">
+      <div>
+        <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Total loss (all time)</div>
+        <div class="text-3xl font-extrabold {{ $fg }} tabular-nums leading-none">{{ number_format($totalQty, 3) }}<span class="text-sm font-semibold {{ $muted }} ml-1">L</span></div>
+        <div class="text-sm font-semibold s-rose mt-2">{{ $currency }} {{ number_format($totalValue, 2) }}</div>
+        <div class="text-xs {{ $muted }} mt-2">Across {{ $adjustments->total() }} adjustment{{ $adjustments->total() !== 1 ? 's' : '' }}</div>
+      </div>
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(244,63,94,.12)">
+        <svg class="w-5 h-5" style="color:#f43f5e" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+        </svg>
+      </div>
+    </div>
   </div>
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Non-recoverable</div>
-    <div class="text-xl font-bold" style="color:#f43f5e">{{ number_format($nonRecoverableQty, 3) }} L</div>
-    <div class="text-lg font-bold mt-0.5" style="color:#f43f5e">{{ $currency }} {{ number_format($nonRecoverableValue, 2) }}</div>
-    <div class="text-xs {{ $muted }} mt-1">Absorbed as a straight loss</div>
+  <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="absolute inset-0 opacity-[0.06]" style="background:linear-gradient(135deg,#f43f5e,transparent 60%)"></div>
+    <div class="relative flex items-start justify-between">
+      <div>
+        <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Non-recoverable</div>
+        <div class="text-3xl font-extrabold tabular-nums leading-none" style="color:#f43f5e">{{ number_format($nonRecoverableQty, 3) }}<span class="text-sm font-semibold {{ $muted }} ml-1">L</span></div>
+        <div class="text-sm font-semibold mt-2" style="color:#f43f5e">{{ $currency }} {{ number_format($nonRecoverableValue, 2) }}</div>
+        <div class="text-xs {{ $muted }} mt-2">Absorbed as a straight loss</div>
+      </div>
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(244,63,94,.12)">
+        <svg class="w-5 h-5" style="color:#f43f5e" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </div>
+    </div>
   </div>
-  <div class="rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-1">Recoverable</div>
-    <div class="text-xl font-bold" style="color:#10b981">{{ number_format($recoverableQty, 3) }} L</div>
-    <div class="text-lg font-bold mt-0.5" style="color:#10b981">{{ $currency }} {{ number_format($recoverableValue, 2) }}</div>
-    <div class="text-xs {{ $muted }} mt-1">Claimable / chargeable to a third party</div>
+  <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
+    <div class="absolute inset-0 opacity-[0.06]" style="background:linear-gradient(135deg,#10b981,transparent 60%)"></div>
+    <div class="relative flex items-start justify-between">
+      <div>
+        <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Recoverable</div>
+        <div class="text-3xl font-extrabold tabular-nums leading-none" style="color:#10b981">{{ number_format($recoverableQty, 3) }}<span class="text-sm font-semibold {{ $muted }} ml-1">L</span></div>
+        <div class="text-sm font-semibold mt-2" style="color:#10b981">{{ $currency }} {{ number_format($recoverableValue, 2) }}</div>
+        <div class="text-xs {{ $muted }} mt-2">Claimable / chargeable to a third party</div>
+      </div>
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(16,185,129,.12)">
+        <svg class="w-5 h-5" style="color:#10b981" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+    </div>
   </div>
 </div>
 

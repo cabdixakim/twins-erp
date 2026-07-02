@@ -64,6 +64,57 @@ class InventoryAdjustmentController extends Controller
         ));
     }
 
+    public function exportCsv(Request $request)
+    {
+        $cid = $this->authorise();
+
+        $query = InventoryAdjustment::with(['product', 'depot'])
+            ->where('company_id', $cid)
+            ->orderBy('created_at')
+            ->orderBy('id');
+
+        if ($request->filled('depot')) {
+            $query->where('depot_id', (int) $request->depot);
+        }
+        if ($request->filled('reason')) {
+            $query->where('reason_type', $request->reason);
+        }
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        $rows     = $query->get();
+        $currency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
+        $filename = 'write-offs-' . date('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($rows, $currency) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'Date', 'Time', 'Reason', 'Product', 'Depot',
+                'Qty Lost', 'Unit Cost', 'Loss Value', 'Currency', 'Recoverable', 'Notes',
+            ]);
+            foreach ($rows as $adj) {
+                fputcsv($out, [
+                    $adj->created_at->format('Y-m-d'),
+                    $adj->created_at->format('H:i'),
+                    \App\Models\InventoryAdjustment::reasonLabel($adj->reason_type),
+                    $adj->product?->name ?? '',
+                    $adj->depot?->name ?? '',
+                    number_format((float) $adj->qty, 3, '.', ''),
+                    number_format((float) $adj->unit_cost, 4, '.', ''),
+                    number_format((float) $adj->total_value, 2, '.', ''),
+                    $currency,
+                    $adj->recoverable ? 'Yes' : 'No',
+                    $adj->notes ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function create(Request $request)
     {
         $cid = $this->authorise();

@@ -129,6 +129,9 @@ Route::middleware(['auth', 'company.setup', 'user.active'])->group(function () {
         Route::post('/inventory-adjustments', [\App\Http\Controllers\InventoryAdjustmentController::class, 'store'])
             ->middleware('permission:purchases.receive')
             ->name('inventory-adjustments.store');
+        Route::get('/inventory-adjustments/export', [\App\Http\Controllers\InventoryAdjustmentController::class, 'exportCsv'])
+            ->middleware('permission:inventory.view')
+            ->name('inventory-adjustments.export');
         Route::get('/depot-stock/available', [DepotStockController::class, 'available'])
             ->middleware('permission:inventory.view')
             ->name('depot-stock.available');
