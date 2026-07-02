@@ -797,6 +797,9 @@ Route::middleware(['auth', 'company.setup', 'active.company', 'user.active'])
         Route::get('/inventory-position', [\App\Http\Controllers\ReportController::class, 'inventoryPosition'])
             ->middleware('permission:reports.export')
             ->name('inventory-position');
+        Route::get('/inventory-position/movement', [\App\Http\Controllers\ReportController::class, 'inventoryPositionMovement'])
+            ->middleware('permission:reports.export')
+            ->name('inventory-position.movement');
         Route::get('/pl/export', [\App\Http\Controllers\ReportController::class, 'exportPl'])
             ->middleware('permission:reports.export')
             ->name('pl.export');

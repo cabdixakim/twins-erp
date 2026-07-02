@@ -6,4 +6,5 @@
 - [Roles system](roles-system.md) — 6 system roles: owner(god), admin(near-owner), manager, accountant, transport-controller, viewer. RoleMiddleware checks slug; owner always bypasses. $isOwnerOrAdmin/$isFinanceRole/$isTransport passed to sidebar partials. Roles table has NO company_id column — global roles only.
 - [Permission middleware routing](permission-routing.md) — all 173 routes now use permission: middleware; role: gates fully removed; RolePermissionSeeder seeds defaults; never add role: to routes.
 - [admin:create command](admin-create.md) — app/Console/Commands/CreateAdminUser.php; attaches user to all companies + grants all is_system roles; use --name/--email/--password flags or interactive prompts.
+- [Sale vs internal-transfer movement tagging](inventory-movement-sale-tagging.md) — cross-dock dispatch (real sale) vs cross-dock transfer (internal, not a sale) both post as issue movements; only `reference` prefix tells them apart.
 - [Prod Postgres restricted user](prod-postgres-restricted.md) — session_replication_role=replica is superuser-only; fails on prod. Use DELETE FROM in FK-safe order instead of TRUNCATE+CASCADE bypass.

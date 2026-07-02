@@ -237,124 +237,24 @@
 @endif
 
 {{-- ══════════════════════════════════════════════════════════════════ --}}
-{{-- SECTION 3: PERIOD STOCK MOVEMENT (with $ values)                  --}}
+{{-- SECTION 3: PERIOD INVENTORY MOVEMENT — moved to dedicated page    --}}
 {{-- ══════════════════════════════════════════════════════════════════ --}}
 <div class="mb-6">
-    <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-1">Period Inventory Movement</h2>
-    <p class="text-xs {{ $muted }} mb-3">
-        Opening &amp; closing inventory balance (qty and value) based on actual depot purchases and sales
-        from <strong class="{{ $fg }}">{{ \Carbon\Carbon::parse($from)->format('d M Y') }}</strong>
-        to <strong class="{{ $fg }}">{{ \Carbon\Carbon::parse($to)->format('d M Y') }}</strong>.
-    </p>
-
-    @if(count($movementRows) > 0)
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">
-        <table class="w-full text-xs min-w-[760px]">
-            <thead>
-                <tr class="{{ $surface2 }} border-b {{ $border }}">
-                    <th class="text-left px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Product</th>
-                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Opening Balance</th>
-                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#10b981">+ Purchases</th>
-                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#a855f7">− Sales</th>
-                    <th class="text-right px-4 py-3 font-semibold uppercase tracking-wide text-[10px]" style="color:#f43f5e">− Losses</th>
-                    <th class="text-right px-4 py-3 font-semibold {{ $muted }} uppercase tracking-wide text-[10px]">Closing Balance</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($movementRows as $row)
-                <tr class="border-b {{ $border }} last:border-0 hover:{{ $surface2 }} transition">
-                    <td class="px-4 py-3 font-semibold {{ $fg }}">{{ $row['product'] }}</td>
-                    <td class="px-4 py-3 text-right {{ $muted }}">
-                        {{ number_format($row['opening'], 0) }} L
-                        <div class="text-[10px]">{{ $cfmt($row['opening_value']) }}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        @if($row['receipts'] > 0)
-                            <span style="color:#10b981">+{{ number_format($row['receipts'], 0) }} L</span>
-                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['receipts_value']) }}</div>
-                        @else<span class="{{ $muted }}">—</span>@endif
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        @if($row['dispatched'] > 0)
-                            <span style="color:#a855f7">−{{ number_format($row['dispatched'], 0) }} L</span>
-                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['dispatched_value']) }}</div>
-                        @else<span class="{{ $muted }}">—</span>@endif
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        @if($row['losses'] > 0)
-                            <span style="color:#f43f5e">−{{ number_format($row['losses'], 0) }} L</span>
-                            <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['losses_value']) }}</div>
-                            <div class="text-[9px] {{ $muted }} mt-0.5">
-                                Non-recov: {{ number_format($row['non_recoverable_qty'], 0) }} L ({{ $cfmt($row['non_recoverable_value']) }})<br>
-                                Recov: {{ number_format($row['recoverable_qty'], 0) }} L ({{ $cfmt($row['recoverable_value']) }})
-                            </div>
-                        @else<span class="{{ $muted }}">—</span>@endif
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        @php $closingColor = $row['closing'] > 0 ? '#10b981' : ($row['closing'] < 0 ? '#f43f5e' : null); @endphp
-                        <span class="font-bold {{ $closingColor ? '' : $muted }}" @if($closingColor) style="color:{{ $closingColor }}" @endif>
-                            {{ number_format($row['closing'], 0) }} L
-                        </span>
-                        <div class="text-[10px] {{ $muted }}">{{ $cfmt($row['closing_value']) }}</div>
-                        @if($row['closing'] > 0.0005)
-                            <div class="text-[9px] {{ $muted }} mt-0.5">WAC: {{ $cfmt($row['closing_avg_cost']) }}/L</div>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-            <tfoot>
-                @php
-                    $totOpening      = collect($movementRows)->sum('opening');
-                    $totOpeningValue = collect($movementRows)->sum('opening_value');
-                    $totReceipts      = collect($movementRows)->sum('receipts');
-                    $totReceiptsValue = collect($movementRows)->sum('receipts_value');
-                    $totDispatched      = collect($movementRows)->sum('dispatched');
-                    $totDispatchedValue = collect($movementRows)->sum('dispatched_value');
-                    $totLosses      = collect($movementRows)->sum('losses');
-                    $totLossesValue = collect($movementRows)->sum('losses_value');
-                    $totClosing      = collect($movementRows)->sum('closing');
-                    $totClosingValue = collect($movementRows)->sum('closing_value');
-                    $totClosingAvgCost = abs($totClosing) > 0.0005 ? $totClosingValue / $totClosing : 0.0;
-                @endphp
-                <tr class="{{ $surface2 }} border-t {{ $border }}">
-                    <td class="px-4 py-3 font-bold text-[10px] uppercase tracking-wide {{ $muted }}">Total</td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px] {{ $muted }}">
-                        {{ number_format($totOpening, 0) }} L
-                        <div class="font-normal">{{ $cfmt($totOpeningValue) }}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#10b981">
-                        +{{ number_format($totReceipts, 0) }} L
-                        <div class="font-normal {{ $muted }}">{{ $cfmt($totReceiptsValue) }}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#a855f7">
-                        −{{ number_format($totDispatched, 0) }} L
-                        <div class="font-normal {{ $muted }}">{{ $cfmt($totDispatchedValue) }}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" style="color:#f43f5e">
-                        −{{ number_format($totLosses, 0) }} L
-                        <div class="font-normal {{ $muted }}">{{ $cfmt($totLossesValue) }}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-[10px]" @if($totClosing > 0) style="color:#10b981" @endif>
-                        {{ number_format($totClosing, 0) }} L
-                        <div class="font-normal {{ $muted }}">{{ $cfmt($totClosingValue) }}</div>
-                        @if($totClosing > 0.0005)
-                            <div class="font-normal {{ $muted }}">WAC: {{ $cfmt($totClosingAvgCost) }}/L</div>
-                        @endif
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
+    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-5 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+            <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-1">Period Inventory Movement</h2>
+            <p class="text-xs {{ $muted }}">
+                Opening balance + purchases − sales − losses = closing balance, per product, with average cost. Now on its own
+                printable page with month/quarter/year presets.
+            </p>
+        </div>
+        <a href="{{ route('reports.inventory-position.movement') }}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shrink-0"
+           style="background:#10b981;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+            View Movement Statement
+        </a>
     </div>
-    <p class="text-[10px] {{ $muted }} mt-2">
-        Note: Opening &amp; closing balances reflect depot purchases and sales only. Fuel still in transit or at shipper does not affect these figures until it is physically received into a depot.
-        Values use each movement's recorded weighted-average unit cost; the closing balance's WAC/L is the blended cost of stock currently on hand.
-    </p>
-    @else
-    <div class="rounded-2xl border {{ $border }} {{ $surface }} p-8 text-center {{ $muted }} text-sm">
-        No inventory movements found for this period.
-    </div>
-    @endif
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════════ --}}
@@ -362,7 +262,10 @@
 {{-- ══════════════════════════════════════════════════════════════════ --}}
 <div class="mb-6">
     <h2 class="text-xs font-semibold uppercase tracking-widest {{ $muted }} mb-1">Purchases Received This Period</h2>
-    <p class="text-xs {{ $muted }} mb-3">Individual purchase receipts that make up the "+ Receipts" figure above.</p>
+    <p class="text-xs {{ $muted }} mb-3">
+        Depot receipts recorded within this period (physical receipt date). Note: the Movement Statement's
+        "+ Purchases" figure counts qty at time of purchase commitment, which may differ from physical receipt timing shown here.
+    </p>
 
     @if($purchaseBreakdown->count() > 0)
     <div class="rounded-2xl border {{ $border }} {{ $surface }} overflow-x-auto">

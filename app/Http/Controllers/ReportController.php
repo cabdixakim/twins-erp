@@ -489,115 +489,12 @@ class ReportController extends Controller
 
         $currency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
 
-        // ── Period stock movement by product ─────────────────────────────
-        // Opening = cumulative net before $from
-        $openingRaw = DB::table('inventory_movements')
-            ->where('company_id', $cid)
-            ->whereDate('created_at', '<', $from)
-            ->selectRaw("
-                product_id,
-                SUM(CASE WHEN type='receipt'    THEN qty
-                         WHEN type='issue'      THEN -qty
-                         WHEN type='adjustment' THEN qty
-                         ELSE 0 END) as qty,
-                SUM(CASE WHEN type='receipt'    THEN COALESCE(total_cost, qty * unit_cost)
-                         WHEN type='issue'      THEN -COALESCE(total_cost, qty * unit_cost)
-                         WHEN type='adjustment' THEN COALESCE(total_cost, qty * unit_cost)
-                         ELSE 0 END) as value
-            ")
-            ->groupBy('product_id')
-            ->get()->keyBy('product_id');
-
-        // Movements within the period
-        $periodRaw = DB::table('inventory_movements')
-            ->where('company_id', $cid)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
-            ->selectRaw("
-                product_id,
-                SUM(CASE WHEN type='receipt'    THEN qty ELSE 0 END) as receipts,
-                SUM(CASE WHEN type='receipt'    THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as receipts_value,
-                SUM(CASE WHEN type='issue'      THEN qty ELSE 0 END) as dispatched,
-                SUM(CASE WHEN type='issue'      THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as dispatched_value,
-                SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(qty) ELSE 0 END) as losses,
-                SUM(CASE WHEN type='adjustment' AND qty < 0 THEN ABS(COALESCE(total_cost, qty * unit_cost)) ELSE 0 END) as losses_value,
-                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN qty ELSE 0 END) as adjustments_in,
-                SUM(CASE WHEN type='adjustment' AND qty > 0 THEN COALESCE(total_cost, qty * unit_cost) ELSE 0 END) as adjustments_in_value
-            ")
-            ->groupBy('product_id')
-            ->get()->keyBy('product_id');
-
-        // Loss reconciliation from inventory_adjustments (authoritative loss ledger:
-        // recoverable vs non-recoverable), within the period
-        $lossAdjRaw = DB::table('inventory_adjustments')
-            ->where('company_id', $cid)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
-            ->selectRaw("
-                product_id,
-                SUM(CASE WHEN recoverable THEN qty ELSE 0 END) as recoverable_qty,
-                SUM(CASE WHEN recoverable THEN total_value ELSE 0 END) as recoverable_value,
-                SUM(CASE WHEN NOT recoverable THEN qty ELSE 0 END) as non_recoverable_qty,
-                SUM(CASE WHEN NOT recoverable THEN total_value ELSE 0 END) as non_recoverable_value
-            ")
-            ->groupBy('product_id')
-            ->get()->keyBy('product_id');
-
         // Product names
         $products = DB::table('products')
             ->where('company_id', $cid)
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name', 'id');
-
-        // Collect all product ids that appear in any movement
-        $allProductIds = collect($openingRaw->keys())
-            ->merge($periodRaw->keys())
-            ->unique()->values();
-
-        $movementRows = [];
-        foreach ($allProductIds as $pid) {
-            $opening       = (float)($openingRaw[$pid]->qty ?? 0);
-            $openingValue  = (float)($openingRaw[$pid]->value ?? 0);
-            $receipts      = (float)($periodRaw[$pid]->receipts ?? 0);
-            $receiptsValue = (float)($periodRaw[$pid]->receipts_value ?? 0);
-            $dispatched      = (float)($periodRaw[$pid]->dispatched ?? 0);
-            $dispatchedValue = (float)($periodRaw[$pid]->dispatched_value ?? 0);
-            $losses      = (float)($periodRaw[$pid]->losses ?? 0);
-            $lossesValue = (float)($periodRaw[$pid]->losses_value ?? 0);
-            $adjIn      = (float)($periodRaw[$pid]->adjustments_in ?? 0);
-            $adjInValue = (float)($periodRaw[$pid]->adjustments_in_value ?? 0);
-            $closing      = $opening + $receipts - $dispatched - $losses + $adjIn;
-            $closingValue = $openingValue + $receiptsValue - $dispatchedValue - $lossesValue + $adjInValue;
-            $closingAvgCost = abs($closing) > 0.0005 ? $closingValue / $closing : 0.0;
-
-            $recoverableQty      = (float)($lossAdjRaw[$pid]->recoverable_qty ?? 0);
-            $recoverableValue    = (float)($lossAdjRaw[$pid]->recoverable_value ?? 0);
-            $nonRecoverableQty   = (float)($lossAdjRaw[$pid]->non_recoverable_qty ?? 0);
-            $nonRecoverableValue = (float)($lossAdjRaw[$pid]->non_recoverable_value ?? 0);
-
-            $movementRows[] = [
-                'product_id'    => $pid,
-                'product'       => $products[$pid] ?? "Product #$pid",
-                'opening'       => round($opening, 3),
-                'opening_value' => round($openingValue, 2),
-                'receipts'       => round($receipts, 3),
-                'receipts_value' => round($receiptsValue, 2),
-                'dispatched'       => round($dispatched, 3),
-                'dispatched_value' => round($dispatchedValue, 2),
-                'losses'       => round($losses, 3),
-                'losses_value' => round($lossesValue, 2),
-                'adj_in'       => round($adjIn, 3),
-                'adj_in_value' => round($adjInValue, 2),
-                'closing'         => round($closing, 3),
-                'closing_value'   => round($closingValue, 2),
-                'closing_avg_cost' => round($closingAvgCost, 4),
-                'recoverable_qty'        => round($recoverableQty, 3),
-                'recoverable_value'      => round($recoverableValue, 2),
-                'non_recoverable_qty'    => round($nonRecoverableQty, 3),
-                'non_recoverable_value'  => round($nonRecoverableValue, 2),
-            ];
-        }
 
         // ── Per-purchase breakdown within the period ──────────────────────
         // Every receipt movement in the period, joined back to its purchase
@@ -773,8 +670,185 @@ class ReportController extends Controller
 
         return view('reports.inventory-position', compact(
             'from', 'to', 'currency',
-            'movementRows', 'pipelineRows', 'pipelineTotals',
+            'pipelineRows', 'pipelineTotals',
             'depotBreakdown', 'products', 'purchaseBreakdown'
+        ));
+    }
+
+    /**
+     * Resolve a period preset (this_month, last_month, this_quarter, this_year, custom)
+     * into a [from, to] date pair. Falls back to explicit from/to for 'custom'.
+     */
+    private function resolvePeriodPreset(string $preset, ?string $from, ?string $to): array
+    {
+        $now = now();
+        switch ($preset) {
+            case 'last_month':
+                $start = $now->copy()->subMonthNoOverflow()->startOfMonth();
+                $end   = $now->copy()->subMonthNoOverflow()->endOfMonth();
+                return [$start->toDateString(), $end->toDateString()];
+            case 'this_quarter':
+                $start = $now->copy()->startOfQuarter();
+                $end   = $now->copy()->endOfQuarter();
+                return [$start->toDateString(), min($end->toDateString(), $now->toDateString())];
+            case 'this_year':
+                $start = $now->copy()->startOfYear();
+                return [$start->toDateString(), $now->toDateString()];
+            case 'custom':
+                return [
+                    $from ?: $now->copy()->startOfMonth()->toDateString(),
+                    $to   ?: $now->toDateString(),
+                ];
+            case 'this_month':
+            default:
+                $start = $now->copy()->startOfMonth();
+                return [$start->toDateString(), $now->toDateString()];
+        }
+    }
+
+    /**
+     * Period Inventory Movement — dedicated printable statement.
+     * opening + purchases (actual purchased qty, regardless of physical receipt)
+     * − sales − losses = closing, per product. Quantities only; average cost shown
+     * as a single blended figure (not a per-column value breakdown).
+     */
+    public function inventoryPositionMovement(Request $request)
+    {
+        $cid    = $this->cid();
+        $preset = $request->input('preset', 'this_month');
+        [$from, $to] = $this->resolvePeriodPreset($preset, $request->input('from'), $request->input('to'));
+
+        $currency = DB::table('companies')->where('id', $cid)->value('base_currency') ?? '';
+
+        $products = DB::table('products')
+            ->where('company_id', $cid)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id');
+
+        // Purchases actually made (committed), regardless of physical receipt status.
+        // Excludes draft (not yet real), cancelled, and voided (returned to seller).
+        $purchasedStatuses = ['confirmed', 'nominated', 'received', 'transferred', 'dispatched'];
+
+        $purchasesQuery = fn () => DB::table('purchases')
+            ->where('company_id', $cid)
+            ->whereIn('status', $purchasedStatuses);
+
+        $openingPurchasesRaw = (clone $purchasesQuery())
+            ->whereDate('created_at', '<', $from)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(qty * unit_price) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        $periodPurchasesRaw = (clone $purchasesQuery())
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(qty * unit_price) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        // Sales — actual dispatches to customers: normal sales module (ref_type='sale')
+        // plus cross-dock direct dispatches to a client. Internal cross-dock → depot
+        // transfers are excluded (stock stays owned, just moves location).
+        $salesQuery = fn () => DB::table('inventory_movements')
+            ->where('company_id', $cid)
+            ->where('type', 'issue')
+            ->where(function ($q) {
+                $q->where('ref_type', 'sale')
+                  ->orWhere('reference', 'like', 'cross-dock-dispatch:%');
+            });
+
+        $openingSalesRaw = (clone $salesQuery())
+            ->whereDate('created_at', '<', $from)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(COALESCE(total_cost, qty * unit_cost)) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        $periodSalesRaw = (clone $salesQuery())
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(COALESCE(total_cost, qty * unit_cost)) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        $lossesQuery = fn () => DB::table('inventory_adjustments')->where('company_id', $cid);
+
+        $openingLossesRaw = (clone $lossesQuery())
+            ->whereDate('created_at', '<', $from)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(total_value) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        $periodLossesRaw = (clone $lossesQuery())
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->selectRaw('product_id, SUM(qty) as qty, SUM(total_value) as value')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        $allProductIds = collect($openingPurchasesRaw->keys())
+            ->merge($periodPurchasesRaw->keys())
+            ->merge($openingSalesRaw->keys())
+            ->merge($periodSalesRaw->keys())
+            ->merge($openingLossesRaw->keys())
+            ->merge($periodLossesRaw->keys())
+            ->unique()->values();
+
+        $movementRows = [];
+        foreach ($allProductIds as $pid) {
+            $openingPurchasesQty  = (float)($openingPurchasesRaw[$pid]->qty ?? 0);
+            $openingPurchasesVal  = (float)($openingPurchasesRaw[$pid]->value ?? 0);
+            $openingSalesQty      = (float)($openingSalesRaw[$pid]->qty ?? 0);
+            $openingSalesVal      = (float)($openingSalesRaw[$pid]->value ?? 0);
+            $openingLossesQty     = (float)($openingLossesRaw[$pid]->qty ?? 0);
+            $openingLossesVal     = (float)($openingLossesRaw[$pid]->value ?? 0);
+
+            $opening      = $openingPurchasesQty - $openingSalesQty - $openingLossesQty;
+            $openingValue = $openingPurchasesVal - $openingSalesVal - $openingLossesVal;
+
+            $purchases      = (float)($periodPurchasesRaw[$pid]->qty ?? 0);
+            $purchasesValue = (float)($periodPurchasesRaw[$pid]->value ?? 0);
+            $sales      = (float)($periodSalesRaw[$pid]->qty ?? 0);
+            $salesValue = (float)($periodSalesRaw[$pid]->value ?? 0);
+            $losses      = (float)($periodLossesRaw[$pid]->qty ?? 0);
+            $lossesValue = (float)($periodLossesRaw[$pid]->value ?? 0);
+
+            $closing      = $opening + $purchases - $sales - $losses;
+            $closingValue = $openingValue + $purchasesValue - $salesValue - $lossesValue;
+            $avgCost = abs($closing) > 0.0005 ? $closingValue / $closing : 0.0;
+
+            $movementRows[] = [
+                'product_id' => $pid,
+                'product'    => $products[$pid] ?? "Product #$pid",
+                'opening'    => round($opening, 3),
+                'purchases'  => round($purchases, 3),
+                'sales'      => round($sales, 3),
+                'losses'     => round($losses, 3),
+                'closing'    => round($closing, 3),
+                'avg_cost'   => round($avgCost, 4),
+            ];
+        }
+
+        $movementTotals = [
+            'opening'   => collect($movementRows)->sum('opening'),
+            'purchases' => collect($movementRows)->sum('purchases'),
+            'sales'     => collect($movementRows)->sum('sales'),
+            'losses'    => collect($movementRows)->sum('losses'),
+            'closing'   => collect($movementRows)->sum('closing'),
+        ];
+
+        // Blended average cost across all products combined
+        $totalClosingValue = 0.0;
+        foreach ($allProductIds as $pid) {
+            $openingPurchasesVal = (float)($openingPurchasesRaw[$pid]->value ?? 0);
+            $openingSalesVal     = (float)($openingSalesRaw[$pid]->value ?? 0);
+            $openingLossesVal    = (float)($openingLossesRaw[$pid]->value ?? 0);
+            $purchasesValue      = (float)($periodPurchasesRaw[$pid]->value ?? 0);
+            $salesValue          = (float)($periodSalesRaw[$pid]->value ?? 0);
+            $lossesValue         = (float)($periodLossesRaw[$pid]->value ?? 0);
+            $totalClosingValue  += ($openingPurchasesVal - $openingSalesVal - $openingLossesVal)
+                                 + $purchasesValue - $salesValue - $lossesValue;
+        }
+        $movementTotals['avg_cost'] = abs($movementTotals['closing']) > 0.0005
+            ? $totalClosingValue / $movementTotals['closing']
+            : 0.0;
+
+        return view('reports.inventory-position-movement', compact(
+            'from', 'to', 'preset', 'currency', 'movementRows', 'movementTotals'
         ));
     }
 
