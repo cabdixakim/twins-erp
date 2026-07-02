@@ -72,7 +72,6 @@
 {{-- Summary cards --}}
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
   <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="absolute inset-0 opacity-[0.015]" style="background:linear-gradient(135deg,#f43f5e,transparent 60%)"></div>
     <div class="relative flex items-start justify-between">
       <div>
         <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Total loss (all time)</div>
@@ -88,7 +87,6 @@
     </div>
   </div>
   <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="absolute inset-0 opacity-[0.015]" style="background:linear-gradient(135deg,#f43f5e,transparent 60%)"></div>
     <div class="relative flex items-start justify-between">
       <div>
         <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Non-recoverable</div>
@@ -104,7 +102,6 @@
     </div>
   </div>
   <div class="relative overflow-hidden rounded-2xl border {{ $border }} {{ $surface }} p-4">
-    <div class="absolute inset-0 opacity-[0.015]" style="background:linear-gradient(135deg,#10b981,transparent 60%)"></div>
     <div class="relative flex items-start justify-between">
       <div>
         <div class="text-[10px] font-bold {{ $muted }} uppercase tracking-widest mb-2">Recoverable</div>
