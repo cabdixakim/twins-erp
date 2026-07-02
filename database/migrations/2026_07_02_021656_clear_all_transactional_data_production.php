@@ -2,19 +2,19 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Clears ALL transactional data while preserving master data.
  *
- * Deleted (transactional):
- *   journal_entry_lines, journal_entries
- *   inventory_consumptions, inventory_movements, depot_stocks
- *   batch_costs, import_trucks, import_nominations
- *   sales, purchases, batches
- *   inventory_periods
+ * Deleted in FK-safe dependency order (children before parents):
+ *   journal_entry_lines → journal_entries
+ *   inventory_consumptions → inventory_movements → depot_stocks
+ *   batch_costs → import_trucks → import_nominations
+ *   sales → purchases → batches → inventory_periods
  *   supplier_ledger_entries, depot_ledger_entries, transporter_ledger_entries
  *   petty_cash_transactions
- *   import_jobs, import_job_rows
+ *   import_job_rows → import_jobs
  *
  * Preserved (master data):
  *   companies, users, company_user
@@ -22,47 +22,42 @@ use Illuminate\Support\Facades\DB;
  *   chart_of_accounts, journals
  *   roles, permissions, role_permission, user_roles
  *   petty_cash_accounts
+ *
+ * Note: Uses DELETE FROM (not TRUNCATE + session_replication_role) so it
+ * works on restricted Replit production Postgres where superuser is unavailable.
  */
 return new class extends Migration
 {
+    // Ordered from most-dependent (children) to least-dependent (parents)
+    // so FK constraints are never violated.
+    private array $tables = [
+        'journal_entry_lines',
+        'journal_entries',
+        'inventory_consumptions',
+        'inventory_movements',
+        'depot_stocks',
+        'batch_costs',
+        'import_trucks',
+        'import_nominations',
+        'sales',
+        'purchases',
+        'batches',
+        'inventory_periods',
+        'supplier_ledger_entries',
+        'depot_ledger_entries',
+        'transporter_ledger_entries',
+        'petty_cash_transactions',
+        'import_job_rows',
+        'import_jobs',
+    ];
+
     public function up(): void
     {
-        // Disable FK checks temporarily so order doesn't matter
-        DB::statement('SET session_replication_role = replica;');
-
-        $tables = [
-            'journal_entry_lines',
-            'journal_entries',
-            'inventory_consumptions',
-            'inventory_movements',
-            'depot_stocks',
-            'batch_costs',
-            'import_trucks',
-            'import_nominations',
-            'sales',
-            'purchases',
-            'batches',
-            'inventory_periods',
-            'supplier_ledger_entries',
-            'depot_ledger_entries',
-            'transporter_ledger_entries',
-            'petty_cash_transactions',
-            'import_job_rows',
-            'import_jobs',
-        ];
-
-        foreach ($tables as $table) {
-            // Only truncate tables that actually exist in this installation
-            $exists = DB::selectOne(
-                "SELECT to_regclass('public.{$table}') AS t"
-            );
-            if ($exists && $exists->t !== null) {
-                DB::statement("TRUNCATE TABLE {$table} RESTART IDENTITY CASCADE");
+        foreach ($this->tables as $table) {
+            if (Schema::hasTable($table)) {
+                DB::table($table)->delete();
             }
         }
-
-        // Re-enable FK checks
-        DB::statement('SET session_replication_role = DEFAULT;');
     }
 
     public function down(): void
